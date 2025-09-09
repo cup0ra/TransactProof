@@ -1,0 +1,43 @@
+# filepath: apps/api/.gitignore
+# Compiled application
+/dist
+/build
+
+# Runtime data
+*.pid
+*.seed
+*.pid.lock
+
+# Logs
+logs/
+*.log
+
+# Environment configuration
+.env
+.env.local
+.env.*.local
+
+# Database files
+/prisma/dev.db*
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+
+# File uploads (except placeholder)
+/uploads/*
+!/uploads/.gitkeep
+
+# Temporary directories
+/tmp/
+/temp/
+
+# Test coverage
+/coverage
+/.nyc_output
+
+# TypeScript
+*.tsbuildinfo
+
+# NestJS cache
+.nest/

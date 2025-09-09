@@ -1,0 +1,52 @@
+{
+  "name": "transactproof",
+  "private": true,
+  "version": "0.1.0",
+  "description": "TransactProof - PDF receipt generator for crypto transactions",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean",
+    "db:migrate": "cd apps/api && npm run db:migrate",
+    "db:seed": "cd apps/api && npm run db:seed",
+    "docker:up": "docker-compose -f infra/docker-compose.yml up -d",
+    "docker:down": "docker-compose -f infra/docker-compose.yml down"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.44.0",
+    "prettier": "^3.0.0",
+    "turbo": "^1.10.12",
+    "typescript": "^5.1.6"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/transactproof.git"
+  },
+  "keywords": [
+    "crypto",
+    "receipt",
+    "pdf",
+    "blockchain",
+    "base",
+    "usdt",
+    "siwe"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "pino-pretty": "^13.1.1"
+  }
+}
