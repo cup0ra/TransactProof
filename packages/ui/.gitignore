@@ -1,0 +1,14 @@
+# filepath: packages/ui/.gitignore
+# Build output
+/dist
+/lib
+
+# Storybook
+.storybook-out
+storybook-static/
+
+# TypeScript
+*.tsbuildinfo
+
+# Cache
+.turbo/

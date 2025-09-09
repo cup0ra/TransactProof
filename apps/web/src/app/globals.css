@@ -1,0 +1,393 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Предотвращение flash of unstyled content */
+  html {
+    background-color: #000000; /* Темный фон по умолчанию */
+    color-scheme: dark light;
+  }
+  
+  /* CSS переменные для цветов тем */
+  :root {
+    --color-background: 255 255 255; /* белый для светлой темы */
+    --color-foreground: 0 0 0; /* черный для светлой темы */
+    --color-primary: 249 115 22; /* оранжевый остается тем же */
+    --color-secondary: 100 116 139; /* серый для светлой темы */
+    --color-muted: 248 250 252; /* очень светлый серый */
+    --color-border: 226 232 240; /* светлый серый для границ */
+    --color-accent: 249 115 22; /* оранжевый акцент */
+    
+    /* Toast переменные */
+    --toast-bg: #ffffff;
+    --toast-text: #000000;
+    --toast-border: 1px solid #e5e7eb;
+  }
+
+  .dark {
+    --color-background: 0 0 0; /* черный для темной темы */
+    --color-foreground: 255 255 255; /* белый для темной темы */
+    --color-primary: 249 115 22; /* оранжевый остается тем же */
+    --color-secondary: 100 116 139; /* серый остается тем же */
+    --color-muted: 15 23 42; /* темный серый */
+    --color-border: 30 41 59; /* темный серый для границ */
+    --color-accent: 249 115 22; /* оранжевый акцент */
+    
+    /* Toast переменные для темной темы */
+    --toast-bg: #000000;
+    --toast-text: #ffffff;
+    --toast-border: 1px solid #374151;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    scroll-behavior: smooth;
+    background-color: white;
+    color: black;
+    /* Всегда резервируем место для скроллбара */
+    overflow-y: scroll;
+  }
+  
+  html.dark {
+    background-color: black;
+    color: white;
+  }
+  
+  body {
+    @apply bg-white dark:bg-black text-black dark:text-white;
+    font-weight: 300;
+    letter-spacing: 0.025em;
+  }
+  
+  /* Добавляем transition только к компонентам, а не к body */
+  .theme-transition {
+    @apply transition-colors duration-300;
+  }
+  
+  * {
+    @apply selection:bg-orange-400 selection:text-white;
+  }
+}
+
+@layer components {
+  /* Обновленные кнопки с поддержкой тем */
+  .btn-minimal {
+    @apply inline-flex items-center justify-center px-8 py-3 font-light tracking-wide transition-all duration-300;
+  }
+  
+  .btn-primary-minimal {
+    @apply btn-minimal bg-orange-400 text-white dark:text-black hover:bg-orange-500 border border-transparent hover:border-orange-600;
+  }
+  
+  .btn-secondary-minimal {
+    @apply btn-minimal border border-orange-400 text-orange-400 hover:border-orange-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950;
+  }
+
+  /* Обновленные параллакс эффекты с поддержкой тем */
+  .parallax-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;
+    will-change: transform;
+  }
+  
+  .parallax-element {
+    will-change: transform;
+  }
+  
+  .parallax-separator {
+    will-change: transform;
+  }
+  
+  .parallax-cta {
+    will-change: transform;
+  }
+  
+  .parallax-dots {
+    will-change: transform;
+  }
+  
+  .parallax-float {
+    animation: parallaxFloat 6s ease-in-out infinite;
+  }
+  
+  .parallax-title {
+    text-shadow: 2px 2px 4px rgba(249, 115, 22, 0.3);
+  }
+  
+  .parallax-subtitle {
+    transition: transform 0.3s ease-out;
+  }
+  
+  .parallax-buttons {
+    transition: transform 0.3s ease-out;
+  }
+  
+  @keyframes parallaxFloat {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  
+  /* Parallax separators */
+  .parallax-separator {
+    animation: parallaxSeparator 15s ease-in-out infinite;
+  }
+  
+  .parallax-cta {
+    animation: parallaxCTA 18s ease-in-out infinite;
+  }
+  
+  @keyframes parallaxSeparator {
+    0%, 100% {
+      transform: translateX(0px) translateY(0px) scale(1);
+    }
+    33% {
+      transform: translateX(-20px) translateY(-10px) scale(1.05);
+    }
+    66% {
+      transform: translateX(15px) translateY(5px) scale(0.95);
+    }
+  }
+  
+  @keyframes parallaxCTA {
+    0%, 100% {
+      transform: translateX(0px) translateY(0px) rotate(0deg);
+    }
+    25% {
+      transform: translateX(-15px) translateY(-8px) rotate(0.5deg);
+    }
+    50% {
+      transform: translateX(10px) translateY(3px) rotate(0deg);
+    }
+    75% {
+      transform: translateX(-5px) translateY(-12px) rotate(-0.5deg);
+    }
+  }
+  
+  .parallax-layer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    will-change: transform;
+  }
+  
+  /* Smooth transitions */
+  .smooth-enter {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+  
+  .smooth-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  /* Text animations */
+  .text-reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    animation: textReveal 0.8s ease-out forwards;
+  }
+  
+  .text-reveal-delay-1 {
+    animation-delay: 0.2s;
+  }
+  
+  .text-reveal-delay-2 {
+    animation-delay: 0.4s;
+  }
+  
+  @keyframes textReveal {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Обновленная сетка с поддержкой тем */
+  .minimal-grid {
+    background-image: 
+      linear-gradient(rgba(251, 191, 36, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(251, 191, 36, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .minimal-grid-light {
+    background-image: 
+      linear-gradient(rgba(100, 116, 139, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(100, 116, 139, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+  
+  /* Floating animation */
+  .float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  .float-delay {
+    animation: float 6s ease-in-out infinite;
+    animation-delay: 2s;
+  }
+  
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+  
+  /* Pulse with different timing */
+  .pulse-slow {
+    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  .pulse-slower {
+    animation: pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+@layer utilities {
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .text-shadow-lg {
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .text-shadow-light {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+  
+  .backdrop-blur-xs {
+    backdrop-filter: blur(2px);
+  }
+  
+  /* Smooth scrolling */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+
+  /* Тематические утилиты */
+  .bg-theme {
+    background-color: rgb(var(--color-background));
+  }
+
+  .text-theme {
+    color: rgb(var(--color-foreground));
+  }
+
+  .border-theme {
+    border-color: rgb(var(--color-border));
+  }
+}
+
+/* WalletConnect/Reown AppKit модальное окно - расширенные правила */
+/* Основные элементы */
+w3m-modal,
+w3m-router,
+w3m-header,
+w3m-overlay,
+wui-overlay,
+wui-modal,
+appkit-modal,
+[data-testid="w3m-modal"],
+[data-testid="appkit-modal"],
+[data-testid="w3m-router"],
+[class*="w3m"],
+[class*="appkit"],
+[class*="reown"],
+[id*="w3m"],
+[id*="appkit"],
+[id*="reown"] {
+  z-index: 99999 !important;
+  position: fixed !important;
+}
+
+/* Дочерние элементы */
+w3m-modal *,
+w3m-router *,
+wui-modal *,
+appkit-modal *,
+[data-testid="w3m-modal"] *,
+[data-testid="appkit-modal"] * {
+  z-index: 99999 !important;
+}
+
+/* Shadow DOM части */
+w3m-modal::part(overlay),
+w3m-router::part(overlay),
+wui-modal::part(overlay),
+appkit-modal::part(overlay) {
+  z-index: 99998 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
+w3m-modal::part(container),
+w3m-router::part(container),
+wui-modal::part(container),
+appkit-modal::part(container) {
+  z-index: 99999 !important;
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+/* Дополнительные правила для всех возможных селекторов */
+[data-w3m],
+[data-w3m] *,
+[data-appkit],
+[data-appkit] *,
+[data-reown],
+[data-reown] *,
+.w3m-modal,
+.w3m-router,
+.w3m-overlay,
+.appkit-modal,
+.reown-modal {
+  z-index: 99999 !important;
+}
+
+/* Элементы с атрибутами, содержащими эти ключевые слова */
+[class*="modal"][class*="w3m"],
+[class*="modal"][class*="appkit"],
+[class*="modal"][class*="reown"],
+[id*="modal"][id*="w3m"],
+[id*="modal"][id*="appkit"],
+[id*="modal"][id*="reown"] {
+  z-index: 99999 !important;
+  position: fixed !important;
+}
+
+/* Убеждаемся что body не перекрывает модальное окно */
+body {
+  position: relative;
+  z-index: 1;
+}
+
+/* Основной контент сайта */
+#__next,
+.main-content {
+  position: relative;
+  z-index: 10;
+}

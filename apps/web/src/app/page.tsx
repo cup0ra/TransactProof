@@ -1,0 +1,144 @@
+'use client'
+
+import Link from 'next/link'
+
+export default function HomePage() {
+  return (
+    <>
+      {/* Hero Section with Parallax */}
+      <section className="relative h-screen flex items-center justify-center overflow-hidden">
+          {/* Parallax Background */}
+          <div className="parallax-bg absolute inset-0 -z-10" style={{
+            backgroundImage: `
+              radial-gradient(circle at 20% 30%, rgba(249, 115, 22, 0.15) 0%, transparent 60%),
+              radial-gradient(circle at 80% 70%, rgba(245, 158, 11, 0.12) 0%, transparent 60%),
+              radial-gradient(circle at 40% 80%, rgba(249, 115, 22, 0.08) 0%, transparent 60%)
+            `,
+            backgroundSize: '120% 140%',
+            backgroundPosition: '0% 0%'
+          }}>
+            <div className="absolute inset-0 bg-white dark:bg-black transition-colors duration-300"></div>
+            <div className="absolute inset-0 opacity-20 parallax-dots" style={{
+              backgroundImage: `radial-gradient(circle, #f97316 0.8px, transparent 0.8px)`,
+              backgroundSize: '100px 100px'
+            }}></div>
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/50 dark:via-black/50 to-white dark:to-black opacity-80 transition-colors duration-300"></div>
+          </div>
+          
+          <div className="relative z-10 text-center max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Minimal Logo */}
+            <div className="mb-8 sm:mb-12 lg:mb-16">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 mx-auto mb-6 sm:mb-8 border-2 border-orange-400 rounded-full flex items-center justify-center parallax-float">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border border-amber-300 rounded-full flex items-center justify-center">
+                  <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 lg:w-3 lg:h-3 bg-orange-500 rounded-full"></div>
+                </div>
+              </div>
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-thin text-black dark:text-white mb-4 sm:mb-6 tracking-wider parallax-title transition-colors duration-300">
+                TransactProof
+              </h1>
+            </div>
+            
+            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-8 sm:mb-12 lg:mb-16 max-w-2xl mx-auto font-light leading-relaxed parallax-subtitle transition-colors duration-300">
+              Professional blockchain receipts.
+              <br />
+              <span className="text-orange-400">Minimal. Verified. Instant.</span>
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center parallax-buttons">
+              <Link href="/generate" className="group relative inline-flex items-center justify-center px-8 sm:px-10 lg:px-12 py-3 sm:py-4 text-base sm:text-lg font-light text-white dark:text-black bg-orange-400 rounded-none hover:bg-orange-500 hover:text-white dark:hover:text-black transition-all duration-300 border-2 border-transparent hover:border-orange-600">
+                <span className="relative z-10">Generate Receipt</span>
+                <div className="absolute inset-0 bg-orange-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+              </Link>
+              <Link href="/dashboard" className="inline-flex items-center justify-center px-8 sm:px-10 lg:px-12 py-3 sm:py-4 text-base sm:text-lg font-light text-orange-400 border border-orange-400 rounded-none hover:border-orange-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950 transition-all duration-300">
+                Dashboard
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* How It Works Section */}
+        <section className="py-16 sm:py-24 lg:py-32 relative bg-gray-50 dark:bg-black transition-colors duration-300">
+          {/* Parallax separator */}
+          <div className="absolute inset-0 parallax-separator" style={{
+            backgroundImage: `
+              radial-gradient(circle at 60% 20%, rgba(245, 158, 11, 0.1) 0%, transparent 50%),
+              radial-gradient(circle at 20% 80%, rgba(249, 115, 22, 0.08) 0%, transparent 50%)
+            `,
+            backgroundSize: '150% 150%'
+          }}></div>
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center mb-12 sm:mb-16 lg:mb-20">
+            <h2 className="text-2xl sm:text-3xl font-light text-black dark:text-white mb-4 sm:mb-6 tracking-wide transition-colors duration-300">How It Works</h2>
+            <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-light max-w-2xl mx-auto leading-relaxed transition-colors duration-300">
+              Generate professional PDF receipts for your crypto transactions in three simple steps
+            </p>
+          </div>            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-12">
+              {[
+                {
+                  title: 'Connect Wallet',
+                  description: 'Connect your MetaMask wallet and authenticate with Sign-In with Ethereum (SIWE) for secure access.'
+                },
+                {
+                  title: 'Enter Transaction',
+                  description: 'Provide your transaction hash and optionally add a description for context and record-keeping.'
+                },
+                {
+                  title: 'Generate Receipt',
+                  description: 'Pay a small fee in ETH and receive a professional PDF receipt with verified transaction details.'
+                }
+              ].map((step, index) => (
+                <div key={index} className="text-center group">
+                  <div className="border border-gray-200 dark:border-gray-800 p-4 sm:p-6 lg:p-8 bg-white/50 dark:bg-black/50 backdrop-blur-sm hover:border-orange-400 transition-all duration-500 hover:bg-white/70 dark:hover:bg-black/70">
+                    <div className="flex items-center mb-4 sm:mb-6">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 text-orange-400 group-hover:text-orange-500 transition-colors duration-300 flex-shrink-0 mr-3 sm:mr-4">
+                        {index === 0 && (
+                          <svg className="w-full h-full" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.6 14.8,10V11H16V16H8V11H9.2V10C9.2,8.6 10.6,7 12,7M12,8.2C11.2,8.2 10.4,8.7 10.4,10V11H13.6V10C13.6,8.7 12.8,8.2 12,8.2Z" />
+                          </svg>
+                        )}
+                        {index === 1 && (
+                          <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                          </svg>
+                        )}
+                        {index === 2 && (
+                          <svg className="w-full h-full" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className="text-xs font-light text-amber-400 uppercase tracking-wider">Step {index + 1}</span>
+                    </div>
+                    <h3 className="text-base sm:text-lg font-light text-black dark:text-white mb-3 sm:mb-4 tracking-wide transition-colors duration-300">{step.title}</h3>
+                    <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm font-light leading-relaxed transition-colors duration-300">{step.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-16 sm:py-20 lg:py-24 relative bg-white dark:bg-black text-center transition-colors duration-300">
+          {/* Parallax CTA background */}
+          <div className="absolute inset-0 parallax-cta" style={{
+            backgroundImage: `
+              radial-gradient(circle at 40% 40%, rgba(249, 115, 22, 0.12) 0%, transparent 70%),
+              radial-gradient(circle at 80% 60%, rgba(245, 158, 11, 0.08) 0%, transparent 70%)
+            `,
+            backgroundSize: '180% 180%'
+          }}></div>
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-thin text-black dark:text-white mb-6 sm:mb-8 tracking-wide transition-colors duration-300">
+              Ready to start?
+            </h2>
+            <div className="w-16 sm:w-20 lg:w-24 h-px bg-orange-500 mx-auto mb-8 sm:mb-10 lg:mb-12"></div>
+            <Link href="/generate" className="group relative inline-flex items-center justify-center px-8 sm:px-12 lg:px-16 py-4 sm:py-5 text-base sm:text-lg font-light text-white dark:text-black bg-orange-400 rounded-none hover:bg-orange-500 hover:text-white dark:hover:text-black transition-all duration-300">
+              <span className="relative z-10">Generate Your First Receipt</span>
+              <div className="absolute inset-0 bg-orange-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+            </Link>
+          </div>
+        </section>
+    </>
+  )
+}

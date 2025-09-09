@@ -1,0 +1,16 @@
+# filepath: packages/core/.gitignore
+# Build output
+/dist
+/lib
+/esm
+/cjs
+
+# TypeScript
+*.tsbuildinfo
+
+# Cache
+.turbo/
+
+# Environment
+.env
+.env.local
