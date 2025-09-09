@@ -3,20 +3,17 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy root package.json and workspace files
-COPY package.json turbo.json ./
-COPY apps/api/package.json ./apps/api/
-COPY packages/core/package.json ./packages/core/
+# Copy package.json and install dependencies
+COPY package.json ./
+COPY package-lock.json* ./
 
 # Install dependencies
 RUN npm ci --only=production && npm cache clean --force
 
 # Copy source code
-COPY apps/api ./apps/api
-COPY packages/core ./packages/core
+COPY . .
 
 # Generate Prisma client
-WORKDIR /app/apps/api
 RUN npx prisma generate
 
 # Build the application
@@ -34,11 +31,11 @@ RUN apk add --no-cache dumb-init
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nestjs -u 1001
 
-# Copy built application
-COPY --from=builder --chown=nestjs:nodejs /app/apps/api/dist ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/apps/api/node_modules ./node_modules
-COPY --from=builder --chown=nestjs:nodejs /app/apps/api/package.json ./
-COPY --from=builder --chown=nestjs:nodejs /app/apps/api/prisma ./prisma
+# Copy built application and dependencies
+COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/package.json ./
+COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
 
 # Create uploads directory
 RUN mkdir -p uploads && chown nestjs:nodejs uploads
