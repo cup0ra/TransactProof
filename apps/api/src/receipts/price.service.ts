@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import { CoinGeckoService } from '../common/services/coingecko.service'
 
 interface TokenPrice {
   usd: number
@@ -14,23 +15,29 @@ interface PriceResponse {
 export class PriceService {
   private readonly logger = new Logger(PriceService.name)
   
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly coinGeckoService: CoinGeckoService
+  ) {}
 
   /**
    * Get token price in USDT using CoinGecko API
    */
-  async getTokenPriceInUSDT(token: string, amount: string): Promise<{ usdtValue: number; pricePerToken: number } | null> {
+  async getTokenPriceInUSDT(token: string, amount: string): Promise<{ usdtValue: number; pricePerToken: number; tokenInfo?: any } | null> {
     try {
-      const tokenId = this.getTokenId(token)
-      if (!tokenId) {
+      const tokenSearchResult = await this.coinGeckoService.findTokenId(token)
+      if (!tokenSearchResult) {
         this.logger.warn(`Unknown token: ${token}`)
         return null
       }
 
+      const { coinGeckoId, confidence, source } = tokenSearchResult
+      this.logger.log(`Found token ${token} -> ${coinGeckoId} (confidence: ${confidence}, source: ${source})`)
+
       // Use CoinGecko free API
-      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${tokenId}&vs_currencies=usd,usdt`
+      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${coinGeckoId}&vs_currencies=usd,usdt`
       
-      this.logger.log(`Fetching price for ${token} (${tokenId})`)
+      this.logger.log(`Fetching price for ${token} (${coinGeckoId})`)
       
       const response = await fetch(url, {
         method: 'GET',
@@ -45,13 +52,13 @@ export class PriceService {
 
       const data: PriceResponse = await response.json()
       
-      if (!data[tokenId]) {
-        this.logger.warn(`Price data not found for ${tokenId}`)
+      if (!data[coinGeckoId]) {
+        this.logger.warn(`Price data not found for ${coinGeckoId}`)
         return null
       }
 
       // Prefer USDT price, fallback to USD
-      const pricePerToken = data[tokenId].usdt || data[tokenId].usd
+      const pricePerToken = data[coinGeckoId].usdt || data[coinGeckoId].usd
       const tokenAmount = parseFloat(amount)
       const usdtValue = tokenAmount * pricePerToken
 
@@ -59,7 +66,13 @@ export class PriceService {
 
       return {
         usdtValue,
-        pricePerToken
+        pricePerToken,
+        tokenInfo: {
+          coinGeckoId,
+          confidence,
+          source,
+          name: tokenSearchResult.name
+        }
       }
     } catch (error) {
       this.logger.error(`Error fetching price for ${token}:`, error.message)
@@ -68,75 +81,12 @@ export class PriceService {
   }
 
   /**
-   * Map token symbols to CoinGecko IDs
+   * Get token information and CoinGecko ID
+   * @deprecated This method is replaced by CoinGeckoService.findTokenId()
    */
-  private getTokenId(token: string): string | null {
-    const tokenMap: { [key: string]: string } = {
-      'ETH': 'ethereum',
-      'USDT': 'tether',
-      'USDC': 'usd-coin',
-      'BTC': 'bitcoin',
-      'WETH': 'weth',
-      'DAI': 'dai',
-      'LINK': 'chainlink',
-      'UNI': 'uniswap',
-      'MATIC': 'matic-network',
-      'AVAX': 'avalanche-2',
-      'BNB': 'binancecoin',
-      'ADA': 'cardano',
-      'SOL': 'solana',
-      'DOT': 'polkadot',
-      'ATOM': 'cosmos',
-      'NEAR': 'near',
-      'FTM': 'fantom',
-      'ALGO': 'algorand',
-      'XLM': 'stellar',
-      'VET': 'vechain',
-      'THETA': 'theta-token',
-      'ICP': 'internet-computer',
-      'SAND': 'the-sandbox',
-      'MANA': 'decentraland',
-      'CRV': 'curve-dao-token',
-      'COMP': 'compound-governance-token',
-      'SUSHI': 'sushi',
-      'YFI': 'yearn-finance',
-      'SNX': 'havven',
-      'MKR': 'maker',
-      'AAVE': 'aave',
-      '1INCH': '1inch',
-      'ENJ': 'enjincoin',
-      'BAT': 'basic-attention-token',
-      'ZRX': '0x',
-      'OMG': 'omisego',
-      'LRC': 'loopring',
-      'GRT': 'the-graph',
-      'STORJ': 'storj',
-      'REN': 'republic-protocol',
-      'KNC': 'kyber-network-crystal',
-      'ZIL': 'zilliqa',
-      'QTUM': 'qtum',
-      'ICX': 'icon',
-      'ONT': 'ontology',
-      'ZEC': 'zcash',
-      'DASH': 'dash',
-      'XMR': 'monero',
-      'ETC': 'ethereum-classic',
-      'BSV': 'bitcoin-cash-sv',
-      'BCH': 'bitcoin-cash',
-      'LTC': 'litecoin',
-      'XRP': 'ripple',
-      'TRX': 'tron',
-      'EOS': 'eos',
-      'IOTA': 'iota',
-      'NEO': 'neo',
-      'XTZ': 'tezos',
-      // Base network specific tokens
-      'BALD': 'bald-base',
-      'PRIME': 'echelon-prime',
-      'DEGEN': 'degen-base',
-    }
-
-    return tokenMap[token.toUpperCase()] || null
+  private async getTokenId(token: string): Promise<string | null> {
+    const result = await this.coinGeckoService.findTokenId(token)
+    return result?.coinGeckoId || null
   }
 
   /**
@@ -158,7 +108,7 @@ export class PriceService {
   /**
    * Check if a token is supported
    */
-  isTokenSupported(token: string): boolean {
-    return this.getTokenId(token) !== null
+  async isTokenSupported(token: string): Promise<boolean> {
+    return await this.coinGeckoService.isTokenSupported(token)
   }
 }

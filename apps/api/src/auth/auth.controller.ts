@@ -54,7 +54,6 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'User profile retrieved' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getProfile(@Req() req: Request) {
-    console.log('🔍 /me endpoint called at:', new Date().toISOString())
     return {
       walletAddress: req.user.walletAddress,
     }

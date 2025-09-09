@@ -220,15 +220,21 @@ export class ReceiptsService {
 
   async getTransactionDetails(txHash: string) {
     try {
+      this.logger.log(`📋 Getting transaction details for hash: ${txHash}`)
+      
       const details = await this.blockchainService.getExtendedTransactionDetails(txHash)
       
       if (!details) {
+        this.logger.warn(`❌ Transaction not found: ${txHash}`)
         throw new NotFoundException('Transaction not found')
       }
 
+
+      this.logger.log(`✅ Transaction details retrieved successfully for ${txHash}`)
+      
       return details
     } catch (error) {
-      this.logger.error(`Error getting transaction details for ${txHash}:`, error)
+      this.logger.error(`❌ Error getting transaction details for ${txHash}:`, error)
       throw new BadRequestException('Failed to get transaction details')
     }
   }

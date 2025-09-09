@@ -280,26 +280,35 @@ export class BlockchainService {
     }
     
     try {
-      this.logger.log(`Getting extended transaction details from ${network.name} for ${txHash}`)
+      this.logger.log(`🔍 Getting extended transaction details from ${network.name} for ${txHash}`)
       
       const transaction = await network.client.getTransaction({
         hash: txHash as `0x${string}`,
       })
 
       if (!transaction) {
+        this.logger.warn(`❌ Transaction object is null for ${txHash}`)
         return null
       }
+
+
 
       const receipt = await network.client.getTransactionReceipt({
         hash: txHash as `0x${string}`,
       })
 
+
+
       const block = await network.client.getBlock({
         blockNumber: transaction.blockNumber,
       })
 
+
+
       const currentBlock = await network.client.getBlockNumber()
       const confirmations = Number(currentBlock - transaction.blockNumber)
+      
+
 
       // Get basic transaction details using the same network
       const basicDetails = await this.getTransactionDetailsFromNetwork(txHash, network)
@@ -363,13 +372,14 @@ export class BlockchainService {
     }
     
     try {
-      this.logger.log(`Getting transaction details from ${network.name} for ${txHash}`)
+      this.logger.log(`📊 Getting transaction details from ${network.name} for ${txHash}`)
       
       const transaction = await network.client.getTransaction({
         hash: txHash as `0x${string}`,
       })
 
       if (!transaction) {
+        this.logger.warn(`❌ Transaction is null from ${network.name}`)
         return null
       }
 
@@ -387,7 +397,9 @@ export class BlockchainService {
           'event Transfer(address indexed from, address indexed to, uint256 value)'
         ])
 
-        for (const log of receipt.logs) {
+        for (let i = 0; i < receipt.logs.length; i++) {
+          const log = receipt.logs[i]
+          
           try {
             // Check if this is a Transfer event by trying to decode
             const decoded = decodeEventLog({
@@ -424,7 +436,7 @@ export class BlockchainService {
                 this.logger.warn(`Failed to get price for ${tokenSymbol}:`, error.message)
               }
 
-              return {
+              const result = {
                 sender: args.from,
                 receiver: args.to,
                 amount,
@@ -435,8 +447,10 @@ export class BlockchainService {
                 explorerUrl: `${network.explorerBaseUrl}/tx/${txHash}`,
                 usdtValue,
                 pricePerToken,
-                status: receipt.status === 'success' ? 'success' : receipt.status === 'reverted' ? 'reverted' : 'pending'
+                status: receipt.status === 'success' ? 'success' as const : receipt.status === 'reverted' ? 'reverted' as const : 'pending' as const
               }
+              
+              return result
             }
           } catch (decodeError) {
             // Skip logs that can't be decoded as Transfer events
@@ -465,7 +479,7 @@ export class BlockchainService {
           this.logger.warn(`Failed to get price for ${token}:`, error.message)
         }
 
-        return {
+        const result = {
           sender: transaction.from,
           receiver: transaction.to,
           amount,
@@ -476,10 +490,12 @@ export class BlockchainService {
           explorerUrl: `${network.explorerBaseUrl}/tx/${txHash}`,
           usdtValue,
           pricePerToken,
-          status: receipt.status === 'success' ? 'success' : receipt.status === 'reverted' ? 'reverted' : 'pending'
+          status: receipt.status === 'success' ? 'success' as const : receipt.status === 'reverted' ? 'reverted' as const : 'pending' as const
         }
+        
+        return result
       }
-
+      
       // If no transfers found, return basic transaction info
       const nativeTokenInfo = this.getNativeTokenInfo(network.chainId)
       const amount = formatUnits(transaction.value, nativeTokenInfo.decimals)
