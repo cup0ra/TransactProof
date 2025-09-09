@@ -18,7 +18,6 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@transactproof/core": ["../../packages/core/src"],
       "@/*": ["./src/*"]
     }
   }
