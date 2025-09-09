@@ -1,14 +1,16 @@
+# Dependencies stage
+FROM node:18-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev
+
 # Build stage
 FROM node:18-alpine AS builder
-
 WORKDIR /app
 
-# Copy package.json and install dependencies
-COPY package.json ./
-COPY package-lock.json* ./
-
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Copy package files and install all dependencies
+COPY package.json package-lock.json* ./
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -20,25 +22,25 @@ RUN npx prisma generate
 RUN npm run build
 
 # Production stage
-FROM node:18-alpine AS production
-
-WORKDIR /app
+FROM node:18-alpine AS runtime
 
 # Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nestjs -u 1001
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001
 
-# Copy built application and dependencies
+WORKDIR /app
+
+# Copy built application and production dependencies
+COPY --from=deps --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/package.json ./
 COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
 
 # Create uploads directory
-RUN mkdir -p uploads && chown nestjs:nodejs uploads
+RUN mkdir -p uploads && chown -R nestjs:nodejs uploads
 
 USER nestjs
 
