@@ -15,6 +15,12 @@ COPY . .
 # Generate Prisma client and build
 RUN npx prisma generate && npm run build
 
+# List files to debug
+RUN echo "=== DEBUG: Listing build results ===" && \
+    find . -name "main.js" -type f && \
+    ls -la && \
+    ls -la ../ 2>/dev/null || echo "No parent directory"
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
@@ -30,4 +36,5 @@ USER nestjs
 EXPOSE 3001
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/main.js"]
+# Try different paths for main.js
+CMD ["sh", "-c", "node dist/main.js || node ../dist/main.js || ls -la && echo 'main.js not found'"]
