@@ -8,17 +8,17 @@ nixPkgs = [
   "curl",
   "gnutar",
   "gzip",
-  "nodejs-18_x",
+  "nodejs_18",
   "chromium",
   "nss",
   "freetype",
   "harfbuzz",
-  "ttf_dejavu"
+  "fontconfig",
+  "dejavu_fonts"
 ]
 
 [variables]
 PUPPETEER_SKIP_DOWNLOAD = "true"
-PUPPETEER_EXECUTABLE_PATH = "/nix/store/bin/chromium"
 NODE_ENV = "production"
 PORT = "3001"
 
@@ -34,4 +34,4 @@ cmds = [
 ]
 
 [phases.start]
-cmd = "node dist/main.js"
+cmd = "export PUPPETEER_EXECUTABLE_PATH=\"$(which chromium)\" && node dist/main.js"
