@@ -1,6 +1,5 @@
-; Nixpacks example config for deploying the API without a Dockerfile on Railway
-; Keep using apps/api/railway.json with DOCKERFILE builder by default.
-; If you want to use Nixpacks instead, switch the builder and rename this file to nixpacks.toml
+; Nixpacks config for deploying the API without a Dockerfile on Railway
+; Place in apps/api and set Root Directory in Railway to apps/api
 
 [phases.setup]
 nixPkgs = [
@@ -35,5 +34,4 @@ cmds = [
 ]
 
 [phases.start]
-cmd = "node apps/api/dist/main.js"
-
+cmd = "node dist/main.js"
