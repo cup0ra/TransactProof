@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
+import * as path from 'path'
 import { ThrottlerModule } from '@nestjs/throttler'
 import { DatabaseModule } from './database/database.module'
 import { AuthModule } from './auth/auth.module'
@@ -10,7 +11,13 @@ import { AppController } from './app.controller'
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      // Load env from compiled dist-relative path and fallbacks
+      envFilePath: [
+        path.join(__dirname, '..', '.env'),
+        path.join(__dirname, '..', '.env.production'),
+        path.join(__dirname, '..', '.env.railway'),
+        '.env',
+      ],
     }),
     ThrottlerModule.forRoot([
       {
