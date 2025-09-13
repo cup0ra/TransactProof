@@ -74,6 +74,7 @@ export class ReceiptsController {
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get receipt by ID' })
   @ApiResponse({ 
     status: 200, 
@@ -90,6 +91,7 @@ export class ReceiptsController {
   }
 
   @Get(':id/pdf')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Download receipt PDF' })
   @ApiResponse({ status: 200, description: 'PDF file' })
   @ApiResponse({ status: 404, description: 'Receipt not found' })
@@ -134,6 +136,7 @@ export class ReceiptsController {
   }
 
   @Get('files/:filename')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Serve PDF files' })
   @ApiResponse({ status: 200, description: 'PDF file served' })
   @ApiResponse({ status: 404, description: 'File not found' })

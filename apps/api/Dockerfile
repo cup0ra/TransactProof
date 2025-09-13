@@ -1,26 +1,39 @@
 FROM node:18-alpine
 
-# Install necessary packages
-RUN apk add --no-cache dumb-init openssl
+# Install necessary packages (Chromium for Puppeteer) and tools
+RUN apk add --no-cache \
+    dumb-init \
+    openssl \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
 
 WORKDIR /app
 
-# Copy package files first for better caching
+# Environment for Puppeteer to use system Chromium
+ENV PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    NODE_ENV=production \
+    PORT=3001
+
+# Copy root package files first for better caching (monorepo)
 COPY package*.json ./
 
-# Install dependencies
+# Install dependencies (root)
 RUN npm ci
 
-# Copy Prisma schema
-COPY prisma ./prisma/
+# Copy Prisma schema into the API workspace and generate client
+COPY apps/api/prisma ./apps/api/prisma/
+RUN npx prisma generate --schema=./apps/api/prisma/schema.prisma
 
-# Generate Prisma client
-RUN npx prisma generate
-
-# Copy all source code
+# Copy repository (monorepo)
 COPY . .
 
-# Build the application
+# Build only the API package
+WORKDIR /app/apps/api
 RUN npm run build
 
 # Verify build
@@ -31,12 +44,13 @@ RUN echo "=== Build Verification ===" && \
     echo "Dist directory contents:" && \
     ls -la dist/ && \
     echo "Main.js check:" && \
-    test -f dist/main.js && echo "✅ Found dist/main.js" || echo "❌ Missing dist/main.js"
+    test -f dist/main.js && echo "✅ Found dist/main.js" || (echo "❌ Missing dist/main.js" && exit 1)
 
 # Create uploads directory
-RUN mkdir -p uploads
+RUN mkdir -p /app/apps/api/uploads && chown -R 1001:1001 /app/apps/api/uploads
 
-# Clean up dev dependencies
+# Clean up dev dependencies (run from repo root)
+WORKDIR /app
 RUN npm prune --production
 
 # Create non-root user
@@ -48,11 +62,8 @@ USER nestjs
 
 EXPOSE 3001
 
-# Set environment defaults
-ENV NODE_ENV=production
-ENV PORT=3001
-
 ENTRYPOINT ["dumb-init", "--"]
 
-# Simple startup with debugging
-CMD ["sh", "-c", "echo 'Starting container...' && pwd && ls -la dist/ && node dist/main.js"]
+# Start API
+WORKDIR /app/apps/api
+CMD ["node", "dist/main.js"]

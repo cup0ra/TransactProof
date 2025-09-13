@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false)
   const [initialCheckDone, setInitialCheckDone] = useState(false)
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
   // Единственный useEffect для инициализации
   useEffect(() => {
@@ -166,7 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           statement: 'Sign in to TransactProof to generate PDF receipts',
           uri: window.location.origin,
           version: '1',
-          chainId: 84532, // Base Sepolia
+          chainId: Number(process.env.NEXT_PUBLIC_BASE_CHAIN_ID || 8453),
           nonce: nonce,
           issuedAt: new Date().toISOString(),
           expirationTime: new Date(Date.now() + 5 * 60 * 1000).toISOString(),

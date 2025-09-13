@@ -76,7 +76,7 @@ npm run dev
    - JWT токены в HttpOnly cookies
 
 2. **Генерация чеков**
-   - Оплата 1 USDT на Base
+   - Оплата 0.0000001 ETH на сети Base на сервисный адрес
    - Получение деталей транзакции
    - Генерация PDF чека
 
@@ -106,7 +106,7 @@ PORT=3001
 DATABASE_URL=postgresql://user:pass@localhost:5432/transactproof
 JWT_SECRET=your-jwt-secret
 ALCHEMY_BASE_RPC=https://base-mainnet.g.alchemy.com/v2/API_KEY
-SERVICE_USDT_ADDRESS=0x...
+SERVICE_ETH_ADDRESS=0x...
 USDT_CONTRACT=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
 ```
 
@@ -123,6 +123,13 @@ NEXT_PUBLIC_ALCHEMY_ID=your-alchemy-id
 - JWT с HttpOnly + Secure + SameSite cookies
 - Rate limiting на критичных endpoints
 - Валидация всех входных данных через zod
+
+## Примечания по оплате
+
+- Бэкенд проверяет входящий перевод ETH (0.0000001 ETH) на ваш сервисный адрес в сети Base.
+- Настройте переменные окружения:
+  - `SERVICE_ETH_ADDRESS` — адрес получения платежей ETH.
+- Для тестовой сети используйте Base Sepolia и соответствующий chainId (`NEXT_PUBLIC_BASE_CHAIN_ID`, `BASE_CHAIN_ID`).
 
 ## Лицензия
 

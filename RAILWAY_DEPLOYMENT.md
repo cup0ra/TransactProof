@@ -70,7 +70,7 @@ railway variables set THROTTLE_LIMIT=100
 3. **Verify Deployment**
    ```bash
    railway logs
-   curl https://your-app.railway.app/api/api/health
+  curl https://your-app.railway.app/api/health
    ```
 
 ## Troubleshooting
@@ -131,3 +131,6 @@ railway logs
 # Connect to database
 railway connect
 ```
+
+### Puppeteer / Chromium issues
+If PDF generation fails on Railway, ensure your Docker image (or Nixpacks config) installs system Chromium and that env var `PUPPETEER_EXECUTABLE_PATH` points to it (Dockerfile in `apps/api` already does this). Also verify `NODE_ENV=production` and that server has permission to write `/app/apps/api/uploads`.

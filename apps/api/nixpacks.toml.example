@@ -1,0 +1,39 @@
+; Nixpacks example config for deploying the API without a Dockerfile on Railway
+; Keep using apps/api/railway.json with DOCKERFILE builder by default.
+; If you want to use Nixpacks instead, switch the builder and rename this file to nixpacks.toml
+
+[phases.setup]
+nixPkgs = [
+  "bash",
+  "coreutils",
+  "curl",
+  "gnutar",
+  "gzip",
+  "nodejs-18_x",
+  "chromium",
+  "nss",
+  "freetype",
+  "harfbuzz",
+  "ttf_dejavu"
+]
+
+[variables]
+PUPPETEER_SKIP_DOWNLOAD = "true"
+PUPPETEER_EXECUTABLE_PATH = "/nix/store/bin/chromium"
+NODE_ENV = "production"
+PORT = "3001"
+
+[phases.install]
+cmds = [
+  "npm ci",
+  "npx prisma generate --schema=./apps/api/prisma/schema.prisma"
+]
+
+[phases.build]
+cmds = [
+  "npm --prefix apps/api run build"
+]
+
+[phases.start]
+cmd = "node apps/api/dist/main.js"
+

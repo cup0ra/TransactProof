@@ -40,7 +40,7 @@ if [ ! -f "railway.json" ]; then
     "startCommand": "node dist/main.js",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,
-    "healthcheckPath": "/api/api/health",
+    "healthcheckPath": "/api/health",
     "healthcheckTimeout": 30
   }
 }

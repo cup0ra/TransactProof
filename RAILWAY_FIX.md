@@ -76,7 +76,7 @@ require('crypto').randomBytes(64).toString('base64')
 
 После деплоя проверьте:
 1. Логи в Railway должны показать успешный запуск
-2. Health check должен отвечать: `https://your-app.railway.app/api/api/health`
+2. Health check должен отвечать: `https://your-app.railway.app/api/health`
 
 ## 📋 Checklist:
 

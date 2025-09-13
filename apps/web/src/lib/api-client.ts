@@ -3,7 +3,7 @@
  */
 
 export class ApiClient {
-  private static baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
+  private static baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
   
   static async fetch(url: string, options: RequestInit = {}) {
     const fullUrl = url.startsWith('http') ? url : `${this.baseUrl}${url}`

@@ -15,8 +15,8 @@ export class AuthController {
   @UseGuards(ThrottlerGuard)
   @ApiOperation({ summary: 'Generate nonce for SIWE' })
   @ApiResponse({ status: 200, description: 'Nonce generated successfully' })
-  async getNonce(@Body('walletAddress') walletAddress: string) {
-    return this.authService.generateNonce(walletAddress)
+  async getNonce() {
+    return this.authService.generateNonce()
   }
 
   @Post('verify')

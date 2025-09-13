@@ -1,5 +1,5 @@
--- Initialize database
-CREATE DATABASE IF NOT EXISTS transactproof;
+-- Initialize database (runs only on first init)
+CREATE DATABASE transactproof;
 
 -- Create user if not exists
 DO $$

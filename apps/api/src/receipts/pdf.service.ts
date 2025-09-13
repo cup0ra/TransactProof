@@ -452,10 +452,11 @@ export class PdfService {
       // Save PDF file locally
       fs.writeFileSync(filePath, pdfBuffer)
 
-      // Return local URL
-      const baseUrl = this.configService.get('CORS_ORIGIN', 'http://localhost:3000')
-      const apiPort = this.configService.get('PORT', '3002')
-      const pdfUrl = `http://localhost:${apiPort}/api/receipts/files/${fileName}`
+      // Return local/public URL
+      const apiPublicUrl = this.configService.get('API_PUBLIC_URL')
+      const apiPort = this.configService.get('PORT', '3001')
+      const baseUrl = apiPublicUrl || `http://localhost:${apiPort}`
+      const pdfUrl = `${baseUrl}/api/receipts/files/${fileName}`
 
       this.logger.log(`PDF saved locally: ${filePath}`)
       this.logger.log(`PDF URL: ${pdfUrl}`)

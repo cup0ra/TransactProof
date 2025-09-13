@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { createPublicClient, http, parseAbi, formatUnits, PublicClient, decodeEventLog } from 'viem'
+import { createPublicClient, http, parseAbi, parseAbiItem, formatUnits, PublicClient, decodeEventLog } from 'viem'
 import { mainnet, base, baseSepolia, polygon, arbitrum, optimism } from 'viem/chains'
 import { PriceService } from './price.service'
 
@@ -60,6 +60,7 @@ export class BlockchainService {
   private readonly networks: Map<string, NetworkConfig> = new Map()
   private readonly usdtContract: string
   private readonly serviceAddress: string
+  private readonly serviceUsdtAddress?: string
 
   constructor(
     private readonly configService: ConfigService,
@@ -68,6 +69,7 @@ export class BlockchainService {
   ) {
     this.usdtContract = configService.get('USDT_CONTRACT')
     this.serviceAddress = configService.get('SERVICE_ETH_ADDRESS')
+    this.serviceUsdtAddress = configService.get('SERVICE_USDT_ADDRESS') || this.serviceAddress
     
     // Initialize all supported networks
     this.initializeNetworks()
@@ -267,6 +269,63 @@ export class BlockchainService {
       return false
     } catch (error) {
       this.logger.error('Error verifying ETH payment:', error)
+      return false
+    }
+  }
+
+  async verifyUSDTPayment(fromAddress: string, minAmount: number = 1): Promise<boolean> {
+    try {
+      const baseChainId = parseInt(this.configService.get('BASE_CHAIN_ID') || '8453')
+      const network = this.networks.get(baseChainId.toString())
+
+      if (!network || !network.client) {
+        this.logger.error(`Base network client not available for chainId ${baseChainId}`)
+        return false
+      }
+
+      if (!this.usdtContract) {
+        this.logger.error('USDT_CONTRACT not configured')
+        return false
+      }
+
+      if (!this.serviceUsdtAddress) {
+        this.logger.error('SERVICE_USDT_ADDRESS or SERVICE_ETH_ADDRESS not configured')
+        return false
+      }
+
+      const client = network.client
+      const currentBlock = await client.getBlockNumber()
+      const lookback = BigInt(5_000) // ~5000 blocks
+      const fromBlock = currentBlock > lookback ? currentBlock - lookback : 0n
+
+      const transferEvent = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
+
+      // Filter by indexed args (from, to)
+      const logs = await client.getLogs({
+        address: this.usdtContract as `0x${string}`,
+        event: transferEvent,
+        fromBlock,
+        toBlock: currentBlock,
+        args: {
+          from: fromAddress as `0x${string}`,
+          to: this.serviceUsdtAddress as `0x${string}`,
+        },
+      })
+
+      const minUnits = BigInt(Math.round(minAmount * 1_000_000)) // USDT has 6 decimals
+
+      for (const log of logs) {
+        const value = (log as any).args?.value as bigint | undefined
+        if (typeof value === 'bigint' && value >= minUnits) {
+          this.logger.log(`USDT payment verified: from ${fromAddress} to ${this.serviceUsdtAddress} value=${value}`)
+          return true
+        }
+      }
+
+      this.logger.warn(`USDT payment not found: from ${fromAddress} to ${this.serviceUsdtAddress} >= ${minAmount} USDT`)
+      return false
+    } catch (error) {
+      this.logger.error('Error verifying USDT payment:', error)
       return false
     }
   }
