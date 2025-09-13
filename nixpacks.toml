@@ -16,13 +16,12 @@ nixPkgs = [
 
 [variables]
 PUPPETEER_SKIP_DOWNLOAD = "true"
-NODE_ENV = "production"
 PORT = "3001"
 
 [phases.install]
 cmds = [
-  "cd apps/api && npm ci || npm install",
-  "cd apps/api && npx prisma generate --schema=./prisma/schema.prisma"
+  "npm ci",
+  "npx prisma generate --schema=./apps/api/prisma/schema.prisma"
 ]
 
 [phases.build]
