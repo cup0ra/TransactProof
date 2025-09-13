@@ -40,8 +40,13 @@ USER nestjs
 # Expose port
 EXPOSE 3001
 
+# Set default environment variables (will be overridden by Railway)
+ENV NODE_ENV=production
+ENV PORT=3001
+ENV JWT_SECRET=fallback-secret-will-be-overridden-by-railway
+
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
 
 # Start the application with explicit path verification
-CMD ["sh", "-c", "echo 'Starting app from:' && pwd && ls -la dist/ && node dist/main.js"]
+CMD ["sh", "-c", "echo 'Starting app from:' && pwd && echo 'Environment check:' && echo 'NODE_ENV='$NODE_ENV && echo 'JWT_SECRET exists:' && test -n \"$JWT_SECRET\" && echo 'YES' || echo 'NO' && ls -la dist/ && node dist/main.js"]
