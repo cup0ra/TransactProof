@@ -20,6 +20,7 @@
     },
     "start:prod": {
       "dependsOn": ["build"],
+             "env": ["JWT_SECRET", "NODE_ENV", "DATABASE_URL", "SIWE_DOMAIN", "CORS_ORIGIN", "SERVICE_ETH_ADDRESS", "USDT_CONTRACT", "PORT"],
       "cache": false
     },
     "dev": {
