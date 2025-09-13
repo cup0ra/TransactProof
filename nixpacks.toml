@@ -30,4 +30,4 @@ cmds = [
 ]
 
 [phases.start]
-cmd = "cd apps/api && export PUPPETEER_EXECUTABLE_PATH=\"$(which chromium)\" && npx prisma migrate deploy && node dist/main.js"
+cmd = "cd apps/api && export PUPPETEER_EXECUTABLE_PATH=\"$(which chromium)\" && sh ./scripts/prestart.sh && npx prisma migrate deploy && node dist/main.js"
