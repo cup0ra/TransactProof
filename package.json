@@ -18,6 +18,7 @@
     "start:web": "turbo run start --filter=@transactproof/web",
     "dev:api": "turbo run dev --filter=@transactproof/api --parallel",
     "dev:web": "turbo run dev --filter=@transactproof/web --parallel",
+    "start:api:prod": "turbo run start:prod --filter=@transactproof/api",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "clean": "turbo run clean",

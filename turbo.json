@@ -1,26 +1,35 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
+  "globalDependencies": [
+    "**/.env*",
+    "apps/api/prisma/schema.prisma"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "dist/**"
+      ]
+    },
+          "build:api": {
+      "dependsOn": ["^build"],
+       "env": ["JWT_SECRET", "NODE_ENV", "DATABASE_URL", "SIWE_DOMAIN", "CORS_ORIGIN", "SERVICE_ETH_ADDRESS", "USDT_CONTRACT", "PORT"],
+      "outputs": ["dist/**"]
+    },
+    "start:prod": {
+      "dependsOn": ["build"],
+      "cache": false
     },
     "dev": {
       "cache": false,
       "persistent": true
     },
     "start": {
-      "dependsOn": ["build"]
-    },
-    "lint": {
-      "outputs": []
-    },
-    "test": {
-      "outputs": []
-    },
-    "clean": {
-      "cache": false
+      "dependsOn": ["build"],
+      "cache": false,
+      "persistent": true
     }
   }
 }
