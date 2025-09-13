@@ -5,48 +5,54 @@ RUN apk add --no-cache dumb-init openssl
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files first for better caching
 COPY package*.json ./
-COPY prisma ./prisma/
 
-# Install all dependencies (needed for build)
+# Install dependencies
 RUN npm ci
 
-# Copy source code
+# Copy Prisma schema
+COPY prisma ./prisma/
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Copy all source code
 COPY . .
 
-# Generate Prisma client and build application
-RUN npx prisma generate && \
-    npm run build && \
-    echo "=== Build verification ===" && \
+# Build the application
+RUN npm run build
+
+# Verify build
+RUN echo "=== Build Verification ===" && \
+    pwd && \
+    echo "Current directory contents:" && \
     ls -la && \
+    echo "Dist directory contents:" && \
     ls -la dist/ && \
-    test -f dist/main.js && echo "✅ main.js found at $(pwd)/dist/main.js" || echo "❌ main.js missing"
+    echo "Main.js check:" && \
+    test -f dist/main.js && echo "✅ Found dist/main.js" || echo "❌ Missing dist/main.js"
+
+# Create uploads directory
+RUN mkdir -p uploads
+
+# Clean up dev dependencies
+RUN npm prune --production
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001
-
-# Create uploads directory with proper permissions
-RUN mkdir -p uploads && \
+    adduser -S nestjs -u 1001 && \
     chown -R nestjs:nodejs /app
 
-# Remove dev dependencies to reduce image size
-RUN npm prune --production
-
-# Switch to non-root user
 USER nestjs
 
-# Expose port
 EXPOSE 3001
 
-# Set default environment variables (will be overridden by Railway)
+# Set environment defaults
 ENV NODE_ENV=production
 ENV PORT=3001
-ENV JWT_SECRET=fallback-secret-will-be-overridden-by-railway
 
-# Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the application with explicit path verification
-CMD ["sh", "-c", "echo 'Starting app from:' && pwd && echo 'Environment check:' && echo 'NODE_ENV='$NODE_ENV && echo 'JWT_SECRET exists:' && test -n \"$JWT_SECRET\" && echo 'YES' || echo 'NO' && ls -la dist/ && node dist/main.js"]
+# Simple startup with debugging
+CMD ["sh", "-c", "echo 'Starting container...' && pwd && ls -la dist/ && node dist/main.js"]
