@@ -166,7 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           statement: 'Sign in to TransactProof to generate PDF receipts',
           uri: window.location.origin,
           version: '1',
-          chainId: Number(process.env.NEXT_PUBLIC_BASE_CHAIN_ID || 8453),
+          chainId: Number(process.env.NEXT_PUBLIC_BASE_CHAIN_ID || 84532),
           nonce: nonce,
           issuedAt: new Date().toISOString(),
           expirationTime: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
