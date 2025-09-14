@@ -11,13 +11,6 @@ import { AppController } from './app.controller'
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      // Load env from compiled dist-relative path and fallbacks
-      envFilePath: [
-        path.join(__dirname, '..', '.env'),
-        path.join(__dirname, '..', '.env.production'),
-        path.join(__dirname, '..', '.env.railway'),
-        '.env',
-      ],
     }),
     ThrottlerModule.forRoot([
       {
