@@ -227,7 +227,8 @@ export class BlockchainService {
     try {
       // Look for recent ETH transfers to service address from user
       const currentBlock = await this.publicClient.getBlockNumber()
-      const fromBlock = currentBlock - BigInt(100) // Look back fewer blocks for efficiency
+      this.logger.log(`Current block number: ${currentBlock}`)
+      const fromBlock = currentBlock - BigInt(5_000)  // Look back fewer blocks for efficiency
       
       this.logger.log(`Checking blocks ${fromBlock} to ${currentBlock} for ETH payment`)
 

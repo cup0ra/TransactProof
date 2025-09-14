@@ -13,14 +13,54 @@
         "dist/**"
       ]
     },
-          "build:api": {
+    "build:api": {
       "dependsOn": ["^build"],
-       "env": ["JWT_SECRET", "NODE_ENV", "DATABASE_URL", "SIWE_DOMAIN", "CORS_ORIGIN", "SERVICE_ETH_ADDRESS", "USDT_CONTRACT", "PORT"],
+       "env": [
+        "JWT_SECRET",
+        "NODE_ENV",
+        "DATABASE_URL",
+        "SIWE_DOMAIN",
+        "CORS_ORIGIN",
+        "SERVICE_ETH_ADDRESS",
+        "USDT_CONTRACT",
+        "PORT",
+        "SESSION_COOKIE_NAME",
+        "SESSION_TTL_MIN",
+        "BASE_CHAIN_ID",
+        "ALCHEMY_BASE_RPC",
+        "ETHEREUM_RPC_URL",
+        "BASE_RPC_URL",
+        "ARBITRUM_RPC_URL",
+        "OPTIMISM_RPC_URL",
+        "POLYGON_RPC_URL",
+        "THROTTLE_TTL",
+        "THROTTLE_LIMIT"
+        ],
       "outputs": ["dist/**"]
     },
     "start:prod": {
       "dependsOn": ["build"],
-             "env": ["JWT_SECRET", "NODE_ENV", "DATABASE_URL", "SIWE_DOMAIN", "CORS_ORIGIN", "SERVICE_ETH_ADDRESS", "USDT_CONTRACT", "PORT"],
+      "env": [
+        "JWT_SECRET",
+        "NODE_ENV",
+        "DATABASE_URL",
+        "SIWE_DOMAIN",
+        "CORS_ORIGIN",
+        "SERVICE_ETH_ADDRESS",
+        "USDT_CONTRACT",
+        "PORT",
+        "SESSION_COOKIE_NAME",
+        "SESSION_TTL_MIN",
+        "BASE_CHAIN_ID",
+        "ALCHEMY_BASE_RPC",
+        "ETHEREUM_RPC_URL",
+        "BASE_RPC_URL",
+        "ARBITRUM_RPC_URL",
+        "OPTIMISM_RPC_URL",
+        "POLYGON_RPC_URL",
+        "THROTTLE_TTL",
+        "THROTTLE_LIMIT"
+        ],
       "cache": false
     },
     "dev": {
