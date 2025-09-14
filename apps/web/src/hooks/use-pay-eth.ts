@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { useAccount, useChainId, useWalletClient } from 'wagmi'
-import { parseEther } from 'viem'
+import { useAccount, useChainId, useWalletClient, usePublicClient } from 'wagmi'
+import { parseEther, formatEther } from 'viem'
+import { formatNumber } from '@/utils/format-numbers'
 
 // Service address for ETH payments
 const SERVICE_ADDRESS = process.env.NEXT_PUBLIC_SERVICE_ETH_ADDRESS || '0x1234567890123456789012345678901234567890'
@@ -13,6 +14,7 @@ export function usePayETH() {
   const { isConnected, address } = useAccount()
   const chainId = useChainId()
   const { data: walletClient } = useWalletClient()
+  const publicClient = usePublicClient()
 
   const payETH = async (amount: number = 0.0000001) => {
     if (!isConnected || !address) {
@@ -22,6 +24,11 @@ export function usePayETH() {
 
     if (!walletClient) {
       toast.error('Wallet client not available. Please reconnect your wallet.')
+      return null
+    }
+
+    if (!publicClient) {
+      toast.error('Public client not available. Please check your connection.')
       return null
     }
 
@@ -42,6 +49,34 @@ export function usePayETH() {
 
     try {
       setIsLoading(true)
+      
+      toast.loading('Checking ETH balance...', { id: 'payment' })
+      
+      // Check ETH balance before attempting transaction
+      try {
+        const balanceRaw = await publicClient.getBalance({
+          address: address,
+        })
+
+        const currentBalance = parseFloat(formatEther(balanceRaw))
+        const gasBuffer = chainId === 1 ? 0.001 : 0.0001 // Mainnet vs L2 networks
+        const totalRequired = amount + gasBuffer
+        
+        console.log('ETH balance check:', {
+          currentBalance,
+          requiredAmount: amount,
+          gasBuffer,
+          totalRequired,
+          hasEnough: currentBalance >= totalRequired
+        })
+        
+        if (currentBalance < totalRequired) {
+          toast.error(`Insufficient ETH balance. You have ${formatNumber(currentBalance, 8)} ETH, but need ${formatNumber(totalRequired, 8)} ETH (including gas).`, { id: 'payment' })
+          return null
+        }
+      } catch (balanceError) {
+        console.warn('Could not check ETH balance, proceeding with transaction:', balanceError)
+      }
       
       toast.loading('Preparing transaction...', { id: 'payment' })
       

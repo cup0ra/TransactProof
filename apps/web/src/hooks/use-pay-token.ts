@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { useAccount, useChainId, useWalletClient } from 'wagmi'
-import { parseUnits, encodeFunctionData } from 'viem'
+import { useAccount, useChainId, useWalletClient, usePublicClient } from 'wagmi'
+import { parseUnits, encodeFunctionData, parseAbi, formatUnits } from 'viem'
+import { formatNumber } from '@/utils/format-numbers'
 
 // Service address for token payments
 const SERVICE_ADDRESS = process.env.NEXT_PUBLIC_SERVICE_ETH_ADDRESS || '0x1234567890123456789012345678901234567890'
@@ -22,11 +23,17 @@ const ERC20_TRANSFER_ABI = [
   }
 ] as const
 
+// ERC20 Balance check ABI
+const ERC20_BALANCE_ABI = parseAbi([
+  'function balanceOf(address owner) view returns (uint256)'
+])
+
 export function usePayToken() {
   const [isLoading, setIsLoading] = useState(false)
   const { isConnected, address } = useAccount()
   const chainId = useChainId()
   const { data: walletClient } = useWalletClient()
+  const publicClient = usePublicClient()
 
   const payToken = async (
     contractAddress: string,
@@ -41,6 +48,11 @@ export function usePayToken() {
 
     if (!walletClient) {
       toast.error('Wallet client not available. Please reconnect your wallet.')
+      return null
+    }
+
+    if (!publicClient) {
+      toast.error('Public client not available. Please check your connection.')
       return null
     }
 
@@ -64,6 +76,35 @@ export function usePayToken() {
 
     try {
       setIsLoading(true)
+      
+      toast.loading(`Checking ${symbol} balance...`, { id: 'payment' })
+      
+      // Check token balance before attempting transaction
+      try {
+        const balanceRaw = await publicClient.readContract({
+          address: contractAddress as `0x${string}`,
+          abi: ERC20_BALANCE_ABI,
+          functionName: 'balanceOf',
+          args: [address],
+        })
+
+        const currentBalance = parseFloat(formatUnits(balanceRaw as bigint, decimals))
+        
+        console.log('Token balance check:', {
+          symbol,
+          currentBalance,
+          requiredAmount: amount,
+          hasEnough: currentBalance >= amount
+        })
+        
+        if (currentBalance < amount) {
+          toast.error(`Insufficient ${symbol} balance. You have ${formatNumber(currentBalance, 6)} ${symbol}, but need ${formatNumber(amount, 6)} ${symbol}.`, { id: 'payment' })
+          return null
+        }
+      } catch (balanceError) {
+        console.warn('Could not check token balance, proceeding with transaction:', balanceError)
+        toast.loading(`Preparing ${symbol} transaction...`, { id: 'payment' })
+      }
       
       toast.loading(`Preparing ${symbol} transaction...`, { id: 'payment' })
       

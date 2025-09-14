@@ -49,12 +49,12 @@ export const APP_CONFIG = {
       symbol: 'USDC',
       name: 'USD Coin',
       contractAddresses: {
-        1: '0xA0b86a33E6351b8B8B53EEbF3C7F65b3e9B5AE8D',     // Ethereum Mainnet
-        8453: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',   // Base Mainnet
-        84532: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',  // Base Sepolia
-        137: '0x2791Bca1f2de4661ED88A30c99A7a9449Aa84174',   // Polygon Mainnet
-        10: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',    // Optimism Mainnet  
-        42161: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', // Arbitrum One
+        1: '0xA0b86a33E6351b8B8B53EEbF3C7F65b3e9B5AE8D',     // Ethereum Mainnet (USDC)
+        8453: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',   // Base Mainnet (USDC)
+        84532: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',  // Base Sepolia (USDC)
+        137: '0x2791Bca1f2de4661ED88A30c99A7a9449Aa84174',   // Polygon Mainnet (USDC - Bridged)
+        10: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',    // Optimism Mainnet (USDC)
+        42161: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', // Arbitrum One (USDC)
       },
       decimals: {
         1: 6,     // Ethereum: 6 decimals
@@ -111,6 +111,21 @@ export function getTokenContractAddress(tokenType: string, chainId: number): str
   
   const contractAddresses = (paymentOption as any).contractAddresses
   return contractAddresses?.[chainId] || null
+}
+
+// Get alternative token contract addresses (for tokens that might have multiple versions)
+export function getAlternativeTokenAddresses(tokenType: string, chainId: number): string[] {
+  // Polygon has multiple USDC versions
+  if (tokenType === 'USDC' && chainId === 137) {
+    return [
+      '0x2791Bca1f2de4661ED88A30c99A7a9449Aa84174', // USDC (Bridged from Ethereum) 
+      '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', // USDC.e (Native USDC)
+    ]
+  }
+  
+  // For other networks, return the primary address
+  const primaryAddress = getTokenContractAddress(tokenType, chainId)
+  return primaryAddress ? [primaryAddress] : []
 }
 
 export function getTokenDecimals(tokenType: string, chainId: number): number {

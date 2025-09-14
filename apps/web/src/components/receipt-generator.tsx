@@ -11,6 +11,10 @@ import { useVerifyTransaction } from '@/hooks/use-verify-transaction'
 import { useAccount, useChainId } from 'wagmi'
 import { globalAuthManager } from '@/utils/global-auth-manager'
 import { APP_CONFIG, getAvailablePaymentOptions, formatPaymentAmount } from '@/config'
+import { useTokenBalance } from '@/hooks/use-token-balance'
+import { useMultiTokenBalance } from '@/hooks/use-multi-token-balance'
+import { useETHBalance } from '@/hooks/use-eth-balance'
+import { formatNumber, formatPaymentAmountDisplay, formatBalanceDisplay } from '@/utils/format-numbers'
 
 const receiptSchema = z.object({
   txHash: z.string().min(66, 'Transaction hash must be 66 characters').max(66, 'Transaction hash must be 66 characters'),
@@ -37,6 +41,34 @@ export function ReceiptGenerator() {
   const { payToken, isLoading: isPaymentTokenLoading } = usePayToken()
   const { generateReceipt, isLoading: isGenerating } = useGenerateReceipt()
   const { verifyTransaction, isVerifying } = useVerifyTransaction()
+
+  // Get balance for selected payment option
+  const { balance: tokenBalance, isLoading: isTokenBalanceLoading, hasInsufficientBalance: hasInsufficientTokenBalance } = useTokenBalance(
+    selectedPayment?.contractAddress || undefined,
+    selectedPayment?.decimals
+  )
+  
+  // Use multi-token balance for better token support (especially on Polygon)
+  const { 
+    balance: multiTokenBalance, 
+    isLoading: isMultiTokenBalanceLoading, 
+    hasInsufficientBalance: hasInsufficientMultiTokenBalance,
+    contractAddress: detectedContractAddress,
+    tokenInfo
+  } = useMultiTokenBalance(
+    selectedPayment?.type || '',
+    selectedPayment?.decimals
+  )
+  
+  const { balance: ethBalance, isLoading: isETHBalanceLoading, hasInsufficientBalance: hasInsufficientETHBalance } = useETHBalance()
+  
+  // Determine which balance and functions to use based on payment type
+  const isETHPayment = selectedPayment?.type === 'ETH'
+  const isTokenPayment = selectedPayment?.type === 'USDT' || selectedPayment?.type === 'USDC'
+  
+  const currentBalance = isETHPayment ? ethBalance : (isTokenPayment ? multiTokenBalance : tokenBalance)
+  const isBalanceLoading = isETHPayment ? isETHBalanceLoading : (isTokenPayment ? isMultiTokenBalanceLoading : isTokenBalanceLoading)
+  const hasInsufficientBalance = isETHPayment ? hasInsufficientETHBalance : (isTokenPayment ? hasInsufficientMultiTokenBalance : hasInsufficientTokenBalance)
 
   const isPaymentLoading = isPaymentETHLoading || isPaymentTokenLoading
 
@@ -132,7 +164,7 @@ export function ReceiptGenerator() {
         }
         
         paymentTxHash = await payToken(
-          selectedPayment.contractAddress,
+          detectedContractAddress || selectedPayment.contractAddress,
           selectedPayment.amount,
           selectedPayment.symbol,
           selectedPayment.decimals
@@ -244,7 +276,7 @@ export function ReceiptGenerator() {
       <div className="text-center mb-12">
         <h2 className="text-xl font-light text-black dark:text-white mb-4 tracking-wide transition-colors duration-300">Generate Transaction Receipt</h2>
         <p className="text-gray-600 dark:text-gray-400 text-sm font-light leading-relaxed transition-colors duration-300">
-          Enter your transaction hash and pay {formatPaymentAmount(selectedPayment.amount)} {selectedPayment.symbol} to generate a verified PDF receipt
+          Enter your transaction hash and pay {formatPaymentAmountDisplay(selectedPayment.amount)} {selectedPayment.symbol} to generate a verified PDF receipt
         </p>
       </div>
 
@@ -318,7 +350,7 @@ export function ReceiptGenerator() {
                         : 'border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600'
                     }`}
                   >
-                    <div className="font-medium">{formatPaymentAmount(option.amount)} {option.symbol}</div>
+                    <div className="font-medium">{formatPaymentAmountDisplay(option.amount)} {option.symbol}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{option.name}</div>
                     <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">on {option.networkName}</div>
                   </button>
@@ -331,6 +363,47 @@ export function ReceiptGenerator() {
               )}
             </div>
             
+            {/* Balance Display */}
+            {selectedPayment && (
+              <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  Your {selectedPayment.symbol} Balance
+                  {isTokenPayment && tokenInfo && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {tokenInfo.name} ({tokenInfo.symbol})
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center justify-center space-x-2">
+                  {isBalanceLoading ? (
+                    <div className="w-4 h-4 border border-orange-400 border-t-transparent animate-spin"></div>
+                  ) : (
+                    <>
+                      <span className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                        {formatBalanceDisplay(currentBalance, isETHPayment)} {selectedPayment.symbol}
+                      </span>
+                      {hasInsufficientBalance(selectedPayment.amount) && (
+                        <span className="ml-2 px-2 py-1 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs rounded">
+                          Insufficient Balance
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+                {!isBalanceLoading && hasInsufficientBalance(selectedPayment.amount) && (
+                  <div className="mt-2 text-xs text-red-600 dark:text-red-400">
+                    You need {formatPaymentAmountDisplay(selectedPayment.amount)} {selectedPayment.symbol} but only have {formatBalanceDisplay(currentBalance, isETHPayment)} {selectedPayment.symbol}
+                    {isETHPayment && <span className="block mt-1">(Plus gas fees)</span>}
+                  </div>
+                )}
+                {isTokenPayment && detectedContractAddress && (
+                  <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Contract: {detectedContractAddress.slice(0, 6)}...{detectedContractAddress.slice(-4)}
+                  </div>
+                )}
+              </div>
+            )}
+            
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
@@ -342,10 +415,23 @@ export function ReceiptGenerator() {
               <button
                 type="button"
                 onClick={handlePayment}
-                disabled={isPaymentLoading}
-                className="btn-primary-minimal text-xs py-3 disabled:opacity-50"
+                disabled={
+                  isPaymentLoading || 
+                  hasInsufficientBalance(selectedPayment?.amount || 0)
+                }
+                className={`text-xs py-3 transition-all duration-300 ${
+                  isPaymentLoading || 
+                  hasInsufficientBalance(selectedPayment?.amount || 0)
+                    ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-gray-300 dark:border-gray-700'
+                    : 'btn-primary-minimal'
+                }`}
               >
-                {isPaymentLoading ? 'Processing...' : `Pay ${formatPaymentAmount(selectedPayment.amount)} ${selectedPayment.symbol}`}
+                {isPaymentLoading 
+                  ? 'Processing...' 
+                  : hasInsufficientBalance(selectedPayment?.amount || 0)
+                    ? `Insufficient ${selectedPayment?.symbol} Balance`
+                    : `Pay ${formatPaymentAmountDisplay(selectedPayment.amount)} ${selectedPayment.symbol}`
+                }
               </button>
             </div>
           </div>
