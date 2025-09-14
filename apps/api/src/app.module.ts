@@ -11,6 +11,10 @@ import { AppController } from './app.controller'
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: [
+        path.join(__dirname, '..', '.env'),
+        '.env',
+      ],
     }),
     ThrottlerModule.forRoot([
       {
