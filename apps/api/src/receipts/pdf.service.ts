@@ -27,10 +27,64 @@ export class PdfService {
   constructor(private readonly configService: ConfigService) {}
 
   async generateReceiptPdf(data: ReceiptData): Promise<Buffer> {
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    })
+    this.logger.log('🚀 Starting PDF generation process...')
+    
+    // Browser configuration for Railway deployment
+    const browserConfig: puppeteer.LaunchOptions = {
+      headless: true, // Use headless mode
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-features=TranslateUI',
+        '--disable-extensions',
+        '--disable-default-apps',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor'
+      ],
+      timeout: 30000, // 30 seconds timeout
+    }
+
+    // Log environment variables for debugging
+    this.logger.log(`Environment variables:`)
+    this.logger.log(`- PUPPETEER_EXECUTABLE_PATH: ${process.env.PUPPETEER_EXECUTABLE_PATH || 'not set'}`)
+    this.logger.log(`- PUPPETEER_SKIP_DOWNLOAD: ${process.env.PUPPETEER_SKIP_DOWNLOAD || 'not set'}`)
+    this.logger.log(`- CHROME_BIN: ${process.env.CHROME_BIN || 'not set'}`)
+    this.logger.log(`- NODE_ENV: ${process.env.NODE_ENV || 'not set'}`)
+
+    // Use system Chrome/Chromium if available (Railway deployment)
+    const puppeteerExecutablePath = process.env.PUPPETEER_EXECUTABLE_PATH
+    if (puppeteerExecutablePath) {
+      browserConfig.executablePath = puppeteerExecutablePath
+      this.logger.log(`Using system browser: ${puppeteerExecutablePath}`)
+      
+      // Check if executable exists
+      const fs = require('fs')
+      if (!fs.existsSync(puppeteerExecutablePath)) {
+        this.logger.error(`❌ Browser executable not found at: ${puppeteerExecutablePath}`)
+        throw new Error(`Browser executable not found at: ${puppeteerExecutablePath}`)
+      }
+    } else {
+      this.logger.warn('No PUPPETEER_EXECUTABLE_PATH found, using default Puppeteer browser')
+    }
+
+    let browser: puppeteer.Browser
+    try {
+      browser = await puppeteer.launch(browserConfig)
+      this.logger.log('✅ Browser launched successfully')
+    } catch (error) {
+      this.logger.error('❌ Failed to launch browser with Puppeteer:', error)
+      this.logger.error('� Browser config used:', JSON.stringify(browserConfig, null, 2))
+      throw new Error(`Failed to launch browser: ${error.message}`)
+    }
 
     try {
       const page = await browser.newPage()

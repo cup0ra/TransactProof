@@ -11,11 +11,14 @@ WORKDIR /app
 
 # System deps for building and Prisma
 RUN apk add --no-cache bash python3 make g++ \
-    chromium nss freetype harfbuzz ca-certificates ttf-freefont
+    chromium nss freetype harfbuzz ca-certificates ttf-freefont \
+    && rm -rf /var/cache/apk/*
 
 # Use system Chromium for Puppeteer
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    PUPPETEER_DISABLE_HEADLESS_WARNING=true \
+    CHROME_BIN=/usr/bin/chromium-browser \
     NODE_ENV=production \
     PORT=3001
 
@@ -46,19 +49,22 @@ WORKDIR /app
 
 # System deps for Puppeteer runtime
 RUN apk add --no-cache dumb-init \
-    chromium nss freetype harfbuzz ca-certificates ttf-freefont
+    chromium nss freetype harfbuzz ca-certificates ttf-freefont \
+    && rm -rf /var/cache/apk/*
 
 ENV NODE_ENV=production \
     PORT=3001 \
     PUPPETEER_SKIP_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    PUPPETEER_DISABLE_HEADLESS_WARNING=true \
+    CHROME_BIN=/usr/bin/chromium-browser
 
 # Copy production node_modules, dist and prisma from builder
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY apps/api/scripts ./scripts
-RUN chmod +x ./scripts/prestart.sh || true
+RUN chmod +x ./scripts/prestart.sh ./scripts/check-browser.js || true
 
 # Prepare uploads dir (ephemeral)
 RUN mkdir -p /app/uploads && chown -R 1001:1001 /app/uploads

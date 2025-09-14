@@ -15,5 +15,9 @@ if [ "$missing" -eq 1 ]; then
   exit 1
 fi
 
+# Check browser setup
+echo "🔍 Checking browser setup..."
+node ./scripts/check-browser.js
+
 exit 0
 
