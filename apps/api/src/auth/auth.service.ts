@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common'
+import { Injectable, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { ConfigService } from '@nestjs/config'
 import { SiweMessage } from 'siwe'
@@ -8,6 +8,8 @@ import { randomBytes } from 'crypto'
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name)
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
@@ -112,20 +114,29 @@ export class AuthService {
   }
 
   async validateJwtPayload(payload: any) {
-    // Check if session exists and is valid
-    const session = await this.prisma.session.findUnique({
-      where: { jwtId: payload.jti },
-      include: { user: true },
-    })
+    try {
+      // Check if session exists and is valid
+      const session = await this.prisma.session.findUnique({
+        where: { jwtId: payload.jti },
+        include: { user: true },
+      })
 
-    if (!session || session.expiresAt < new Date()) {
-      throw new UnauthorizedException('Session expired')
-    }
+      if (!session || session.expiresAt < new Date()) {
+        this.logger.warn(`Invalid or expired session for jwtId: ${payload.jti}`)
+        throw new UnauthorizedException('Session expired')
+      }
 
-    return {
-      id: session.user.id,
-      walletAddress: session.user.walletAddress,
-      jwtId: payload.jti,
+      return {
+        id: session.user.id,
+        walletAddress: session.user.walletAddress,
+        jwtId: payload.jti,
+      }
+    } catch (error) {
+      this.logger.error(`JWT validation failed: ${error.message}`, error.stack)
+      if (error instanceof UnauthorizedException) {
+        throw error
+      }
+      throw new UnauthorizedException('Invalid session')
     }
   }
 

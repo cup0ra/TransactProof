@@ -15,11 +15,13 @@ async function bootstrap() {
   app.use(helmet())
   
   // CORS
+  const corsOrigin = configService.get('CORS_ORIGIN')
   app.enableCors({
-    origin: configService.get('CORS_ORIGIN'),
-    credentials: true,
+    origin: corsOrigin || true, // Allow all origins if not specified
+    credentials: true, // Critical for cookies in cross-origin requests
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    exposedHeaders: ['Set-Cookie'],
   })
 
   // Cookies

@@ -50,6 +50,9 @@ railway variables set USDT_CONTRACT="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 railway variables set SIWE_DOMAIN="your-domain.com"
 railway variables set CORS_ORIGIN="https://your-frontend-domain.com"
 
+# Cookie settings for cross-domain (only if API and frontend on different domains)
+railway variables set COOKIE_DOMAIN=".yourdomain.com"
+
 # Rate Limiting
 railway variables set THROTTLE_TTL=60
 railway variables set THROTTLE_LIMIT=100

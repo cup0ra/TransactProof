@@ -30,21 +30,42 @@ export class AuthController {
   ) {
     const result = await this.authService.verifySiweMessage(verifyDto)
     
-    // Set JWT cookie
-    response.cookie(
-      process.env.SESSION_COOKIE_NAME || 'tp_session',
-      result.accessToken,
-      {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: parseInt(process.env.SESSION_TTL_MIN || '30') * 60 * 1000,
-      },
-    )
+    const isProduction = process.env.NODE_ENV === 'production'
+    const cookieName = process.env.SESSION_COOKIE_NAME || 'tp_session'
+    
+    // Set JWT cookie with proper cross-domain settings
+    const cookieOptions = {
+      httpOnly: true,
+      secure: isProduction, // Only HTTPS in production
+      sameSite: isProduction ? 'none' as const : 'lax' as const, // 'none' allows cross-domain
+      maxAge: parseInt(process.env.SESSION_TTL_MIN || '30') * 60 * 1000,
+      ...(isProduction && process.env.COOKIE_DOMAIN && { domain: process.env.COOKIE_DOMAIN }),
+    }
+    
+    response.cookie(cookieName, result.accessToken, cookieOptions)
 
     return {
       walletAddress: result.user.walletAddress,
       expiresAt: result.expiresAt,
+      // Also return token in response for debugging/alternative auth
+      ...(process.env.NODE_ENV !== 'production' && { accessToken: result.accessToken }),
+    }
+  }
+
+  @Get('debug/cookies')
+  @ApiOperation({ summary: 'Debug endpoint to check cookies (remove in production)' })
+  @ApiResponse({ status: 200, description: 'Cookie debug info' })
+  async debugCookies(@Req() req: Request) {
+    return {
+      cookies: req.cookies,
+      headers: {
+        cookie: req.headers.cookie,
+        authorization: req.headers.authorization,
+        origin: req.headers.origin,
+        referer: req.headers.referer,
+      },
+      sessionCookieName: process.env.SESSION_COOKIE_NAME || 'tp_session',
+      nodeEnv: process.env.NODE_ENV,
     }
   }
 
@@ -69,7 +90,15 @@ export class AuthController {
   ) {
     await this.authService.invalidateSession(req.user.jwtId)
     
-    response.clearCookie(process.env.SESSION_COOKIE_NAME || 'tp_session')
+    const isProduction = process.env.NODE_ENV === 'production'
+    const cookieName = process.env.SESSION_COOKIE_NAME || 'tp_session'
+    
+    response.clearCookie(cookieName, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      domain: isProduction ? process.env.COOKIE_DOMAIN : undefined,
+    })
     
     return { message: 'Logout successful' }
   }
