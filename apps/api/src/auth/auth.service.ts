@@ -49,7 +49,7 @@ export class AuthService {
         throw new UnauthorizedException('Invalid domain')
       }
 
-      if (siweMessage.chainId !== parseInt(this.configService.get('BASE_CHAIN_ID'))) {
+      if (siweMessage.chainId !== this.configService.get('BASE_CHAIN_ID', 84532)) {
         throw new UnauthorizedException('Invalid chain ID')
       }
 
