@@ -28,7 +28,7 @@ export class ReceiptsService {
     userAddress?: string,
     userId?: string,
   ) {
-    const { txHash, description } = payAndGenerateDto
+    const { txHash, description, paymentTxHash, paymentAmount, paymentType, paymentContractAddress } = payAndGenerateDto
 
     // 1. Verify transaction exists in supported networks before processing payment
     this.logger.log(`Verifying transaction ${txHash} exists in supported networks...`)
@@ -42,16 +42,59 @@ export class ReceiptsService {
 
     this.logger.log(`Transaction ${txHash} verified - found in supported networks`)
 
-    // 2. Verify ETH payment (0.0000001 ETH to service address)
+    // 2. Verify payment (dynamic amount and type from UI, fallback to ETH)
     if (userAddress) {
-      const paymentVerified = await this.blockchainService.verifyETHPayment(
-        userAddress,
-        0.0000001, // 0.0000001 ETH
-      )
+      const expectedPaymentAmount = paymentAmount || 0.0000001 // Default fallback
+      const paymentTokenType = paymentType || 'ETH' // Default to ETH
+      let paymentVerified = false
+      
+      if (paymentTxHash) {
+        // Use efficient hash-based verification if payment hash is provided
+        this.logger.log(`Verifying ${paymentTokenType} payment using transaction hash: ${paymentTxHash} for amount: ${expectedPaymentAmount}`)
+        
+        if (paymentTokenType === 'ETH') {
+          paymentVerified = await this.blockchainService.verifyETHPaymentByHash(
+            paymentTxHash,
+            userAddress,
+            expectedPaymentAmount
+          )
+        } else if ((paymentTokenType === 'USDT' || paymentTokenType === 'USDC') && paymentContractAddress) {
+          // For token payments, use the new token verification method
+          paymentVerified = await this.blockchainService.verifyTokenPaymentByHash(
+            paymentTxHash,
+            userAddress,
+            paymentContractAddress,
+            expectedPaymentAmount,
+            paymentTokenType,
+            6 // USDT/USDC typically have 6 decimals
+          )
+        } else {
+          this.logger.error(`Unsupported payment type: ${paymentTokenType} or missing contract address`)
+          throw new BadRequestException(`Unsupported payment type: ${paymentTokenType}`)
+        }
+      } else {
+        // Fallback to old method if no payment hash provided (for backward compatibility)
+        this.logger.log(`Using fallback payment verification method for ${paymentTokenType}: ${expectedPaymentAmount}`)
+        
+        if (paymentTokenType === 'ETH') {
+          paymentVerified = await this.blockchainService.verifyETHPayment(
+            userAddress,
+            expectedPaymentAmount,
+          )
+        } else if (paymentTokenType === 'USDT') {
+          paymentVerified = await this.blockchainService.verifyUSDTPayment(
+            userAddress,
+            expectedPaymentAmount,
+          )
+        } else {
+          this.logger.error(`Fallback verification not supported for payment type: ${paymentTokenType}`)
+          throw new BadRequestException(`Please provide paymentTxHash for ${paymentTokenType} payments`)
+        }
+      }
       
       if (!paymentVerified) {
         throw new PaymentRequiredException(
-          'Payment of 0.0000001 ETH to service address not found. Please complete payment first.'
+          `Payment of ${expectedPaymentAmount} ${paymentTokenType} to service address not found. Please complete payment first.`
         )
       }
     }

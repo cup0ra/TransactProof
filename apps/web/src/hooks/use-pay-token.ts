@@ -3,18 +3,37 @@
 import { useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useAccount, useChainId, useWalletClient } from 'wagmi'
-import { parseEther } from 'viem'
+import { parseUnits, encodeFunctionData } from 'viem'
 
-// Service address for ETH payments
+// Service address for token payments
 const SERVICE_ADDRESS = process.env.NEXT_PUBLIC_SERVICE_ETH_ADDRESS || '0x1234567890123456789012345678901234567890'
 
-export function usePayETH() {
+// ERC20 Transfer function ABI
+const ERC20_TRANSFER_ABI = [
+  {
+    name: 'transfer',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'to', type: 'address' },
+      { name: 'amount', type: 'uint256' }
+    ],
+    outputs: [{ name: '', type: 'bool' }]
+  }
+] as const
+
+export function usePayToken() {
   const [isLoading, setIsLoading] = useState(false)
   const { isConnected, address } = useAccount()
   const chainId = useChainId()
   const { data: walletClient } = useWalletClient()
 
-  const payETH = async (amount: number = 0.0000001) => {
+  const payToken = async (
+    contractAddress: string,
+    amount: number,
+    symbol: string,
+    decimals: number = 6 // USDT/USDC typically have 6 decimals
+  ) => {
     if (!isConnected || !address) {
       toast.error('Please connect your wallet')
       return null
@@ -32,55 +51,60 @@ export function usePayETH() {
       return null
     }
 
-    console.log('Starting ETH payment:', {
+    console.log('Starting token payment:', {
       amount,
+      symbol,
+      contractAddress,
       serviceAddress: SERVICE_ADDRESS,
       isConnected,
       userAddress: address,
-      chainId
+      chainId,
+      decimals
     })
 
     try {
       setIsLoading(true)
       
-      toast.loading('Preparing transaction...', { id: 'payment' })
+      toast.loading(`Preparing ${symbol} transaction...`, { id: 'payment' })
       
-      // Prepare transaction data
-      // Handle very small numbers that might be in scientific notation
-      let amountString: string
-      if (amount < 0.000001) {
-        // For very small amounts, use fixed notation with enough decimal places
-        amountString = amount.toFixed(10)
-      } else {
-        amountString = amount.toString()
-      }
+      // Parse amount with correct decimals
+      const amountInUnits = parseUnits(amount.toString(), decimals)
       
       console.log('Amount conversion:', {
         originalAmount: amount,
-        amountString,
-        isScientific: amount.toString().includes('e')
+        amountInUnits: amountInUnits.toString(),
+        decimals
       })
       
-      // Send ETH transaction using wallet client directly
+      // Encode transfer function data
+      const data = encodeFunctionData({
+        abi: ERC20_TRANSFER_ABI,
+        functionName: 'transfer',
+        args: [SERVICE_ADDRESS as `0x${string}`, amountInUnits]
+      })
+      
+      // Send token transfer transaction
       const txHash = await walletClient.sendTransaction({
         account: address,
-        to: SERVICE_ADDRESS as `0x${string}`,
-        value: parseEther(amountString),
+        to: contractAddress as `0x${string}`,
+        data,
       })
       
-      console.log('Transaction sent successfully:', txHash)
-      toast.success('Payment successful!', { id: 'payment' })
+      console.log('Token transaction sent successfully:', txHash)
+      toast.success(`${symbol} payment successful!`, { id: 'payment' })
       return txHash
     } catch (error: any) {
-      console.error('Payment error:', error)
+      console.error('Token payment error:', error)
       
       // Handle specific error types
-      let errorMessage = 'Payment failed. Please try again.'
+      let errorMessage = `${symbol} payment failed. Please try again.`
       
       if (error?.name === 'UserRejectedRequestError' || error?.code === 4001) {
         errorMessage = 'Transaction was rejected by user'
       } else if (error?.message?.includes('insufficient funds') || error?.code === -32000) {
-        errorMessage = 'Insufficient funds for transaction'
+        errorMessage = `Insufficient ${symbol} balance for transaction`
+      } else if (error?.message?.includes('allowance')) {
+        errorMessage = `Insufficient ${symbol} allowance. Please approve the token first.`
       } else if (error?.message?.includes('gas')) {
         errorMessage = 'Gas estimation failed. Please try again.'
       } else if (error?.message?.includes('connector') || error?.message?.includes('getChainId')) {
@@ -98,5 +122,5 @@ export function usePayETH() {
     }
   }
 
-  return { payETH, isLoading }
+  return { payToken, isLoading }
 }

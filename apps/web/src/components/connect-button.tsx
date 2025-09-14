@@ -274,12 +274,22 @@ export function ConnectButton() {
 
   // Функция для получения цвета сети
   const getNetworkColor = (network: any) => {
-    if (network?.nativeCurrency?.symbol === 'ETH') return '#627EEA'
-    if (network?.nativeCurrency?.symbol === 'POL') return '#8247E5'
-    if (network?.name?.toLowerCase().includes('optimism')) return '#FF0420'
-    if (network?.name?.toLowerCase().includes('arbitrum')) return '#28A0F0'
-    if (network?.name?.toLowerCase().includes('base')) return '#0052FF'
-    return '#000'
+    switch (network?.id) {
+      case 1: // Ethereum Mainnet
+        return '#627EEA'
+      case 8453: // Base Mainnet
+        return '#0052FF'
+      case 84532: // Base Sepolia
+        return '#0052FF'
+      case 137: // Polygon Mainnet
+        return '#8247E5'
+      case 10: // Optimism Mainnet
+        return '#FF0420'
+      case 42161: // Arbitrum One
+        return '#28A0F0'
+      default:
+        return '#627EEA' // Default to Ethereum blue
+    }
   }
 
   if (!mounted) {

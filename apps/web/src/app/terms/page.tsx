@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { APP_CONFIG, formatPaymentAmount } from '@/config'
 
 export default function TermsOfServicePage() {
   return (
@@ -81,7 +82,7 @@ export default function TermsOfServicePage() {
                     </li>
                     <li className="flex items-start">
                       <span className="w-1 h-1 bg-orange-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                      <span>You authorize transactions from your wallet when you use our services (e.g., payment of 0.0000001 ETH to generate a receipt).</span>
+                      <span>You authorize transactions from your wallet when you use our services (e.g., payment of {formatPaymentAmount(APP_CONFIG.PAYMENT_AMOUNT)} ETH to generate a receipt).</span>
                     </li>
                     <li className="flex items-start">
                       <span className="w-1 h-1 bg-orange-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>

@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
 import { z } from 'zod'
 import { usePayETH } from '@/hooks/use-pay-eth'
+import { usePayToken } from '@/hooks/use-pay-token'
 import { useGenerateReceipt } from '@/hooks/use-generate-receipt'
 import { useAuth } from '@/hooks/use-auth'
 import { useVerifyTransaction } from '@/hooks/use-verify-transaction'
-import { useAccount } from 'wagmi'
+import { useAccount, useChainId } from 'wagmi'
 import { globalAuthManager } from '@/utils/global-auth-manager'
+import { APP_CONFIG, getAvailablePaymentOptions, formatPaymentAmount } from '@/config'
 
 const receiptSchema = z.object({
   txHash: z.string().min(66, 'Transaction hash must be 66 characters').max(66, 'Transaction hash must be 66 characters'),
@@ -20,15 +22,34 @@ type ReceiptForm = z.infer<typeof receiptSchema>
 export function ReceiptGenerator() {
   const { isAuthenticated, user } = useAuth()
   const { address } = useAccount()
+  const chainId = useChainId()
   const [form, setForm] = useState<ReceiptForm>({ txHash: '', description: '' })
   const [step, setStep] = useState<'input' | 'verifying' | 'payment' | 'generating' | 'complete'>('input')
   const [receiptData, setReceiptData] = useState<any>(null)
   const [mounted, setMounted] = useState(false)
   const [globalAuthState, setGlobalAuthState] = useState(false)
+  
+  // Get available payment options for current network
+  const availablePaymentOptions = getAvailablePaymentOptions(chainId || 1)
+  const [selectedPayment, setSelectedPayment] = useState(availablePaymentOptions[0] || APP_CONFIG.PAYMENT_OPTIONS[0])
 
-  const { payETH, isLoading: isPaymentLoading } = usePayETH()
+  const { payETH, isLoading: isPaymentETHLoading } = usePayETH()
+  const { payToken, isLoading: isPaymentTokenLoading } = usePayToken()
   const { generateReceipt, isLoading: isGenerating } = useGenerateReceipt()
   const { verifyTransaction, isVerifying } = useVerifyTransaction()
+
+  const isPaymentLoading = isPaymentETHLoading || isPaymentTokenLoading
+
+  // Update selected payment when network changes
+  useEffect(() => {
+    const newAvailableOptions = getAvailablePaymentOptions(chainId || 1)
+    if (newAvailableOptions.length > 0) {
+      // Try to keep the same payment type if available on new network
+      const currentType = selectedPayment?.type
+      const newOption = newAvailableOptions.find(opt => opt.type === currentType) || newAvailableOptions[0]
+      setSelectedPayment(newOption)
+    }
+  }, [chainId])
 
   // Отслеживаем глобальное состояние аутентификации
   useEffect(() => {
@@ -93,17 +114,45 @@ export function ReceiptGenerator() {
   }
 
   const handlePayment = async () => {
+    if (!selectedPayment) {
+      toast.error('Please select a payment method')
+      return
+    }
+
     try {     
-      const paymentTxHash = await payETH()
+      let paymentTxHash: string | null = null
+      
+      if (selectedPayment.type === 'ETH') {
+        paymentTxHash = await payETH(selectedPayment.amount)
+      } else {
+        // For tokens (USDT/USDC)
+        if (!selectedPayment.contractAddress) {
+          toast.error(`${selectedPayment.symbol} contract not available on this network`)
+          return
+        }
+        
+        paymentTxHash = await payToken(
+          selectedPayment.contractAddress,
+          selectedPayment.amount,
+          selectedPayment.symbol,
+          selectedPayment.decimals
+        )
+      }
+      
+      console.log('Payment transaction hash:', paymentTxHash)
       
       if (paymentTxHash) {
         setStep('generating')
         
         // Generate receipt for the ORIGINAL transaction hash the user entered,
-        // not the payment transaction hash
+        // and pass the payment transaction hash for efficient verification
         const receipt = await generateReceipt({
           txHash: form.txHash, // Use the original transaction hash from form
           description: form.description || undefined,
+          paymentTxHash, // Pass the payment transaction hash for efficient verification
+          paymentAmount: selectedPayment.amount, // Pass the actual payment amount used
+          paymentType: selectedPayment.type, // Pass the payment type (ETH, USDT, USDC)
+          paymentContractAddress: selectedPayment.contractAddress || undefined, // Pass contract address for tokens
         })
         
         console.log('Receipt generated:', receipt)
@@ -195,7 +244,7 @@ export function ReceiptGenerator() {
       <div className="text-center mb-12">
         <h2 className="text-xl font-light text-black dark:text-white mb-4 tracking-wide transition-colors duration-300">Generate Transaction Receipt</h2>
         <p className="text-gray-600 dark:text-gray-400 text-sm font-light leading-relaxed transition-colors duration-300">
-          Enter your transaction hash and pay 0.0000001 ETH to generate a verified PDF receipt
+          Enter your transaction hash and pay {formatPaymentAmount(selectedPayment.amount)} {selectedPayment.symbol} to generate a verified PDF receipt
         </p>
       </div>
 
@@ -253,7 +302,35 @@ export function ReceiptGenerator() {
 
         {step === 'payment' && (
           <div className="text-center py-4">
-            <p className="text-gray-600 dark:text-gray-400 mb-6 text-xs font-light transition-colors duration-300">Ready to generate your receipt?</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-6 text-xs font-light transition-colors duration-300">Choose your payment method</p>
+            
+            {/* Payment Method Selector */}
+            <div className="mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {availablePaymentOptions.map((option) => (
+                  <button
+                    key={option.type}
+                    type="button"
+                    onClick={() => setSelectedPayment(option)}
+                    className={`p-4 border rounded-lg text-sm transition-colors duration-300 ${
+                      selectedPayment?.type === option.type
+                        ? 'border-orange-400 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400'
+                        : 'border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    <div className="font-medium">{formatPaymentAmount(option.amount)} {option.symbol}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{option.name}</div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">on {option.networkName}</div>
+                  </button>
+                ))}
+              </div>
+              {availablePaymentOptions.length === 0 && (
+                <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+                  No payment options available on this network. Please switch to a supported network.
+                </div>
+              )}
+            </div>
+            
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
@@ -268,7 +345,7 @@ export function ReceiptGenerator() {
                 disabled={isPaymentLoading}
                 className="btn-primary-minimal text-xs py-3 disabled:opacity-50"
               >
-                {isPaymentLoading ? 'Processing...' : 'Pay 0.0000001 ETH'}
+                {isPaymentLoading ? 'Processing...' : `Pay ${formatPaymentAmount(selectedPayment.amount)} ${selectedPayment.symbol}`}
               </button>
             </div>
           </div>

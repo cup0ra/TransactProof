@@ -1,6 +1,7 @@
 'use client'
 
 import { ReceiptGenerator } from '@/components/receipt-generator'
+import { APP_CONFIG, formatPaymentAmount } from '@/config'
 
 export default function GeneratePage() {
   return (
@@ -71,7 +72,7 @@ export default function GeneratePage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                   </svg>
                 </div>
-                <div className="text-base sm:text-lg font-light text-orange-400 mb-1">0.0000001 ETH</div>
+                <div className="text-base sm:text-lg font-light text-orange-400 mb-1">{formatPaymentAmount(APP_CONFIG.PAYMENT_AMOUNT)} ETH</div>
                 <div className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider transition-colors duration-300">Service Fee</div>
               </div>
               <div className="group">
@@ -142,7 +143,7 @@ export default function GeneratePage() {
                 {
                   number: "02", 
                   title: "Secure Payment",
-                  description: "Pay a minimal fee of 0.0000001 ETH to process your professional receipt generation.",
+                  description: `Pay a minimal fee of ${formatPaymentAmount(APP_CONFIG.PAYMENT_AMOUNT)} ETH to process your professional receipt generation.`,
                   icon: "◊"
                 },
                 {

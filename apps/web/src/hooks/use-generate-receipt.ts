@@ -7,6 +7,10 @@ import { ApiClient } from '@/lib/api-client'
 interface GenerateReceiptParams {
   txHash: string
   description?: string
+  paymentTxHash?: string
+  paymentAmount?: number
+  paymentType?: string
+  paymentContractAddress?: string
 }
 
 interface ReceiptResponse {

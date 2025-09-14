@@ -274,6 +274,168 @@ export class BlockchainService {
     }
   }
 
+  /**
+   * Verify ETH payment by transaction hash - much more efficient than scanning blocks
+   */
+  async verifyETHPaymentByHash(paymentTxHash: string, fromAddress: string, expectedAmount: number): Promise<boolean> {
+    try {
+      // Find which network the payment transaction is on
+      const network = await this.findTransactionNetwork(paymentTxHash)
+      if (!network || !network.client) {
+        this.logger.error(`Payment transaction ${paymentTxHash} not found in any supported network`)
+        return false
+      }
+
+      this.logger.log(`Verifying payment transaction ${paymentTxHash} on ${network.name}`)
+
+      // Get the transaction details
+      const transaction = await network.client.getTransaction({
+        hash: paymentTxHash as `0x${string}`,
+      })
+
+      if (!transaction) {
+        this.logger.error(`Payment transaction ${paymentTxHash} not found`)
+        return false
+      }
+
+      // Get transaction receipt to check if it was successful
+      const receipt = await network.client.getTransactionReceipt({
+        hash: paymentTxHash as `0x${string}`,
+      })
+
+      if (receipt.status !== 'success') {
+        this.logger.warn(`Payment transaction ${paymentTxHash} was not successful (status: ${receipt.status})`)
+        return false
+      }
+
+      // Verify payment details
+      const isCorrectSender = transaction.from?.toLowerCase() === fromAddress.toLowerCase()
+      const isCorrectReceiver = transaction.to?.toLowerCase() === this.serviceAddress.toLowerCase()
+      
+      // Convert expected amount to wei with tolerance
+      const expectedAmountWei = BigInt(Math.floor(expectedAmount * 1e18))
+      const tolerance = BigInt(Math.floor(0.000001 * 1e18)) // 0.000001 ETH tolerance
+      
+      const diff = transaction.value > expectedAmountWei ? 
+        transaction.value - expectedAmountWei : 
+        expectedAmountWei - transaction.value
+      
+      const isCorrectAmount = diff <= tolerance
+
+      if (isCorrectSender && isCorrectReceiver && isCorrectAmount) {
+        this.logger.log(`ETH payment verified by hash: ${fromAddress} -> ${this.serviceAddress} (${transaction.value} wei, expected ${expectedAmountWei} wei)`)
+        return true
+      } else {
+        this.logger.warn(`Payment verification failed:`, {
+          paymentTxHash,
+          isCorrectSender,
+          isCorrectReceiver,
+          isCorrectAmount,
+          actualFrom: transaction.from,
+          actualTo: transaction.to,
+          actualValue: transaction.value.toString(),
+          expectedAmount: expectedAmountWei.toString()
+        })
+        return false
+      }
+    } catch (error) {
+      this.logger.error(`Error verifying ETH payment by hash ${paymentTxHash}:`, error)
+      return false
+    }
+  }
+
+  /**
+   * Verify token payment by transaction hash - efficient verification for ERC20 tokens
+   */
+  async verifyTokenPaymentByHash(
+    paymentTxHash: string, 
+    fromAddress: string, 
+    contractAddress: string,
+    expectedAmount: number,
+    tokenSymbol: string,
+    decimals: number = 6
+  ): Promise<boolean> {
+    try {
+      // Find which network the payment transaction is on
+      const network = await this.findTransactionNetwork(paymentTxHash)
+      if (!network || !network.client) {
+        this.logger.error(`Payment transaction ${paymentTxHash} not found in any supported network`)
+        return false
+      }
+
+      this.logger.log(`Verifying ${tokenSymbol} payment transaction ${paymentTxHash} on ${network.name}`)
+
+      // Get the transaction receipt to check logs
+      const receipt = await network.client.getTransactionReceipt({
+        hash: paymentTxHash as `0x${string}`,
+      })
+
+      if (receipt.status !== 'success') {
+        this.logger.warn(`Payment transaction ${paymentTxHash} was not successful (status: ${receipt.status})`)
+        return false
+      }
+
+      // Parse Transfer events from logs
+      const transferEventAbi = parseAbi([
+        'event Transfer(address indexed from, address indexed to, uint256 value)'
+      ])
+
+      for (const log of receipt.logs) {
+        try {
+          // Check if this log is from the expected contract
+          if (log.address.toLowerCase() !== contractAddress.toLowerCase()) {
+            continue
+          }
+
+          // Try to decode as Transfer event
+          const decoded = decodeEventLog({
+            abi: transferEventAbi,
+            data: log.data,
+            topics: log.topics,
+          })
+
+          if (decoded.eventName === 'Transfer') {
+            const args = decoded.args as {
+              from: string
+              to: string
+              value: bigint
+            }
+
+            // Check if this is the payment we're looking for
+            const isCorrectSender = args.from.toLowerCase() === fromAddress.toLowerCase()
+            const isCorrectReceiver = args.to.toLowerCase() === this.serviceAddress.toLowerCase()
+
+            if (isCorrectSender && isCorrectReceiver) {
+              // Convert expected amount to token units
+              const expectedAmountUnits = BigInt(Math.floor(expectedAmount * Math.pow(10, decimals)))
+              const tolerance = BigInt(Math.floor(0.01 * Math.pow(10, decimals))) // 0.01 token tolerance
+
+              const diff = args.value > expectedAmountUnits ? 
+                args.value - expectedAmountUnits : 
+                expectedAmountUnits - args.value
+
+              if (diff <= tolerance) {
+                this.logger.log(`${tokenSymbol} payment verified by hash: ${fromAddress} -> ${this.serviceAddress} (${args.value} units, expected ${expectedAmountUnits} units)`)
+                return true
+              } else {
+                this.logger.warn(`${tokenSymbol} payment amount mismatch: received ${args.value}, expected ${expectedAmountUnits}, diff: ${diff}`)
+              }
+            }
+          }
+        } catch (decodeError) {
+          // Skip logs that can't be decoded as Transfer events
+          continue
+        }
+      }
+
+      this.logger.warn(`${tokenSymbol} payment not found in transaction ${paymentTxHash}`)
+      return false
+    } catch (error) {
+      this.logger.error(`Error verifying ${tokenSymbol} payment by hash ${paymentTxHash}:`, error)
+      return false
+    }
+  }
+
   async verifyUSDTPayment(fromAddress: string, minAmount: number = 1): Promise<boolean> {
     try {
       const baseChainId = parseInt(this.configService.get('BASE_CHAIN_ID') || '8453')

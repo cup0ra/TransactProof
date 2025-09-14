@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { APP_CONFIG, formatPaymentAmount } from '@/config'
 
 export default function PrivacyPolicyPage() {
   return (
@@ -93,7 +94,7 @@ export default function PrivacyPolicyPage() {
                     </li>
                     <li className="flex items-start">
                       <span className="w-1 h-1 bg-orange-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                      <span>Verify payments (e.g., 0.0000001 ETH transaction).</span>
+                      <span>Verify payments (e.g., {formatPaymentAmount(APP_CONFIG.PAYMENT_AMOUNT)} ETH transaction).</span>
                     </li>
                     <li className="flex items-start">
                       <span className="w-1 h-1 bg-orange-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
