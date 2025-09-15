@@ -48,8 +48,10 @@ export class PdfService {
         '--disable-extensions',
         '--disable-default-apps',
         '--disable-web-security',
-        '--disable-features=VizDisplayCompositor'
+        '--disable-features=VizDisplayCompositor',
+        
       ],
+      executablePath: '/usr/bin/google-chrome',
       timeout: 30000, // 30 seconds timeout
     }
 
