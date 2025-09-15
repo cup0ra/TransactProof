@@ -31,28 +31,12 @@ export class PdfService {
     
     // Browser configuration for Railway deployment
     const browserConfig: puppeteer.LaunchOptions = {
-      headless: true, // Use headless mode
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process',
-        '--disable-gpu',
-        '--disable-background-timer-throttling',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding',
-        '--disable-features=TranslateUI',
-        '--disable-extensions',
-        '--disable-default-apps',
-        '--disable-web-security',
-        '--disable-features=VizDisplayCompositor',
-        
-      ],
-      executablePath: '/usr/bin/google-chrome',
-      timeout: 30000, // 30 seconds timeout
+    headless: true, // Or 'new' for new headless mode
+     args: [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-gpu',
+   ]
     }
 
     // Log environment variables for debugging
