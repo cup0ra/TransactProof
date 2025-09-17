@@ -39,12 +39,6 @@ export class PdfService {
    ]
     }
 
-    // Log environment variables for debugging
-    this.logger.log(`Environment variables:`)
-    this.logger.log(`- PUPPETEER_EXECUTABLE_PATH: ${process.env.PUPPETEER_EXECUTABLE_PATH || 'not set'}`)
-    this.logger.log(`- PUPPETEER_SKIP_DOWNLOAD: ${process.env.PUPPETEER_SKIP_DOWNLOAD || 'not set'}`)
-    this.logger.log(`- CHROME_BIN: ${process.env.CHROME_BIN || 'not set'}`)
-    this.logger.log(`- NODE_ENV: ${process.env.NODE_ENV || 'not set'}`)
 
     // Use system Chrome/Chromium if available (Railway deployment)
     const puppeteerExecutablePath = process.env.PUPPETEER_EXECUTABLE_PATH
@@ -68,7 +62,7 @@ export class PdfService {
       this.logger.log('✅ Browser launched successfully')
     } catch (error) {
       this.logger.error('❌ Failed to launch browser with Puppeteer:', error)
-      this.logger.error('� Browser config used:', JSON.stringify(browserConfig, null, 2))
+      this.logger.error('🛠️ Browser config used:', JSON.stringify(browserConfig, null, 2))
       throw new Error(`Failed to launch browser: ${error.message}`)
     }
 

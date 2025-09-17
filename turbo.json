@@ -34,7 +34,8 @@
         "OPTIMISM_RPC_URL",
         "POLYGON_RPC_URL",
         "THROTTLE_TTL",
-        "THROTTLE_LIMIT"
+        "THROTTLE_LIMIT",
+        "API_PUBLIC_URL"
         ],
       "outputs": ["dist/**"]
     },
@@ -59,7 +60,8 @@
         "OPTIMISM_RPC_URL",
         "POLYGON_RPC_URL",
         "THROTTLE_TTL",
-        "THROTTLE_LIMIT"
+        "THROTTLE_LIMIT",
+         "API_PUBLIC_URL"
         ],
       "cache": false
     },
