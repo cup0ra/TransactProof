@@ -33,7 +33,6 @@ export function useMultiTokenBalance(tokenType: string, decimals: number = 6) {
         setIsLoading(true)
         
         const alternativeAddresses = getAlternativeTokenAddresses(tokenType, chainId || 1)
-        console.log(`Checking ${tokenType} balance on chain ${chainId}:`, alternativeAddresses)
         
         let foundBalance = '0'
         let foundAddress: string | null = null
@@ -42,7 +41,6 @@ export function useMultiTokenBalance(tokenType: string, decimals: number = 6) {
         // Try each possible contract address
         for (const contractAddr of alternativeAddresses) {
           try {
-            console.log(`Trying ${tokenType} contract:`, contractAddr)
             
             // Get balance
             const balanceRaw = await publicClient.readContract({
@@ -67,13 +65,6 @@ export function useMultiTokenBalance(tokenType: string, decimals: number = 6) {
                 functionName: 'name',
               })
             ])
-            
-            console.log(`Found ${tokenType} contract ${contractAddr}:`, {
-              balance: formattedBalance,
-              symbol,
-              name,
-              balanceRaw: balanceRaw.toString()
-            })
             
             // If we found a balance > 0, use this contract
             if (parseFloat(formattedBalance) > 0) {

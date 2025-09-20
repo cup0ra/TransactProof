@@ -25,13 +25,6 @@ export function useTokenBalance(contractAddress?: string, decimals: number = 6) 
       try {
         setIsLoading(true)
         
-        console.log('Fetching token balance:', {
-          address,
-          contractAddress,
-          decimals,
-          chainId
-        })
-        
         const balanceRaw = await publicClient.readContract({
           address: contractAddress as `0x${string}`,
           abi: ERC20_BALANCE_ABI,
@@ -40,21 +33,8 @@ export function useTokenBalance(contractAddress?: string, decimals: number = 6) 
         })
 
         const formattedBalance = formatUnits(balanceRaw as bigint, decimals)
-        console.log('Token balance fetched:', {
-          balanceRaw: balanceRaw.toString(),
-          formattedBalance,
-          decimals
-        })
-        
         setBalance(formattedBalance)
       } catch (error) {
-        console.error('Error fetching token balance:', {
-          error,
-          address,
-          contractAddress,
-          chainId,
-          decimals
-        })
         setBalance('0')
       } finally {
         setIsLoading(false)

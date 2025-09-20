@@ -11,12 +11,11 @@ import { globalAuthManager } from '@/utils/global-auth-manager'
 
 export function Header() {
   const { isAuthenticated, user } = useAuth()
-  const { address } = useAccount()
+  const { address, isConnected } = useAccount()
   const actualPathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [globalAuthState, setGlobalAuthState] = useState(false)
 
-  // Отслеживаем глобальное состояние аутентификации
   useEffect(() => {
     const unsubscribe = globalAuthManager.onAuthChange((changedAddress, isAuth) => {
       if (address && changedAddress === address.toLowerCase()) {
@@ -34,23 +33,19 @@ export function Header() {
     }
   }, [address])
 
-  // Вычисляем итоговое состояние аутентификации
-  const isFullyAuthenticated = (
-    isAuthenticated && user?.walletAddress?.toLowerCase() === address?.toLowerCase()
-  ) || globalAuthState
+  const isFullyAuthenticated = isConnected && (
+    (isAuthenticated && user?.walletAddress?.toLowerCase() === address?.toLowerCase()) ||
+    globalAuthState
+  )
 
-  // Оптимизируем pathname - для legal страниц используем стабильное значение
   const pathname = useMemo(() => {
     const mainPages = ['/', '/generate', '/dashboard']
-    // Если это основная страница навигации, используем актуальный path
     if (mainPages.includes(actualPathname)) {
       return actualPathname
     }
-    // Для всех остальных страниц (включая legal) возвращаем последнюю основную страницу или null
     return null
   }, [actualPathname])
   
-  // Мемоизируем классы для навигации - будут обновляться только для основных страниц
   const navClasses = useMemo(() => ({
     home: `text-sm transition-colors font-light tracking-wide ${
       pathname === '/' 
@@ -204,7 +199,5 @@ export function Header() {
 }
 
 export const MemoizedHeader = memo(Header, () => {
-  // Всегда перерендериваем, но оптимизация происходит через useMemo внутри компонента
-  // Это позволяет компоненту корректно реагировать на изменения, но избегать тяжелых вычислений
   return false
 })

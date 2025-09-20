@@ -34,18 +34,9 @@ export function usePayETH() {
 
     // Validate service address
     if (!SERVICE_ADDRESS || SERVICE_ADDRESS === '0x1234567890123456789012345678901234567890') {
-      console.error('Invalid service address:', SERVICE_ADDRESS)
       toast.error('Service configuration error. Please contact support.')
       return null
     }
-
-    console.log('Starting ETH payment:', {
-      amount,
-      serviceAddress: SERVICE_ADDRESS,
-      isConnected,
-      userAddress: address,
-      chainId
-    })
 
     try {
       setIsLoading(true)
@@ -62,20 +53,12 @@ export function usePayETH() {
         const gasBuffer = chainId === 1 ? 0.001 : 0.0001 // Mainnet vs L2 networks
         const totalRequired = amount + gasBuffer
         
-        console.log('ETH balance check:', {
-          currentBalance,
-          requiredAmount: amount,
-          gasBuffer,
-          totalRequired,
-          hasEnough: currentBalance >= totalRequired
-        })
-        
         if (currentBalance < totalRequired) {
           toast.error(`Insufficient ETH balance. You have ${formatNumber(currentBalance, 8)} ETH, but need ${formatNumber(totalRequired, 8)} ETH (including gas).`, { id: 'payment' })
           return null
         }
       } catch (balanceError) {
-        console.warn('Could not check ETH balance, proceeding with transaction:', balanceError)
+        // Could not check balance, proceed with transaction
       }
       
       toast.loading('Preparing transaction...', { id: 'payment' })
@@ -90,12 +73,6 @@ export function usePayETH() {
         amountString = amount.toString()
       }
       
-      console.log('Amount conversion:', {
-        originalAmount: amount,
-        amountString,
-        isScientific: amount.toString().includes('e')
-      })
-      
       // Send ETH transaction using wallet client directly
       const txHash = await walletClient.sendTransaction({
         account: address,
@@ -103,11 +80,9 @@ export function usePayETH() {
         value: parseEther(amountString),
       })
       
-      console.log('Transaction sent successfully:', txHash)
       toast.success('Payment successful!', { id: 'payment' })
       return txHash
     } catch (error: any) {
-      console.error('Payment error:', error)
       
       // Handle specific error types
       let errorMessage = 'Payment failed. Please try again.'

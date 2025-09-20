@@ -26,7 +26,6 @@ export function useVerifyTransaction() {
 
       return true
     } catch (error) {
-      // Не показываем toast для ошибки аутентификации, так как ApiClient уже перенаправил
       if (error instanceof Error && error.message !== 'Authentication required') {
         toast.error('Failed to verify transaction. Please try again.')
       }

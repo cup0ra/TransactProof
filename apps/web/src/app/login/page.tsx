@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ConnectButton } from '@/components/connect-button'
 import { useAuth } from '@/hooks/use-auth'
+import { useAccount } from 'wagmi'
 
 export default function LoginPage() {
   const router = useRouter()
   const { isAuthenticated, initialCheckDone } = useAuth()
+  const { isConnected } = useAccount()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -15,10 +17,10 @@ export default function LoginPage() {
   }, [])
 
   useEffect(() => {
-    if (mounted && initialCheckDone && isAuthenticated) {
+    if (mounted && initialCheckDone && isAuthenticated && isConnected) {
       router.push('/dashboard')
     }
-  }, [isAuthenticated, initialCheckDone, router, mounted])
+  }, [isAuthenticated, isConnected, initialCheckDone, router, mounted])
 
   return (
     <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center p-4 sm:p-6 lg:p-8 transition-colors duration-300">

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ReceiptCard } from '@/components/receipt-card'
 import { EmptyState } from '@/components/empty-state'
 import { useAuth } from '@/hooks/use-auth'
+import { useAccount } from 'wagmi'
 import { ApiClient } from '@/lib/api-client'
 import { toast } from 'react-hot-toast'
 
@@ -35,6 +36,7 @@ interface PaginatedResponse {
 export default function DashboardPage() {
   const router = useRouter()
   const { isAuthenticated, user, initialCheckDone, checkAuth } = useAuth()
+  const { isConnected } = useAccount()
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [pagination, setPagination] = useState({
     page: 1,
@@ -60,25 +62,24 @@ export default function DashboardPage() {
       return
     }
     
-    // Если не авторизован, перенаправляем на страницу входа
-    if (!isAuthenticated) {
-      setRedirecting(true)
-      router.push('/login')
+    if (!isAuthenticated || !isConnected) {
+      if (!redirecting) {
+        setRedirecting(true)
+        router.push('/login')
+      }
       return
     }
     
-    // Если авторизован, загружаем квитанции
-    if (isAuthenticated) {
+    if (isAuthenticated && isConnected) {
       if (redirecting) {
         setRedirecting(false)
       }
       fetchReceipts()
     }
-  }, [mounted, isAuthenticated, initialCheckDone, router])
+  }, [mounted, isAuthenticated, isConnected, initialCheckDone, router, redirecting])
 
   const fetchReceipts = async (page = 1) => {
-    // Предотвращаем запросы если пользователь не авторизован или происходит редирект
-    if (!isAuthenticated || redirecting) {
+    if (!isAuthenticated || redirecting || !isConnected) {
       return
     }
 
@@ -91,18 +92,13 @@ export default function DashboardPage() {
       setReceipts(data.receipts)
       setPagination(data.pagination)
     } catch (error) {
-      // Если ошибка связана с аутентификацией, обновляем статус авторизации
       if (error instanceof Error && (
         error.message === 'Authentication required' || 
         error.message === 'Unauthorized' ||
         error.message.includes('401')
       )) {
-        // Перепроверяем статус аутентификации
-        await checkAuth()
         return
       }
-      
-      // Показываем toast только для других ошибок
       if (!redirecting) {
         toast.error('Failed to load receipts')
       }
@@ -112,7 +108,7 @@ export default function DashboardPage() {
   }
 
   const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= pagination.pages && !redirecting) {
+    if (newPage >= 1 && newPage <= pagination.pages && !redirecting && isConnected && isAuthenticated) {
       fetchReceipts(newPage)
     }
   }
@@ -159,8 +155,7 @@ export default function DashboardPage() {
       </div>
     )
   }
-
-  // Показываем загрузочный экран пока не завершена начальная проверка
+  
   if (!initialCheckDone) {
     return (
       <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center transition-colors duration-300">
@@ -257,7 +252,7 @@ export default function DashboardPage() {
               <button 
                 onClick={() => fetchReceipts(pagination.page)}
                 className="btn-secondary-minimal text-xs py-2 px-4"
-                disabled={loading || redirecting}
+                disabled={loading || redirecting || !isConnected || !isAuthenticated}
               >
                 {loading ? 'Refreshing...' : 'Refresh'}
               </button>

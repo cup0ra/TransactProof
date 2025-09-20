@@ -5,10 +5,6 @@ import { mainnet, arbitrum, base, baseSepolia, polygon, optimism } from '@reown/
 // Get projectId from https://dashboard.reown.com
 export const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'demo-project-id'
 
-if (!projectId || projectId === 'your-project-id-here') {
-  console.warn('WalletConnect Project ID not set. Using demo mode.')
-}
-
 // Application configuration
 export const APP_CONFIG = {
   PAYMENT_OPTIONS: [
@@ -17,8 +13,8 @@ export const APP_CONFIG = {
       amount: 0.0000001,
       symbol: 'ETH',
       name: 'Ethereum',
-      contractAddress: null, // Native token
-      supportedNetworks: [1, 8453, 84532, 137, 10, 42161], // All networks support ETH
+      contractAddress: null,
+      supportedNetworks: [1, 8453, 84532, 137, 10, 42161],
     },
     {
       type: 'USDT',
@@ -100,7 +96,7 @@ export const wagmiAdapter = new WagmiAdapter({
   networks
 })
 
-export const config = wagmiAdapter.wagmiConfig
+// Export wagmi adapter\nexport { wagmiAdapter }
 
 // Helper functions for multi-network token contracts
 export function getTokenContractAddress(tokenType: string, chainId: number): string | null {

@@ -20,14 +20,13 @@ interface AuthContextType {
   user: User | null
   isLoading: boolean
   initialCheckDone: boolean
-  signInWithEthereum: (address: string, customSigner?: (message: string) => Promise<string>) => Promise<AuthResponse>
+  signInWithEthereum: (address: string, customSigner: (message: string) => Promise<string>) => Promise<AuthResponse>
   signOut: () => Promise<void>
   checkAuth: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Глобальный singleton для предотвращения множественных инициализаций
 class AuthInitManager {
   private static instance: AuthInitManager | null = null
   private initPromise: Promise<any> | null = null
@@ -76,7 +75,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
-  // Единственный useEffect для инициализации
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -101,12 +99,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Используем глобальный менеджер для предотвращения дублирования
     authInitManager.initialize(initializeAuth)
   }, [])
 
   const checkAuth = useCallback(async () => {
-    // Предотвращаем дублирование если уже идет проверка
     if (isLoading) {
       return
     }
@@ -134,20 +130,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [apiUrl, isLoading])
 
-  const signInWithEthereum = async (address: string, customSigner?: (message: string) => Promise<string>) => {
-    // Используем глобальный менеджер для предотвращения дублирования
+  const signInWithEthereum = async (address: string, customSigner: (message: string) => Promise<string>) => {
     return globalAuthManager.getOrCreateAuthPromise(address, async () => {
-      // Предотвращаем множественные попытки входа
       if (isLoading) {
         throw new Error('Authentication already in progress')
       }
 
       setIsLoading(true)
       try {
-        // 1. Приводим адрес к checksum формату
         const checksumAddress = getAddress(address.toLowerCase())
-        
-        // 2. Получаем nonce
         const nonceResponse = await fetch(`${apiUrl}/api/auth/nonce`, {
           method: 'GET',
           credentials: 'include',
@@ -158,8 +149,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const { nonce } = await nonceResponse.json()
-
-        // 3. Создаем SIWE сообщение
         const siweMessage = new SiweMessage({
           domain: window.location.host,
           address: checksumAddress,
@@ -173,26 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
 
         const message = siweMessage.prepareMessage()
-
-        // 4. Подписываем сообщение
-        let signature: string
-        
-        if (customSigner) {
-          // Используем переданную функцию подписи (например, WalletConnect)
-          signature = await customSigner(message)
-        } else {
-          // Используем MetaMask через window.ethereum (если доступен)
-          if (typeof window !== 'undefined' && (window as any).ethereum) {
-            signature = await (window as any).ethereum.request({
-              method: 'personal_sign',
-              params: [message, checksumAddress],
-            })
-          } else {
-            throw new Error('Wallet not found')
-          }
-        }
-
-        // 5. Отправляем на сервер для верификации
+        const signature = await customSigner(message)
         const verifyResponse = await fetch(`${apiUrl}/api/auth/verify`, {
           method: 'POST',
           headers: {
@@ -212,7 +182,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const authData: AuthResponse = await verifyResponse.json()
         
-        // 6. Обновляем состояние
         setUser({ walletAddress: authData.walletAddress })
         setIsAuthenticated(true)
         setInitialCheckDone(true)
@@ -240,9 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsAuthenticated(false)
       setUser(null)
-      // Сбрасываем состояние глобального менеджера
       authInitManager.reset()
-      // Очищаем глобальный менеджер аутентификации
       globalAuthManager.clearAll()
       toast.success('Signed out successfully')
     }

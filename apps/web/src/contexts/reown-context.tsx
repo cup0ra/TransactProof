@@ -11,10 +11,9 @@ import { mainnet, base, baseSepolia, polygon, arbitrum, optimism } from '@reown/
 const queryClient = new QueryClient()
 
 if (!projectId || projectId === 'your-project-id-here') {
-  console.warn('WalletConnect Project ID not properly configured')
+  // Project ID not configured
 }
 
-// Функция для исправления z-index модального окна
 const fixModalZIndex = () => {
   if (typeof window !== 'undefined') {
     const style = document.createElement('style')
@@ -50,7 +49,6 @@ const metadata = {
   icons: ['https://avatars.githubusercontent.com/u/179229932']
 }
 
-// Создаем AppKit с правильной конфигурацией
 let appKit: any = null
 
 try {  
@@ -79,11 +77,8 @@ try {
   })
 
   
-  // Принудительно создаем модальное окно в DOM
   if (typeof window !== 'undefined') {
-    // Ждем полной инициализации
     setTimeout(() => {
-            // Проверяем наличие модального элемента
       let modal = document.querySelector('w3m-modal, appkit-modal')
       if (!modal) {
         modal = document.createElement('w3m-modal')
@@ -94,7 +89,6 @@ try {
   
   fixModalZIndex()
 } catch (error) {
-  console.error('AppKit initialization failed:', error)
   throw error
 }
 

@@ -58,21 +58,11 @@ export function usePayToken() {
 
     // Validate service address
     if (!SERVICE_ADDRESS || SERVICE_ADDRESS === '0x1234567890123456789012345678901234567890') {
-      console.error('Invalid service address:', SERVICE_ADDRESS)
       toast.error('Service configuration error. Please contact support.')
       return null
     }
 
-    console.log('Starting token payment:', {
-      amount,
-      symbol,
-      contractAddress,
-      serviceAddress: SERVICE_ADDRESS,
-      isConnected,
-      userAddress: address,
-      chainId,
-      decimals
-    })
+
 
     try {
       setIsLoading(true)
@@ -90,19 +80,13 @@ export function usePayToken() {
 
         const currentBalance = parseFloat(formatUnits(balanceRaw as bigint, decimals))
         
-        console.log('Token balance check:', {
-          symbol,
-          currentBalance,
-          requiredAmount: amount,
-          hasEnough: currentBalance >= amount
-        })
+
         
         if (currentBalance < amount) {
           toast.error(`Insufficient ${symbol} balance. You have ${formatNumber(currentBalance, 6)} ${symbol}, but need ${formatNumber(amount, 6)} ${symbol}.`, { id: 'payment' })
           return null
         }
       } catch (balanceError) {
-        console.warn('Could not check token balance, proceeding with transaction:', balanceError)
         toast.loading(`Preparing ${symbol} transaction...`, { id: 'payment' })
       }
       
@@ -111,11 +95,7 @@ export function usePayToken() {
       // Parse amount with correct decimals
       const amountInUnits = parseUnits(amount.toString(), decimals)
       
-      console.log('Amount conversion:', {
-        originalAmount: amount,
-        amountInUnits: amountInUnits.toString(),
-        decimals
-      })
+
       
       // Encode transfer function data
       const data = encodeFunctionData({
@@ -131,11 +111,9 @@ export function usePayToken() {
         data,
       })
       
-      console.log('Token transaction sent successfully:', txHash)
       toast.success(`${symbol} payment successful!`, { id: 'payment' })
       return txHash
     } catch (error: any) {
-      console.error('Token payment error:', error)
       
       // Handle specific error types
       let errorMessage = `${symbol} payment failed. Please try again.`

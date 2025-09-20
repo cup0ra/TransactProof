@@ -27,7 +27,6 @@ export function useETHBalance() {
         const formattedBalance = formatEther(balanceRaw)
         setBalance(formattedBalance)
       } catch (error) {
-        console.error('Error fetching ETH balance:', error)
         setBalance('0')
       } finally {
         setIsLoading(false)
@@ -44,16 +43,6 @@ export function useETHBalance() {
     const gasBuffer = chainId === 1 ? 0.001 : 0.0001 // Mainnet vs L2 networks
     const totalRequired = requiredAmount + gasBuffer
     const hasEnough = balanceNumber >= totalRequired
-    
-    console.log('ETH Balance Check:', {
-      balance: balanceNumber,
-      requiredAmount,
-      gasBuffer,
-      totalRequired,
-      hasEnough,
-      isInsufficient: !hasEnough,
-      chainId
-    })
     
     return !hasEnough
   }

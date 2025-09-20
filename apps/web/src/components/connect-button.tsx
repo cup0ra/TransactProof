@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'react-hot-toast'
 import { useAuth } from '@/hooks/use-auth'
-import { useAccount, useDisconnect, useChainId, useSwitchChain } from 'wagmi'
+import { useAccount, useDisconnect, useChainId, useSwitchChain, useWalletClient } from 'wagmi'
 import { useAppKit, useAppKitNetwork, useAppKitAccount } from '@reown/appkit/react'
 import { networks } from '@/config'
 import { useWalletAuth } from '@/contexts/wallet-auth-context'
@@ -13,9 +13,9 @@ export function ConnectButton() {
   const { isAuthenticated, user, signInWithEthereum, signOut, isLoading } = useAuth()
   const { address, isConnected } = useAccount()
   const { disconnect } = useDisconnect()
+  const { data: walletClient } = useWalletClient()
   const { open, close } = useAppKit()
   const { isConnected: appkitConnected } = useAppKitAccount()
-  // Отслеживаем состояние модального окна через DOM
   const [modalIsOpen, setModalIsOpen] = useState(false)
   const chainId = useChainId()
   const { switchChain } = useSwitchChain()
@@ -24,16 +24,16 @@ export function ConnectButton() {
   const [mounted, setMounted] = useState(false)
   const [showNetworkDropdown, setShowNetworkDropdown] = useState(false)
   const [isDisconnecting, setIsDisconnecting] = useState(false)
-  const [globalAuthState, setGlobalAuthState] = useState(false) // Локальное состояние для глобальной аутентификации
-  const [recentlyDisconnected, setRecentlyDisconnected] = useState(false) // Флаг для предотвращения автооткрытия
+  const [globalAuthState, setGlobalAuthState] = useState(false)
+  const [recentlyDisconnected, setRecentlyDisconnected] = useState(false)
+  const [wasConnectedBefore, setWasConnectedBefore] = useState(false)
 
-  // Отслеживаем состояние модального окна через DOM
   useEffect(() => {
     const checkModalState = () => {
       const modals = document.querySelectorAll('w3m-modal, appkit-modal, [data-testid="w3m-modal"]')
       const isOpen = modals.length > 0
       
-      // Закрываем модальные окна только при явном отключении
+
       if (isOpen && isDisconnecting) {
         modals.forEach(modal => {
           if (modal instanceof HTMLElement) {
@@ -77,12 +77,23 @@ export function ConnectButton() {
     }
   }, [address])
 
-  // Вычисляем итоговое состояние аутентификации
-  const isFullyAuthenticated = (
-    isAuthenticated && user?.walletAddress?.toLowerCase() === address?.toLowerCase()
-  ) || globalAuthState
+  useEffect(() => {
+    if (isConnected && address) {
+      setWasConnectedBefore(true)
+    } else if (!isConnected) {
+      const timeoutId = setTimeout(() => {
+        setWasConnectedBefore(false)
+      }, 1000)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [isConnected, address])
+
+
+  const isFullyAuthenticated = isConnected && (
+    (isAuthenticated && user?.walletAddress?.toLowerCase() === address?.toLowerCase()) ||
+    globalAuthState
+  )
   
-  // Получаем информацию о текущей сети
   const currentNetwork = networks.find(network => network.id === chainId) || networks[0]
 
   const handleAuthenticate = useCallback(async () => {
@@ -104,16 +115,30 @@ export function ConnectButton() {
     }
     
     try {
-      await signInWithEthereum(address)
+
+      const customSigner = async (message: string) => {
+        if (!walletClient) {
+          throw new Error('Wallet client not available')
+        }
+        
+
+        const signature = await walletClient.signMessage({
+          message,
+          account: address as `0x${string}`,
+        })
+        
+        return signature
+      }
+
+      await signInWithEthereum(address, customSigner)
       finishAuth()
     } catch (error) {
       cancelAuth()
     }
-  }, [isConnected, address, isFullyAuthenticated, user?.walletAddress, signInWithEthereum, startAuth, finishAuth, cancelAuth])
+  }, [isConnected, address, isFullyAuthenticated, user?.walletAddress, signInWithEthereum, startAuth, finishAuth, cancelAuth, walletClient])
 
-  // Автоматическая аутентификация при подключении кошелька
+  // Auto authentication when wallet connects
   useEffect(() => {
-    // Не запускаем автоаутентификацию если происходит отключение или недавно было отключение
     if (isDisconnecting || recentlyDisconnected) {
       return
     }
@@ -123,22 +148,51 @@ export function ConnectButton() {
     }
     
     if (isConnected && address && !isFullyAuthenticated && !isLoading && !isDisconnecting && !isAuthInProgress) {
-      // Уменьшаем задержку для более быстрого восстановления
       const timeoutId = setTimeout(() => {
-        // Дополнительная проверка что мы всё ещё не отключаемся
         if (!isDisconnecting && !recentlyDisconnected) {
           handleAuthenticate()
         }
-      }, 50) // Уменьшили с 100ms до 50ms
+      }, 50)
       
       return () => clearTimeout(timeoutId)
     }
   }, [isConnected, address, isAuthenticated, isFullyAuthenticated, isLoading, handleAuthenticate, isDisconnecting, isAuthInProgress, user?.walletAddress, globalAuthState, recentlyDisconnected])
 
-  // Сброс состояния при смене адреса
+  // Reset state on address change
   useEffect(() => {
     cancelAuth()
   }, [address, cancelAuth])
+
+  // Auto logout on wallet disconnect
+  useEffect(() => {
+    if (!mounted || isDisconnecting || recentlyDisconnected || !wasConnectedBefore) {
+      return
+    }
+
+    const wasAuthenticated = isAuthenticated || globalAuthState
+    
+    if (!isConnected && wasAuthenticated) {
+      const timeoutId = setTimeout(async () => {
+        if (!isConnected && (isAuthenticated || globalAuthState)) {
+          try {
+            if (isAuthenticated) {
+              await signOut()
+            }
+            
+            globalAuthManager.clearAll()
+            setGlobalAuthState(false)
+            
+            toast.success('Wallet disconnected - signed out automatically')
+          } catch (error) {
+            globalAuthManager.clearAll()
+            setGlobalAuthState(false)
+          }
+        }
+      }, 500) 
+      
+      return () => clearTimeout(timeoutId)
+    }
+  }, [isConnected, isAuthenticated, globalAuthState, signOut, mounted, isDisconnecting, recentlyDisconnected, wasConnectedBefore])
 
   const handleConnect = async () => {
     try {      
@@ -147,11 +201,9 @@ export function ConnectButton() {
         return
       }
       
-      // Сбрасываем все блокирующие состояния при явном подключении
       setRecentlyDisconnected(false)
       setIsDisconnecting(false)
       
-      // Закрываем модальное окно если оно открыто
       if (modalIsOpen && close) {
         close()
         await new Promise(resolve => setTimeout(resolve, 200))
@@ -159,27 +211,21 @@ export function ConnectButton() {
       
       cancelAuth()
       
-      // Отключаем существующее соединение если есть
       if (isConnected) {
         disconnect()
         await new Promise(resolve => setTimeout(resolve, 300))
       }
       
-      // Проверяем состояние перед открытием
       const modalBefore = document.querySelector('w3m-modal, appkit-modal, [data-testid="w3m-modal"]')
       
       await open()
       
-      // Проверяем, действительно ли модальное окно открылось
       setTimeout(() => {
         const modal = document.querySelector('w3m-modal, appkit-modal, [data-testid="w3m-modal"]')
         
         if (modal) {
 
         } else {
-          
-          // Попробуем создать модальное окно принудительно
-          console.log('ConnectButton: Attempting to create modal manually')
           const manualModal = document.createElement('w3m-modal')
           manualModal.style.position = 'fixed'
           manualModal.style.zIndex = '99999'
@@ -204,14 +250,13 @@ export function ConnectButton() {
   const handleDisconnect = async () => {
     try {
       setIsDisconnecting(true)
-      setRecentlyDisconnected(true) // Устанавливаем флаг недавнего отключения
+      setRecentlyDisconnected(true)
+      setWasConnectedBefore(false)
       
-      // Принудительно закрываем все модальные окна
       if (modalIsOpen && close) {
         close()
       }
       
-      // Дополнительно закрываем через DOM (если нужно)
       const modals = document.querySelectorAll('w3m-modal, appkit-modal, [data-testid="w3m-modal"]')
       modals.forEach(modal => {
         if (modal instanceof HTMLElement) {
@@ -222,7 +267,6 @@ export function ConnectButton() {
       
       cancelAuth()
       
-      // Очищаем конкретный адрес из глобального менеджера
       if (address) {
         globalAuthManager.clearAddress(address)
       } else {
@@ -237,12 +281,10 @@ export function ConnectButton() {
       
       toast.success('Wallet disconnected')
       
-      // Сбрасываем состояние отключения быстрее
       setTimeout(() => {
         setIsDisconnecting(false)
       }, 200)
       
-      // Сокращаем время блокировки до 500ms вместо 2 секунд
       setTimeout(() => {
         setRecentlyDisconnected(false)
       }, 500)
@@ -263,7 +305,6 @@ export function ConnectButton() {
     }
   }
 
-  // Закрытие дропдауна при клике вне его
   useEffect(() => {
     const handleClickOutside = () => setShowNetworkDropdown(false)
     if (showNetworkDropdown) {
@@ -272,7 +313,6 @@ export function ConnectButton() {
     }
   }, [showNetworkDropdown])
 
-  // Функция для получения цвета сети
   const getNetworkColor = (network: any) => {
     switch (network?.id) {
       case 1: // Ethereum Mainnet

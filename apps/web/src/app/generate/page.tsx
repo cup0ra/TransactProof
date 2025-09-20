@@ -1,9 +1,44 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { ReceiptGenerator } from '@/components/receipt-generator'
 import { APP_CONFIG, formatPaymentAmount } from '@/config'
+import { useAuth } from '@/hooks/use-auth'
+import { useAccount } from 'wagmi'
 
 export default function GeneratePage() {
+  const router = useRouter()
+  const { isAuthenticated, initialCheckDone } = useAuth()
+  const { isConnected } = useAccount()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted || !initialCheckDone) {
+      return
+    }
+
+    if (!isAuthenticated || !isConnected) {
+      return
+    }
+  }, [mounted, isAuthenticated, isConnected, initialCheckDone, router])
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center transition-colors duration-300">
+        <div className="text-center">
+          <div className="w-6 h-6 border border-orange-400 border-t-transparent animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400 text-xs font-light">
+            Loading...
+          </p>
+        </div>
+      </div>
+    )
+  }
   return (
     <>
       {/* Centered Hero Section with Receipt Generator */}

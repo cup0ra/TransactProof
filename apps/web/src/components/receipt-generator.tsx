@@ -25,7 +25,7 @@ type ReceiptForm = z.infer<typeof receiptSchema>
 
 export function ReceiptGenerator() {
   const { isAuthenticated, user } = useAuth()
-  const { address } = useAccount()
+  const { address, isConnected } = useAccount()
   const chainId = useChainId()
   const [form, setForm] = useState<ReceiptForm>({ txHash: '', description: '' })
   const [step, setStep] = useState<'input' | 'verifying' | 'payment' | 'generating' | 'complete'>('input')
@@ -83,7 +83,6 @@ export function ReceiptGenerator() {
     }
   }, [chainId])
 
-  // Отслеживаем глобальное состояние аутентификации
   useEffect(() => {
     const unsubscribe = globalAuthManager.onAuthChange((changedAddress, isAuth) => {
       if (address && changedAddress === address.toLowerCase()) {
@@ -101,14 +100,21 @@ export function ReceiptGenerator() {
     }
   }, [address])
 
-  // Вычисляем итоговое состояние аутентификации
-  const isFullyAuthenticated = (
-    isAuthenticated && user?.walletAddress?.toLowerCase() === address?.toLowerCase()
-  ) || globalAuthState
+  const isFullyAuthenticated = isConnected && (
+    (isAuthenticated && user?.walletAddress?.toLowerCase() === address?.toLowerCase()) ||
+    globalAuthState
+  )
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    if (!isConnected && (step === 'payment' || step === 'generating')) {
+      setStep('input')
+      toast.error('Wallet disconnected. Please reconnect to continue.')
+    }
+  }, [isConnected, step])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -133,7 +139,6 @@ export function ReceiptGenerator() {
     }
 
     if (step === 'input') {
-      // Сначала проверяем существование транзакции
       setStep('verifying')
       const transactionExists = await verifyTransaction(form.txHash)
       
@@ -171,7 +176,6 @@ export function ReceiptGenerator() {
         )
       }
       
-      console.log('Payment transaction hash:', paymentTxHash)
       
       if (paymentTxHash) {
         setStep('generating')
@@ -187,17 +191,14 @@ export function ReceiptGenerator() {
           paymentContractAddress: selectedPayment.contractAddress || undefined, // Pass contract address for tokens
         })
         
-        console.log('Receipt generated:', receipt)
         setReceiptData(receipt)
         setStep('complete')
         toast.success('Receipt generated successfully!')
       } else {
-        console.log('Payment failed, staying on payment step')
         // Stay on payment step so user can try again
         setStep('payment')
       }
     } catch (error: any) {
-      console.error('Payment or receipt generation error:', error)
       
       const errorMessage = error?.message || 'Failed to process payment or generate receipt'
       toast.error(errorMessage)
