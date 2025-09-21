@@ -26,8 +26,8 @@ export class FeedbackService {
       const { name, email, subject, message } = feedbackDto
 
       const mailOptions = {
-        from: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
-        to: process.env.SUPPORT_EMAIL || 'support@transactproof.com',
+        from: this.configService.get('SMTP_FROM_EMAIL') || this.configService.get('SMTP_USER'),
+        to: this.configService.get('SUPPORT_EMAIL') || 'support@transactproof.com',
         subject: `[TransactProof Feedback] ${subject}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
