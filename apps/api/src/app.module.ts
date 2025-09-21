@@ -5,6 +5,7 @@ import { ThrottlerModule } from '@nestjs/throttler'
 import { DatabaseModule } from './database/database.module'
 import { AuthModule } from './auth/auth.module'
 import { ReceiptsModule } from './receipts/receipts.module'
+import { FeedbackModule } from './feedback/feedback.module'
 import { AppController } from './app.controller'
 
 @Module({
@@ -25,6 +26,7 @@ import { AppController } from './app.controller'
     DatabaseModule,
     AuthModule,
     ReceiptsModule,
+    FeedbackModule,
   ],
   controllers: [AppController],
 })

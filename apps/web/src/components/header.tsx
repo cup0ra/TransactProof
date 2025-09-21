@@ -109,7 +109,6 @@ export function Header() {
               </Link>
             )}
           </nav>
-
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-2">
             <ThemeToggle />
@@ -185,7 +184,6 @@ export function Header() {
                   </Link>
                 )}
               </nav>
-
               {/* Mobile Connect Button */}
               <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
                 <ConnectButton />

@@ -31,9 +31,7 @@ export function Footer() {
           <div>
             <h3 className="font-light text-xs uppercase tracking-wider mb-6 text-orange-400">Support</h3>
             <ul className="space-y-3 text-xs text-gray-600 dark:text-gray-400 font-light">
-              <li><a href="/help" className="hover:text-orange-400 transition-colors duration-300">Help Center</a></li>
-              <li><a href="/contact" className="hover:text-orange-400 transition-colors duration-300">Contact</a></li>
-              <li><a href="/faq" className="hover:text-orange-400 transition-colors duration-300">FAQ</a></li>
+              <li><Link href="/help-center" className="hover:text-orange-400 transition-colors duration-300">Help Center</Link></li>
             </ul>
           </div>
 
