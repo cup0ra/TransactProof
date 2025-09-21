@@ -12,7 +12,7 @@ export class FeedbackService {
     
     this.transporter = nodemailer.createTransport({
       host: this.configService.get('SMTP_HOST') || 'smtp.gmail.com',
-      port: this.configService.get('SMTP_PORT') || 465,
+      port: parseInt(this.configService.get('SMTP_PORT')) || 465,
       secure: true,
       auth: {
         user: this.configService.get('SMTP_USER'),
