@@ -7,7 +7,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "lint": "echo 'No linting needed for core package'"
   },
   "devDependencies": {
     "typescript": "^5.2.2"

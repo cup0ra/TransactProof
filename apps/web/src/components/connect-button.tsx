@@ -15,11 +15,9 @@ export function ConnectButton() {
   const { disconnect } = useDisconnect()
   const { data: walletClient } = useWalletClient()
   const { open, close } = useAppKit()
-  const { isConnected: appkitConnected } = useAppKitAccount()
   const [modalIsOpen, setModalIsOpen] = useState(false)
   const chainId = useChainId()
   const { switchChain } = useSwitchChain()
-  const { caipNetwork, switchNetwork } = useAppKitNetwork()
   const { isAuthInProgress, startAuth, finishAuth, cancelAuth } = useWalletAuth()
   const [mounted, setMounted] = useState(false)
   const [showNetworkDropdown, setShowNetworkDropdown] = useState(false)
@@ -215,8 +213,6 @@ export function ConnectButton() {
         disconnect()
         await new Promise(resolve => setTimeout(resolve, 300))
       }
-      
-      const modalBefore = document.querySelector('w3m-modal, appkit-modal, [data-testid="w3m-modal"]')
       
       await open()
       

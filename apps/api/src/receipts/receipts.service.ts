@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../database/prisma.service'
-import { BlockchainService, ExtendedTransactionDetails } from './blockchain.service'
+import { BlockchainService } from './blockchain.service'
 import { PdfService } from './pdf.service'
 import { PayAndGenerateDto } from './dto/pay-and-generate.dto'
 import { PaymentRequiredException } from '../common/exceptions/payment-required.exception'

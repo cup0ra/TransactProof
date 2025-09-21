@@ -47,6 +47,7 @@ export class PdfService {
       this.logger.log(`Using system browser: ${puppeteerExecutablePath}`)
       
       // Check if executable exists
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const fs = require('fs')
       if (!fs.existsSync(puppeteerExecutablePath)) {
         this.logger.error(`❌ Browser executable not found at: ${puppeteerExecutablePath}`)
@@ -117,9 +118,7 @@ export class PdfService {
     })
 
     // Calculate USDT equivalent if available
-    const ethAmount = parseFloat(data.amount) || 0
     const usdtValue = data.usdtValue?.toFixed(6) || null
-    const pricePerToken = data.pricePerToken?.toFixed(2) || null
     
     // Get network name
     const getNetworkName = (chainId: number) => {

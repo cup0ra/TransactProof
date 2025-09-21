@@ -35,7 +35,7 @@ interface PaginatedResponse {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { isAuthenticated, user, initialCheckDone, checkAuth } = useAuth()
+  const { isAuthenticated, user, initialCheckDone } = useAuth()
   const { isConnected } = useAccount()
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [pagination, setPagination] = useState({

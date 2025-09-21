@@ -56,7 +56,7 @@ export default function HelpCenterPage() {
           Help Center
         </h1>
         <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base font-light max-w-2xl mx-auto leading-relaxed">
-          Need help? We're here to assist you. Send us a message and we'll get back to you as soon as possible.
+          Need help? We&apos;re here to assist you. Send us a message and we&apos;ll get back to you as soon as possible.
         </p>
       </div>
 

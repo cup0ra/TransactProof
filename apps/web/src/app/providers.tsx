@@ -2,7 +2,6 @@
 
 import { Toaster } from 'react-hot-toast'
 import { ThemeProvider } from '@/contexts/theme-context'
-import { ReownProvider } from '@/contexts/reown-context'
 import { AuthProvider } from '@/contexts/auth-context'
 import { WalletAuthProvider } from '@/contexts/wallet-auth-context'
 
