@@ -9,15 +9,7 @@ export class FeedbackService {
   private transporter: nodemailer.Transporter
 
   constructor(private readonly configService: ConfigService) {
-     this.logger.log(
-      'FeedbackService initialized',
-       this.configService.get('SMTP_HOST') ,
-         parseInt(this.configService.get('SMTP_PORT')),
-         this.configService.get('SMTP_USER'),
-         this.configService.get('SMTP_PASS'),
-          this.configService.get('SMTP_FROM_EMAIL'),
-          this.configService.get('SUPPORT_EMAIL'),
-         )
+
     this.transporter = nodemailer.createTransport({
       host: this.configService.get('SMTP_HOST') || 'smtp.gmail.com',
       port: parseInt(this.configService.get('SMTP_PORT')) || 465,
@@ -32,7 +24,15 @@ export class FeedbackService {
   async sendFeedback(feedbackDto: SendFeedbackDto): Promise<void> {
     try {
       const { name, email, subject, message } = feedbackDto
-
+     this.logger.log(
+      'FeedbackService initialized',
+       this.configService.get('SMTP_HOST') ,
+         parseInt(this.configService.get('SMTP_PORT')),
+         this.configService.get('SMTP_USER'),
+         this.configService.get('SMTP_PASS'),
+          this.configService.get('SMTP_FROM_EMAIL'),
+          this.configService.get('SUPPORT_EMAIL'),
+         )
       const mailOptions = {
         from: this.configService.get('SMTP_FROM_EMAIL') || this.configService.get('SMTP_USER'),
         to: this.configService.get('SUPPORT_EMAIL') || 'support@transactproof.com',
