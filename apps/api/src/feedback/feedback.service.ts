@@ -9,7 +9,15 @@ export class FeedbackService {
   private transporter: nodemailer.Transporter
 
   constructor(private readonly configService: ConfigService) {
-    
+     this.logger.log(
+      'FeedbackService initialized',
+       this.configService.get('SMTP_HOST') ,
+         parseInt(this.configService.get('SMTP_PORT')),
+         this.configService.get('SMTP_USER'),
+         this.configService.get('SMTP_PASS'),
+          this.configService.get('SMTP_FROM_EMAIL'),
+          this.configService.get('SUPPORT_EMAIL'),
+         )
     this.transporter = nodemailer.createTransport({
       host: this.configService.get('SMTP_HOST') || 'smtp.gmail.com',
       port: parseInt(this.configService.get('SMTP_PORT')) || 465,
