@@ -1,59 +1,84 @@
 'use client'
-
 import Link from 'next/link'
+import { motion, useScroll, useTransform } from 'framer-motion'
+import { useRef } from 'react'
+import { ParallaxBackground } from '@/components/parallax-background'
 
 export default function HomePage() {
+  const ref = useRef(null)
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start start", "end start"]
+  })
+  
+  const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"])
+  const opacity = useTransform(scrollYProgress, [0, 1], [1, 0.3])
+
   return (
     <>
-      {/* Hero Section with Parallax */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
-          {/* Parallax Background */}
-          <div className="parallax-bg absolute inset-0 -z-10" style={{
-            backgroundImage: `
-              radial-gradient(circle at 20% 30%, rgba(249, 115, 22, 0.15) 0%, transparent 60%),
-              radial-gradient(circle at 80% 70%, rgba(245, 158, 11, 0.12) 0%, transparent 60%),
-              radial-gradient(circle at 40% 80%, rgba(249, 115, 22, 0.08) 0%, transparent 60%)
-            `,
-            backgroundSize: '120% 140%',
-            backgroundPosition: '0% 0%'
-          }}>
-            <div className="absolute inset-0 bg-white dark:bg-black transition-colors duration-300"></div>
-            <div className="absolute inset-0 opacity-20 parallax-dots" style={{
-              backgroundImage: `radial-gradient(circle, #f97316 0.8px, transparent 0.8px)`,
-              backgroundSize: '100px 100px'
-            }}></div>
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/50 dark:via-black/50 to-white dark:to-black opacity-80 transition-colors duration-300"></div>
-          </div>
+      {/* Hero Section with Background Image */}
+      <section ref={ref} className="relative h-screen flex items-center justify-center overflow-hidden">
+          {/* Background Image with Parallax using new component wrapped in motion */}
+          <motion.div 
+            className="absolute inset-0"
+            style={{ y, opacity }}
+          >
+            <ParallaxBackground 
+              enableParallax={false} // motion.div handles parallax
+              darkThemeImage="/bg1.png"
+              lightThemeImage="/bg3.png"
+            />
+          </motion.div>
           
-          <div className="relative z-10 text-center max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div 
+            className="relative z-40 text-center max-w-4xl mx-auto px-4 sm:px-6 lg:px-8"
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, ease: "easeOut" }}
+          >
             {/* Minimal Logo */}
-            <div className="mb-8 sm:mb-12 lg:mb-16">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 mx-auto mb-6 sm:mb-8 border-2 border-orange-400 rounded-full flex items-center justify-center parallax-float">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border border-amber-300 rounded-full flex items-center justify-center">
-                  <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 lg:w-3 lg:h-3 bg-orange-500 rounded-full"></div>
-                </div>
-              </div>
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-thin text-black dark:text-white mb-4 sm:mb-6 tracking-wider parallax-title transition-colors duration-300">
+            <motion.div 
+              className="mb-8 sm:mb-12 lg:mb-16"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <motion.h1 
+                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-thin text-black dark:text-white mb-4 sm:mb-6 tracking-wider transition-colors duration-300"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+              >
                 TransactProof
-              </h1>
-            </div>
+              </motion.h1>
+            </motion.div>
             
-            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-8 sm:mb-12 lg:mb-16 max-w-2xl mx-auto font-light leading-relaxed parallax-subtitle transition-colors duration-300">
+            <motion.p 
+              className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-8 sm:mb-12 lg:mb-16 max-w-2xl mx-auto font-light leading-relaxed parallax-subtitle transition-colors duration-300"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
               Professional blockchain receipts.
               <br />
-              <span className="text-orange-400">Minimal. Verified. Instant.</span>
-            </p>
+              <span className="text-gray-800 dark:text-orange-400">Minimal. Verified. Instant.</span>
+            </motion.p>
             
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center parallax-buttons">
+            <motion.div 
+              className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center parallax-buttons"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
               <Link href="/generate" className="group relative inline-flex items-center justify-center px-8 sm:px-10 lg:px-12 py-3 sm:py-4 text-base sm:text-lg font-light text-white dark:text-black bg-orange-400 rounded-none hover:bg-orange-500 hover:text-white dark:hover:text-black transition-all duration-300 border-2 border-transparent hover:border-orange-600">
                 <span className="relative z-10">Generate Receipt</span>
                 <div className="absolute inset-0 bg-orange-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
               </Link>
-              <Link href="/dashboard" className="inline-flex items-center justify-center px-8 sm:px-10 lg:px-12 py-3 sm:py-4 text-base sm:text-lg font-light text-orange-400 border border-orange-400 rounded-none hover:border-orange-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950 transition-all duration-300">
+              <Link href="/dashboard" className="inline-flex items-center justify-center px-8 sm:px-10 lg:px-12 py-3 sm:py-4 text-base sm:text-lg font-light text-orange-400 border border-orange-400 rounded-none hover:border-orange-500 hover:text-orange-500 hover:bg-orange-950/10 dark:hover:bg-orange-950 transition-all duration-300">
                 Dashboard
               </Link>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </section>
 
         {/* How It Works Section */}
@@ -115,6 +140,36 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
+                      {/* Quick Info Bar */}
+           <div className="mt-8 sm:mt-12 lg:mt-16 flex flex-col sm:flex-row flex-wrap justify-center gap-6 sm:gap-8 lg:gap-12 text-center">
+              <div className="group">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center mx-auto mb-2 sm:mb-3 group-hover:border-orange-400 transition-colors duration-300">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                </div>
+                <div className="text-base sm:text-lg font-light text-orange-400 mb-1">0.5 USDT / USDC</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider transition-colors duration-300">Service Fee</div>
+              </div>
+              <div className="group">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center mx-auto mb-2 sm:mb-3 group-hover:border-orange-400 transition-colors duration-300">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="text-base sm:text-lg font-light text-orange-400 mb-1">30 Seconds</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider transition-colors duration-300">Processing Time</div>
+              </div>
+              <div className="group">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center mx-auto mb-2 sm:mb-3 group-hover:border-orange-400 transition-colors duration-300">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div className="text-lg font-light text-orange-400 mb-1">Professional</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider transition-colors duration-300">PDF Format</div>
+              </div>
+            </div> 
           </div>
         </section>
 

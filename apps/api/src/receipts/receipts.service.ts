@@ -93,6 +93,13 @@ export class ReceiptsService {
       }
       
       if (!paymentVerified) {
+        this.logger.error(`Payment verification failed:`, {
+          paymentTxHash,
+          paymentTokenType,
+          expectedPaymentAmount,
+          userAddress,
+          paymentContractAddress
+        })
         throw new PaymentRequiredException(
           `Payment of ${expectedPaymentAmount} ${paymentTokenType} to service address not found. Please complete payment first.`
         )

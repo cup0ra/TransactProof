@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Res, Req, UseGuards } from '@nestjs/common'
 import { Response, Request } from 'express'
 import { ThrottlerGuard } from '@nestjs/throttler'
+import { ConfigService } from '@nestjs/config'
 import { JwtAuthGuard } from './jwt-auth.guard'
 import { AuthService } from './auth.service'
 import { VerifyDto } from './dto/verify.dto'
@@ -9,7 +10,10 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger'
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Get('nonce')
   @UseGuards(ThrottlerGuard)
@@ -30,16 +34,16 @@ export class AuthController {
   ) {
     const result = await this.authService.verifySiweMessage(verifyDto)
     
-    const isProduction = process.env.NODE_ENV === 'production'
-    const cookieName = process.env.SESSION_COOKIE_NAME || 'tp_session'
+    const isProduction = this.configService.get('NODE_ENV') === 'production'
+    const cookieName = this.configService.get('SESSION_COOKIE_NAME', 'tp_session')
     
     // Set JWT cookie with proper cross-domain settings
     const cookieOptions = {
       httpOnly: true,
       secure: isProduction, // Only HTTPS in production
       sameSite: isProduction ? 'none' as const : 'lax' as const, // 'none' allows cross-domain
-      maxAge: parseInt(process.env.SESSION_TTL_MIN || '30') * 60 * 1000,
-      ...(isProduction && process.env.COOKIE_DOMAIN && { domain: process.env.COOKIE_DOMAIN }),
+      maxAge: parseInt(this.configService.get('SESSION_TTL_MIN', '30')) * 60 * 1000,
+      ...(isProduction && this.configService.get('COOKIE_DOMAIN') && { domain: this.configService.get('COOKIE_DOMAIN') }),
     }
     
     response.cookie(cookieName, result.accessToken, cookieOptions)
@@ -48,7 +52,7 @@ export class AuthController {
       walletAddress: result.user.walletAddress,
       expiresAt: result.expiresAt,
       // Also return token in response for debugging/alternative auth
-      ...(process.env.NODE_ENV !== 'production' && { accessToken: result.accessToken }),
+      ...(this.configService.get('NODE_ENV') !== 'production' && { accessToken: result.accessToken }),
     }
   }
 
@@ -64,8 +68,8 @@ export class AuthController {
         origin: req.headers.origin,
         referer: req.headers.referer,
       },
-      sessionCookieName: process.env.SESSION_COOKIE_NAME || 'tp_session',
-      nodeEnv: process.env.NODE_ENV,
+      sessionCookieName: this.configService.get('SESSION_COOKIE_NAME', 'tp_session'),
+      nodeEnv: this.configService.get('NODE_ENV'),
     }
   }
 
@@ -90,14 +94,14 @@ export class AuthController {
   ) {
     await this.authService.invalidateSession(req.user.jwtId)
     
-    const isProduction = process.env.NODE_ENV === 'production'
-    const cookieName = process.env.SESSION_COOKIE_NAME || 'tp_session'
+    const isProduction = this.configService.get('NODE_ENV') === 'production'
+    const cookieName = this.configService.get('SESSION_COOKIE_NAME', 'tp_session')
     
     response.clearCookie(cookieName, {
       httpOnly: true,
       secure: isProduction,
       sameSite: isProduction ? 'none' : 'lax',
-      domain: isProduction ? process.env.COOKIE_DOMAIN : undefined,
+      domain: isProduction ? this.configService.get('COOKIE_DOMAIN') : undefined,
     })
     
     return { message: 'Logout successful' }

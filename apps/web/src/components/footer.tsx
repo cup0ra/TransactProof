@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Logo } from './logo'
 export function Footer() {
   return (
     <footer className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-black py-16 transition-colors duration-300">
@@ -7,15 +8,11 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center space-x-3 mb-6">
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
-                <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
-                <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-              </div>
+              <Logo />
               <span className="text-sm font-light tracking-wide text-black dark:text-white transition-colors duration-300">TransactProof</span>
             </div>
             <p className="text-gray-600 dark:text-gray-400 text-xs font-light leading-relaxed transition-colors duration-300">
-              Professional PDF receipts for crypto transactions on Base network.
+              Professional PDF receipts for crypto transactions.
             </p>
           </div>
 

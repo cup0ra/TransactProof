@@ -346,7 +346,7 @@ export function ConnectButton() {
               e.stopPropagation()
               setShowNetworkDropdown(!showNetworkDropdown)
             }}
-            className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-all duration-300 font-light text-xs tracking-wide"
+            className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white/30 backdrop-blur-md dark:bg-black/30 text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-all duration-300 font-light text-xs tracking-wide"
           >
             <div 
               className="w-4 h-4 rounded-full" 
@@ -365,7 +365,7 @@ export function ConnectButton() {
 
           {/* Network Dropdown */}
           {showNetworkDropdown && (
-            <div className="absolute top-full left-0 mt-1 w-52 bg-white dark:bg-black border border-gray-300 dark:border-gray-700 shadow-lg z-50">
+            <div className="absolute top-full left-0 mt-1 w-52 bg-white/30 backdrop-blur-md dark:bg-black/30 border border-gray-300 dark:border-gray-700 shadow-lg z-50">
               {networks.map((network) => (
                 <button
                   key={network.id}
@@ -391,7 +391,7 @@ export function ConnectButton() {
         </div>
 
         {/* User Info */}
-        <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300">
+        <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white/30 backdrop-blur-md dark:bg-black/30 text-gray-700 dark:text-gray-300">
           <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
           <span className="font-light text-xs tracking-wide">
             {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Connected'}

@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
   title: 'TransactProof - Crypto Receipt Generator',
-  description: 'Generate PDF receipts for your crypto transactions with USDT payment on Base network',
+  description: 'Generate PDF receipts for your crypto transactions with USDT payment',
   keywords: ['crypto', 'receipt', 'pdf', 'blockchain', 'base', 'usdt'],
   authors: [{ name: 'TransactProof Team' }],
   creator: 'TransactProof',
@@ -64,7 +64,7 @@ export default async function RootLayout({
           <Providers>
             <div className="min-h-screen flex flex-col bg-white dark:bg-black">
               <Header />
-              <main className="flex-1 pt-16">
+              <main className="flex-1">
                 {children}
               </main>
               <Footer />

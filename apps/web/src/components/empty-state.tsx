@@ -19,7 +19,9 @@ export function EmptyState({
     <div className="text-center py-20">
       {/* Icon */}
       <div className="mx-auto w-12 h-12 border border-orange-400 flex items-center justify-center mb-8">
-        <div className="w-4 h-4 bg-orange-400"></div>
+        <svg className="w-6 h-6 text-orange-400" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M3,3V21H21V3H3M5,5H19V19H5V5M7,7V9H17V7H7M7,11V13H17V11H7M7,15V17H14V15H7Z" />
+        </svg>
       </div>
 
       {/* Content */}

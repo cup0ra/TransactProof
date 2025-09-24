@@ -67,7 +67,7 @@ export function ReceiptCard({ receipt }: ReceiptCardProps) {
   }
 
   return (
-    <div className="border border-gray-200 dark:border-gray-800 p-6 bg-gray-50 dark:bg-transparent hover:border-gray-300 dark:hover:border-gray-700 transition-all duration-300">
+    <div className="border border-gray-200 dark:border-gray-800 p-6 bg-white/30 backdrop-blur-md dark:bg-black/50 hover:border-gray-300 dark:hover:border-gray-700 transition-all duration-300">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">

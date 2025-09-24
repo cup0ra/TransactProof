@@ -8,6 +8,7 @@ import { ThemeToggle } from './theme-toggle'
 import { useAuth } from '@/hooks/use-auth'
 import { useAccount } from 'wagmi'
 import { globalAuthManager } from '@/utils/global-auth-manager'
+import { Logo } from './logo'
 
 export function Header() {
   const { isAuthenticated, user } = useAuth()
@@ -74,15 +75,11 @@ export function Header() {
 
   return (
     <>
-      <header className="fixed top-0 w-full z-50 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-black/80 transition-colors duration-300">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <header className="fixed top-0 w-full z-50">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2 sm:space-x-3" onClick={closeMobileMenu}>
-            <div className="flex space-x-1">
-              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-orange-400 rounded-full"></div>
-              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-amber-400 rounded-full"></div>
-              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-yellow-400 rounded-full"></div>
-            </div>
+            <Logo />
             <span className="text-xs sm:text-sm font-light tracking-wide text-black dark:text-white transition-colors duration-300">TransactProof</span>
           </Link>
 
@@ -110,7 +107,7 @@ export function Header() {
             )}
           </nav>
           {/* Desktop Actions */}
-          <div className="hidden md:flex items-center space-x-2">
+          <div className="hidden md:flex items-center ml-auto space-x-2">
             <ThemeToggle />
             <ConnectButton />
           </div>
@@ -143,8 +140,8 @@ export function Header() {
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={closeMobileMenu}></div>
-          <div className="fixed top-16 left-0 right-0 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 transition-colors duration-300">
+          <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" onClick={closeMobileMenu}></div>
+          <div className="fixed top-16  z-40 left-0 right-0 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 transition-colors duration-300">
             <div className="px-4 py-6 space-y-6">
               {/* Mobile Navigation */}
               <nav className="space-y-4">
