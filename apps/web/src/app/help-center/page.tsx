@@ -26,22 +26,24 @@ export default function HelpCenterPage() {
     setSubmitStatus('idle')
 
     try {
-      const response = await fetch('/api/feedback', {
+      const sendRes = await fetch('/api/send-email', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: `[Help Center] ${formData.subject}`,
+          message: `From: ${formData.name} <${formData.email}>\n\n${formData.message}`,
+          fromEmail: formData.email,
+        })
       })
-      
-      if (response.ok) {
+
+      if (!sendRes.ok) {
+        setSubmitStatus('error')
+      } else {
         setSubmitStatus('success')
         setFormData({ name: '', email: '', subject: '', message: '' })
-      } else {
-        setSubmitStatus('error')
       }
-    } catch (error) {
-      console.error('Error submitting feedback:', error)
+    } catch (err) {
+      console.error('Error sending email:', err)
       setSubmitStatus('error')
     } finally {
       setIsSubmitting(false)
