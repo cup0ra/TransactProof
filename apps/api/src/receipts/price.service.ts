@@ -117,25 +117,32 @@ export class PriceService {
       }
 
       const { coinGeckoId, confidence, source } = tokenSearchResult
-      this.logger.log(`Getting historical price for ${token} -> ${coinGeckoId} on ${date.toDateString()} (confidence: ${confidence}, source: ${source})`)
+      this.logger.log(`Getting historical price (hybrid) for ${token} -> ${coinGeckoId} at ${date.toISOString()} (confidence: ${confidence}, source: ${source})`)
 
-      // Get historical price from CoinGecko
-      const historicalPrice = await this.coinGeckoService.getHistoricalPrice(coinGeckoId, date)
-      
-      if (!historicalPrice) {
-        this.logger.warn(`Historical price data not found for ${coinGeckoId} on ${date.toDateString()}`)
-        
-        // Fallback to current price if historical data is not available
-        this.logger.log(`Falling back to current price for ${token}`)
-        return await this.getTokenPriceInUSDT(token, amount)
+      // 1. Try intraday timestamp-based price (higher precision)
+      let pricePerToken: number | null = await this.coinGeckoService.getHistoricalPriceAtTimestamp(coinGeckoId, date)
+      let pricingMode: 'intraday' | 'daily' | 'current' = 'intraday'
+
+      // 2. Fallback to daily snapshot if intraday not available
+      if (pricePerToken == null) {
+        const daily = await this.coinGeckoService.getHistoricalPrice(coinGeckoId, date)
+        if (daily) {
+          pricePerToken = daily.usdt || daily.usd
+          pricingMode = 'daily'
+        }
       }
 
-      // Prefer USDT price, fallback to USD
-      const pricePerToken = historicalPrice.usdt || historicalPrice.usd
+      // 3. Fallback to current live price if both failed
+      if (pricePerToken == null) {
+        this.logger.warn(`Historical (intraday + daily) price unavailable for ${coinGeckoId} at ${date.toISOString()} — using current price.`)
+        const current = await this.getTokenPriceInUSDT(token, amount)
+        return current ? { ...current, tokenInfo: { ...current.tokenInfo, pricingMode: 'current-fallback', requestedTimestamp: date.toISOString() } } : null
+      }
+
       const tokenAmount = parseFloat(amount)
       const usdtValue = tokenAmount * pricePerToken
 
-      this.logger.log(`Historical price conversion: ${amount} ${token} = ${usdtValue.toFixed(6)} USDT (rate: ${pricePerToken} on ${date.toDateString()})`)
+      this.logger.log(`Historical (${pricingMode}) conversion: ${amount} ${token} = ${usdtValue.toFixed(6)} USDT (rate: ${pricePerToken} at ${date.toISOString()})`)
 
       return {
         usdtValue,
@@ -145,7 +152,8 @@ export class PriceService {
           confidence,
           source,
           name: tokenSearchResult.name,
-          historicalDate: date.toISOString()
+          historicalDate: date.toISOString(),
+          pricingMode
         }
       }
     } catch (error) {

@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config'
 import * as puppeteer from 'puppeteer'
 import * as QRCode from 'qrcode'
 import * as fs from 'fs'
-import * as path from 'path'
+import { resolveUploadsDir, buildUploadFilePath } from '../common/utils/uploads-path.util'
 
 interface ReceiptData {
   txHash: string
@@ -128,8 +128,8 @@ export class PdfService {
     
     // Format transaction fee data
     const transactionFeeEth = data.transactionFeeEth?.toFixed(8) || null
-    const transactionFeeUsd = data.transactionFeeUsd?.toFixed(6) || null
-    const nativeSymbol = data.nativeTokenSymbol || 'ETH'
+  const transactionFeeUsd = data.transactionFeeUsd?.toFixed(6) || null
+  // const nativeSymbol = data.nativeTokenSymbol || 'ETH' // reserved for future use
     
     // Calculate total including fee if both values are available
     let totalWithFeeUsd: string | null = null
@@ -519,20 +519,13 @@ export class PdfService {
 
   async uploadPdf(pdfBuffer: Buffer, txHash: string): Promise<string> {
     try {
-      // Create uploads directory if it doesn't exist
-      const uploadsDir = path.join(process.cwd(), 'uploads')
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true })
-      }
+      const uploadsDir = resolveUploadsDir()
+      this.logger.debug(`[PDF] uploadsDir resolved to: ${uploadsDir}`)
 
-      // Generate unique filename
       const fileName = `receipt-${txHash}-${Date.now()}.pdf`
-      const filePath = path.join(uploadsDir, fileName)
-
-      // Save PDF file locally
+      const filePath = buildUploadFilePath(fileName)
       fs.writeFileSync(filePath, pdfBuffer)
 
-      // Return local/public URL
       const apiPublicUrl = this.configService.get('API_PUBLIC_URL')
       const apiPort = this.configService.get('PORT', '3001')
       const baseUrl = apiPublicUrl || `http://localhost:${apiPort}`
@@ -540,7 +533,6 @@ export class PdfService {
 
       this.logger.log(`PDF saved locally: ${filePath}`)
       this.logger.log(`PDF URL: ${pdfUrl}`)
-
       return pdfUrl
     } catch (error) {
       this.logger.error('Error saving PDF file:', error)

@@ -16,8 +16,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { ReceiptsService } from './receipts.service'
 import { PayAndGenerateDto } from './dto/pay-and-generate.dto'
 import { ReceiptResponseDto } from './dto/receipt-response.dto'
-import * as path from 'path'
 import * as fs from 'fs'
+import { resolveUploadsDir, buildUploadFilePath } from '../common/utils/uploads-path.util'
 
 @ApiTags('receipts')
 @Controller('receipts')
@@ -147,23 +147,33 @@ export class ReceiptsController {
     @Res() res: Response,
   ) {
     try {
-      const filePath = path.join(process.cwd(), 'uploads', filename)
-      
+      const uploadsDir = resolveUploadsDir()
+      const filePath = buildUploadFilePath(filename)
+      const user = (res.req as any)?.user
+      const logMeta = {
+        filename,
+        uploadsDir,
+        filePath,
+        cwd: process.cwd(),
+        user: user ? { id: user.id, wallet: user.walletAddress } : null,
+      }
+
       if (!fs.existsSync(filePath)) {
+        console.warn('[serveFile] File not found', logMeta)
         return res.status(404).json({ message: 'File not found' })
       }
 
-      // Check if filename is a valid PDF receipt
       if (!filename.startsWith('receipt-') || !filename.endsWith('.pdf')) {
+        console.warn('[serveFile] Access denied (invalid pattern)', logMeta)
         return res.status(403).json({ message: 'Access denied' })
       }
 
       res.setHeader('Content-Type', 'application/pdf')
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
-      
-      const fileStream = fs.createReadStream(filePath)
-      fileStream.pipe(res)
+      console.log('[serveFile] Streaming file', logMeta)
+      fs.createReadStream(filePath).pipe(res)
     } catch (error) {
+      console.error('[serveFile] Internal error', { filename, error: (error as Error).message })
       return res.status(500).json({ message: 'Internal server error' })
     }
   }
