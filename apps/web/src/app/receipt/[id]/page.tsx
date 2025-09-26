@@ -135,6 +135,9 @@ export default function ReceiptDetailPage() {
       case 137: return 'Polygon'
       case 10: return 'Optimism'
       case 42161: return 'Arbitrum'
+      case 324: return 'zkSync Era'
+      case 56: return 'BNB Smart Chain'
+      case 43114: return 'Avalanche'
       default: return `Chain ${chainId}`
     }
   }

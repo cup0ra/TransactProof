@@ -16,13 +16,14 @@ export function useMultiTokenBalance(tokenType: string, decimals: number = 6) {
   const [isLoading, setIsLoading] = useState(false)
   const [contractAddress, setContractAddress] = useState<string | null>(null)
   const [tokenInfo, setTokenInfo] = useState<{symbol: string, name: string} | null>(null)
-  const { address } = useAccount()
+  const { address, isConnected } = useAccount()
   const chainId = useChainId()
+  // Only query public client when connected
   const publicClient = usePublicClient()
 
   useEffect(() => {
     async function fetchBalance() {
-      if (!address || !publicClient || !tokenType || tokenType === 'ETH') {
+      if (!isConnected || !address || !publicClient || !tokenType || tokenType === 'ETH') {
         setBalance('0')
         setContractAddress(null)
         setTokenInfo(null)
@@ -107,7 +108,7 @@ export function useMultiTokenBalance(tokenType: string, decimals: number = 6) {
     }
 
     fetchBalance()
-  }, [address, tokenType, decimals, publicClient, chainId])
+  }, [isConnected, address, tokenType, decimals, publicClient, chainId])
 
   const hasInsufficientBalance = (requiredAmount: number): boolean => {
     const balanceNumber = parseFloat(balance)

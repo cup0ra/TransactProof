@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { toast } from 'react-hot-toast'
 import { useAuth } from '@/hooks/use-auth'
 import { useAccount, useDisconnect, useChainId, useSwitchChain, useWalletClient } from 'wagmi'
-import { useAppKit, useAppKitNetwork, useAppKitAccount } from '@reown/appkit/react'
+import { useAppKit } from '@reown/appkit/react'
 import { networks } from '@/config'
 import { useWalletAuth } from '@/contexts/wallet-auth-context'
 import { globalAuthManager } from '@/utils/global-auth-manager'
@@ -13,7 +13,12 @@ export function ConnectButton() {
   const { isAuthenticated, user, signInWithEthereum, signOut, isLoading } = useAuth()
   const { address, isConnected } = useAccount()
   const { disconnect } = useDisconnect()
-  const { data: walletClient } = useWalletClient()
+  // Only get wallet client when actually connected
+  const { data: walletClient } = useWalletClient({ 
+    query: { 
+      enabled: isConnected && !!address 
+    } 
+  })
   const { open, close } = useAppKit()
   const [modalIsOpen, setModalIsOpen] = useState(false)
   const chainId = useChainId()
@@ -92,10 +97,14 @@ export function ConnectButton() {
     globalAuthState
   )
   
-  const currentNetwork = networks.find(network => network.id === chainId) || networks[0]
+  const currentNetwork = useMemo(() => 
+    networks.find(network => network.id === chainId) || networks[0],
+    [chainId]
+  )
 
   const handleAuthenticate = useCallback(async () => {
-    if (!isConnected || !address) {
+    // Early returns to prevent unnecessary calls
+    if (!isConnected || !address || !mounted) {
       return
     }
 
@@ -107,19 +116,28 @@ export function ConnectButton() {
       return
     }
 
+    if (isDisconnecting || recentlyDisconnected) {
+      return
+    }
+
     const canStartAuth = await startAuth(address)
     if (!canStartAuth) {
       return
     }
     
     try {
+      // Wait for wallet client if not available yet
+      let attempts = 0
+      while (!walletClient && attempts < 5) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+        attempts++
+      }
 
       const customSigner = async (message: string) => {
         if (!walletClient) {
-          throw new Error('Wallet client not available')
+          throw new Error('Wallet client not available after retries')
         }
         
-
         const signature = await walletClient.signMessage({
           message,
           account: address as `0x${string}`,
@@ -133,35 +151,33 @@ export function ConnectButton() {
     } catch (error) {
       cancelAuth()
     }
-  }, [isConnected, address, isFullyAuthenticated, user?.walletAddress, signInWithEthereum, startAuth, finishAuth, cancelAuth, walletClient])
+  }, [isConnected, address, isFullyAuthenticated, signInWithEthereum, startAuth, finishAuth, cancelAuth, walletClient, mounted, isDisconnecting, recentlyDisconnected])
 
-  // Auto authentication when wallet connects
+  // Auto authentication when wallet connects - with debounce
   useEffect(() => {
-    if (isDisconnecting || recentlyDisconnected) {
+    if (!mounted || isDisconnecting || recentlyDisconnected || !isConnected || !address) {
       return
     }
     
-    if (isFullyAuthenticated) {
+    if (isFullyAuthenticated || isLoading || isAuthInProgress) {
       return
     }
     
-    if (isConnected && address && !isFullyAuthenticated && !isLoading && !isDisconnecting && !isAuthInProgress) {
-      const timeoutId = setTimeout(() => {
-        if (!isDisconnecting && !recentlyDisconnected) {
-          handleAuthenticate()
-        }
-      }, 50)
+    const timeoutId = setTimeout(() => {
+      if (isConnected && address && !isDisconnecting && !recentlyDisconnected && !isFullyAuthenticated) {
+        handleAuthenticate()
+      }
+    }, 200) // Increased delay to prevent rapid calls
       
-      return () => clearTimeout(timeoutId)
-    }
-  }, [isConnected, address, isAuthenticated, isFullyAuthenticated, isLoading, handleAuthenticate, isDisconnecting, isAuthInProgress, user?.walletAddress, globalAuthState, recentlyDisconnected])
+    return () => clearTimeout(timeoutId)
+  }, [mounted, isConnected, address, isFullyAuthenticated, isLoading, isAuthInProgress, isDisconnecting, recentlyDisconnected, handleAuthenticate])
 
   // Reset state on address change
   useEffect(() => {
     cancelAuth()
   }, [address, cancelAuth])
 
-  // Auto logout on wallet disconnect
+  // Auto logout on wallet disconnect with better state management
   useEffect(() => {
     if (!mounted || isDisconnecting || recentlyDisconnected || !wasConnectedBefore) {
       return
@@ -171,7 +187,8 @@ export function ConnectButton() {
     
     if (!isConnected && wasAuthenticated) {
       const timeoutId = setTimeout(async () => {
-        if (!isConnected && (isAuthenticated || globalAuthState)) {
+        // Double check state before cleanup
+        if (!isConnected && !isDisconnecting && (isAuthenticated || globalAuthState)) {
           try {
             if (isAuthenticated) {
               await signOut()
@@ -182,11 +199,12 @@ export function ConnectButton() {
             
             toast.success('Wallet disconnected - signed out automatically')
           } catch (error) {
+            // Silent cleanup on error
             globalAuthManager.clearAll()
             setGlobalAuthState(false)
           }
         }
-      }, 500) 
+      }, 800) // Increased delay for stability
       
       return () => clearTimeout(timeoutId)
     }
@@ -309,7 +327,7 @@ export function ConnectButton() {
     }
   }, [showNetworkDropdown])
 
-  const getNetworkColor = (network: any) => {
+  const getNetworkColor = (network: { id?: number }) => {
     switch (network?.id) {
       case 1: // Ethereum Mainnet
         return '#627EEA'
@@ -323,6 +341,12 @@ export function ConnectButton() {
         return '#FF0420'
       case 42161: // Arbitrum One
         return '#28A0F0'
+      case 324: // zkSync Era
+        return '#3A7BD5'
+      case 56: // BNB Smart Chain
+        return '#F3BA2F'
+      case 43114: // Avalanche C-Chain
+        return '#E84142'
       default:
         return '#627EEA' // Default to Ethereum blue
     }
@@ -346,15 +370,20 @@ export function ConnectButton() {
               e.stopPropagation()
               setShowNetworkDropdown(!showNetworkDropdown)
             }}
-            className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white/30 backdrop-blur-md dark:bg-black/30 text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-all duration-300 font-light text-xs tracking-wide"
+            className="flex w-[180px] items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white/30 backdrop-blur-md dark:bg-black/30 text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-all duration-300 font-light text-xs tracking-wide"
           >
             <div 
               className="w-4 h-4 rounded-full" 
               style={{ backgroundColor: getNetworkColor(currentNetwork) }}
             />
-            <span className="text-sm font-medium">{currentNetwork?.name}</span>
+            <span 
+              className="text-sm font-medium flex-1 truncate" 
+              title={currentNetwork?.name}
+            >
+              {currentNetwork?.name}
+            </span>
             <svg 
-              className={`w-4 h-4 transition-transform ${showNetworkDropdown ? 'rotate-180' : ''}`} 
+              className={`w-4 h-4 ml-auto transition-transform ${showNetworkDropdown ? 'rotate-180' : ''}`} 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -365,7 +394,7 @@ export function ConnectButton() {
 
           {/* Network Dropdown */}
           {showNetworkDropdown && (
-            <div className="absolute top-full left-0 mt-1 w-52 bg-white/30 backdrop-blur-md dark:bg-black/30 border border-gray-300 dark:border-gray-700 shadow-lg z-50">
+            <div className="absolute w-[180px] top-full left-0 mt-1 bg-white/30 backdrop-blur-md dark:bg-black/30 border border-gray-300 dark:border-gray-700 shadow-lg z-50">
               {networks.map((network) => (
                 <button
                   key={network.id}
@@ -378,7 +407,12 @@ export function ConnectButton() {
                     className="w-4 h-4 rounded-full flex-shrink-0" 
                     style={{ backgroundColor: getNetworkColor(network) }}
                   />
-                  <span className="flex-1">{network.name}</span>
+                  <span 
+                    className="flex-1 truncate" 
+                    title={network.name}
+                  >
+                    {network.name}
+                  </span>
                   {network.id === chainId && (
                     <svg className="w-3 h-3 text-orange-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />

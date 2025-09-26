@@ -1,16 +1,23 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ReceiptCard } from '@/components/receipt-card'
 import { EmptyState } from '@/components/empty-state'
+import { NetworkFilter } from '@/components/network-filter'
 import { useAuth } from '@/hooks/use-auth'
 import { useAccount } from 'wagmi'
 import { ApiClient } from '@/lib/api-client'
 import { toast } from 'react-hot-toast'
 import { ParallaxBackground } from '@/components/parallax-background'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
+import { Swiper, SwiperSlide } from 'swiper/react'
+import { Navigation, Pagination } from 'swiper/modules'
+import 'swiper/css'
+import 'swiper/css/navigation'
+import 'swiper/css/pagination'
+import '@/styles/swiper-custom.css'
 
 interface Receipt {
   id: string
@@ -25,14 +32,9 @@ interface Receipt {
   createdAt: string
 }
 
-interface PaginatedResponse {
+interface ReceiptsResponse {
   receipts: Receipt[]
-  pagination: {
-    page: number
-    limit: number
-    total: number
-    pages: number
-  }
+  total: number
 }
 
 export default function DashboardPage() {
@@ -40,63 +42,17 @@ export default function DashboardPage() {
   const { isAuthenticated, user, initialCheckDone } = useAuth()
   const { isConnected } = useAccount()
   const [receipts, setReceipts] = useState<Receipt[]>([])
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 12,
-    total: 0,
-    pages: 0,
-  })
+  const [totalReceipts, setTotalReceipts] = useState(0)
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
   const [redirecting, setRedirecting] = useState(false)
-  const [selectedNetwork, setSelectedNetwork] = useState<number | null>(null)
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [selectedChainId, setSelectedChainId] = useState<number | null>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element
-      if (isDropdownOpen && !target.closest('.dropdown-container')) {
-        setIsDropdownOpen(false)
-      }
-    }
-
-    if (isDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isDropdownOpen])
-
-  useEffect(() => {    
-    if (!mounted) {
-      return
-    }
-
-    if (!initialCheckDone) {
-      return
-    }
-    
-    if (!isAuthenticated || !isConnected) {
-      if (!redirecting) {
-        setRedirecting(true)
-        router.push('/login')
-      }
-      return
-    }
-    
-    if (isAuthenticated && isConnected) {
-      if (redirecting) {
-        setRedirecting(false)
-      }
-      fetchReceipts()
-    }
-  }, [mounted, isAuthenticated, isConnected, initialCheckDone, router, redirecting])
-
-  const fetchReceipts = async (page = 1) => {
+  const fetchReceipts = useCallback(async () => {
     if (!isAuthenticated || redirecting || !isConnected) {
       return
     }
@@ -104,32 +60,116 @@ export default function DashboardPage() {
     try {
       setLoading(true)
       
-      const response = await ApiClient.get(`/api/receipts/my?page=${page}&limit=6`)
-      const data: PaginatedResponse = await response.json()
+      // Build query parameters
+      const params = new URLSearchParams()
+      if (selectedChainId !== null) {
+        params.append('chainId', selectedChainId.toString())
+      }
+      
+      const queryString = params.toString()
+      const url = queryString ? `/api/receipts/my?${queryString}` : '/api/receipts/my'
+      
+      const response = await ApiClient.get(url)
+      const data: ReceiptsResponse = await response.json()
       
       setReceipts(data.receipts)
-      setPagination(data.pagination)
+      setTotalReceipts(data.total)
     } catch (error) {
       if (error instanceof Error && (
         error.message === 'Authentication required' || 
         error.message === 'Unauthorized' ||
         error.message.includes('401')
       )) {
+        // Force redirect on authentication error
+        if (!redirecting) {
+          setRedirecting(true)
+          router.push('/login')
+        }
         return
       }
       if (!redirecting) {
         toast.error('Failed to load receipts')
+        console.error('Error fetching receipts:', error)
       }
     } finally {
       setLoading(false)
     }
-  }
+  }, [isAuthenticated, redirecting, isConnected, selectedChainId, router])
 
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= pagination.pages && !redirecting && isConnected && isAuthenticated) {
-      fetchReceipts(newPage)
+  // Simplified redirect logic
+  useEffect(() => {    
+    if (!mounted || !initialCheckDone) {
+      return
     }
-  }
+
+    // Check if user should be redirected to login
+    const shouldRedirect = !isAuthenticated || !isConnected
+    
+    if (shouldRedirect && !redirecting) {
+      setRedirecting(true)
+      router.push('/login')
+      return
+    }
+    
+    // Reset redirecting state if user is authenticated and connected
+    if (!shouldRedirect && redirecting) {
+      setRedirecting(false)
+    }
+  }, [mounted, initialCheckDone, isAuthenticated, isConnected, redirecting, router])
+
+  // Separate effect for fetching receipts
+  useEffect(() => {
+    if (!mounted || !initialCheckDone || redirecting || !isAuthenticated || !isConnected) {
+      return
+    }
+
+    const doFetch = async () => {
+      try {
+        setLoading(true)
+        
+        // Build query parameters
+        const params = new URLSearchParams()
+        if (selectedChainId !== null) {
+          params.append('chainId', selectedChainId.toString())
+        }
+        
+        const queryString = params.toString()
+        const url = queryString ? `/api/receipts/my?${queryString}` : '/api/receipts/my'
+        
+        const response = await ApiClient.get(url)
+        const data: ReceiptsResponse = await response.json()
+        
+        setReceipts(data.receipts)
+        setTotalReceipts(data.total)
+      } catch (error) {
+        if (error instanceof Error && (
+          error.message === 'Authentication required' || 
+          error.message === 'Unauthorized' ||
+          error.message.includes('401')
+        )) {
+          // Force redirect on authentication error
+          setRedirecting(true)
+          router.push('/login')
+          return
+        }
+        toast.error('Failed to load receipts')
+        console.error('Error fetching receipts:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    doFetch()
+  }, [mounted, initialCheckDone, isAuthenticated, isConnected, redirecting, selectedChainId, router])
+
+  // Handle network filter change
+  const handleChainIdChange = useCallback((chainId: number | null) => {
+    setSelectedChainId(chainId)
+  }, [])
+
+
+
+
 
   const getNetworkName = (chainId: number) => {
     switch(chainId) {
@@ -139,6 +179,9 @@ export default function DashboardPage() {
       case 137: return 'Polygon'
       case 10: return 'Optimism'
       case 42161: return 'Arbitrum'
+      case 324: return 'zkSync Era'
+      case 56: return 'BNB Smart Chain'
+      case 43114: return 'Avalanche'
       default: return `Chain ${chainId}`
     }
   }
@@ -148,18 +191,30 @@ export default function DashboardPage() {
     return uniqueChainIds.map(chainId => getNetworkName(chainId)).join(', ') || 'Multi-chain'
   }
 
-  const getUniqueChainIds = () => {
-    return Array.from(new Set(receipts.map(receipt => receipt.chainId)))
+  // Function to get items per slide based on screen size
+  const getItemsPerSlide = () => {
+    if (typeof window === 'undefined') return 6 // SSR fallback
+    
+    const width = window.innerWidth
+    if (width < 640) return 1      // Mobile: 1 item
+    if (width < 768) return 2      // SM: 2 items  
+    if (width < 1024) return 3     // MD: 3 items (один ряд)
+    if (width < 1600) return 3     // LG: 3 items (один ряд) - включает 1512×857
+    return 6                       // XL: 6 items (два ряда) - только для очень больших экранов
   }
 
-  const getFilteredReceipts = () => {
-    if (!selectedNetwork) return receipts
-    return receipts.filter(receipt => receipt.chainId === selectedNetwork)
-  }
+  const [itemsPerSlide, setItemsPerSlide] = useState(6)
 
-  const handleNetworkFilter = (chainId: number | null) => {
-    setSelectedNetwork(chainId)
-  }
+  // Update items per slide on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setItemsPerSlide(getItemsPerSlide())
+    }
+    
+    handleResize() // Set initial value
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   if (!mounted) {
     return (
@@ -188,6 +243,7 @@ export default function DashboardPage() {
   }
 
   if (redirecting) {
+    console.log('Dashboard: Showing redirecting loader')
     return (
       <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center transition-colors duration-300">
         <div className="text-center">
@@ -200,8 +256,9 @@ export default function DashboardPage() {
     )
   }
 
-  if (!isAuthenticated) {
-    return null // This should not happen due to redirect logic above
+  // Force redirect if not authenticated or not connected after initial check
+  if (!isAuthenticated || !isConnected) {
+    return null // Component will unmount and redirect will happen in useEffect
   }
 
   return (
@@ -252,6 +309,14 @@ export default function DashboardPage() {
               transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
             >
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                           <motion.div
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                >
+                  <NetworkFilter 
+                    selectedChainId={selectedChainId}
+                    onChainIdChange={handleChainIdChange}
+                  />
+                </motion.div>
                 <motion.div
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
                 >
@@ -260,7 +325,7 @@ export default function DashboardPage() {
                   </Link>
                 </motion.div>
                 <motion.button 
-                  onClick={() => fetchReceipts(pagination.page)}
+                  onClick={() => fetchReceipts()}
                   className="btn-secondary-minimal text-xs py-2 px-4"
                   disabled={loading || redirecting || !isConnected || !isAuthenticated}
         
@@ -303,7 +368,7 @@ export default function DashboardPage() {
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.7 }}
                   >
-                    {pagination.total}
+                    {totalReceipts}
                   </motion.p>
                 </div>
               </div>
@@ -371,155 +436,7 @@ export default function DashboardPage() {
             </motion.div>
           </motion.div>
 
-          {/* Network Filter */}
-          <AnimatePresence>
-            {!loading && receipts.length > 0 && getUniqueChainIds().length > 1 && (
-              <motion.div 
-                className="mb-8 sm:mb-8 lg:mb-8"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5, delay: 0.8 }}
-              >
-                <div className="border border-gray-200 dark:border-gray-800 p-4 sm:p-6 bg-white/30 backdrop-blur-md dark:bg-black/50 transition-colors duration-300">
-                  <h3 className="text-sm font-light text-black dark:text-white mb-4 tracking-wide uppercase transition-colors duration-300">Filter by Network</h3>
-                  
-                  {/* Dropdown */}
-                  <div className="relative max-w-xs dropdown-container">
-                    <motion.button
-                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                      className="w-full flex items-center justify-between px-4 py-3 text-sm font-light bg-white/50 dark:bg-black/50 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-colors duration-300 backdrop-blur-sm"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <span className="flex items-center">
-                        {selectedNetwork ? (
-                          <>
-                            <motion.div 
-                              className="w-2 h-2 bg-orange-400 rounded-full mr-2"
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                            />
-                            {getNetworkName(selectedNetwork)} ({receipts.filter(r => r.chainId === selectedNetwork).length})
-                          </>
-                        ) : (
-                          <>
-                            <motion.div 
-                              className="w-2 h-2 bg-gray-400 rounded-full mr-2"
-                              animate={{ scale: [1, 1.2, 1] }}
-                              transition={{ duration: 2, repeat: Infinity }}
-                            />
-                            All Networks ({receipts.length})
-                          </>
-                        )}
-                      </span>
-                      <motion.svg
-                        className="w-4 h-4 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        animate={{ rotate: isDropdownOpen ? 180 : 0 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </motion.svg>
-                    </motion.button>
 
-                    <AnimatePresence>
-                      {isDropdownOpen && (
-                        <motion.div
-                          className="absolute top-full left-0 w-full mt-1 bg-white/90 dark:bg-black/90 backdrop-blur-md border border-gray-200 dark:border-gray-700 shadow-lg z-50 max-h-60 overflow-y-auto"
-                          initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                          transition={{ duration: 0.2, ease: "easeOut" }}
-                        >
-                          {/* All Networks Option */}
-                          <motion.button
-                            onClick={() => {
-                              handleNetworkFilter(null)
-                              setIsDropdownOpen(false)
-                            }}
-                            className={`w-full px-4 py-3 text-left text-sm font-light transition-colors duration-200 flex items-center ${
-                              selectedNetwork === null
-                                ? 'bg-orange-400/20 text-orange-600 dark:text-orange-400'
-                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50'
-                            }`}
-                            whileHover={{ x: 4 }}
-                            transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                          >
-                            <motion.div 
-                              className={`w-2 h-2 rounded-full mr-3 ${selectedNetwork === null ? 'bg-orange-400' : 'bg-gray-400'}`}
-                              animate={{ scale: selectedNetwork === null ? [1, 1.2, 1] : 1 }}
-                              transition={{ duration: 1, repeat: selectedNetwork === null ? Infinity : 0 }}
-                            />
-                            <span>All Networks ({receipts.length})</span>
-                            {selectedNetwork === null && (
-                              <motion.svg
-                                className="w-4 h-4 ml-auto text-orange-400"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                              >
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </motion.svg>
-                            )}
-                          </motion.button>
-
-                          {/* Individual Network Options */}
-                          {getUniqueChainIds().map((chainId, index) => {
-                            const networkReceipts = receipts.filter(r => r.chainId === chainId)
-                            const isSelected = selectedNetwork === chainId
-                            
-                            return (
-                              <motion.button
-                                key={chainId}
-                                onClick={() => {
-                                  handleNetworkFilter(chainId)
-                                  setIsDropdownOpen(false)
-                                }}
-                                className={`w-full px-4 py-3 text-left text-sm font-light transition-colors duration-200 flex items-center ${
-                                  isSelected
-                                    ? 'bg-orange-400/20 text-orange-600 dark:text-orange-400'
-                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50'
-                                }`}
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.05, type: "spring", stiffness: 400, damping: 25 }}
-                                whileHover={{ x: 4 }}
-                              >
-                                <motion.div 
-                                  className={`w-2 h-2 rounded-full mr-3 ${isSelected ? 'bg-orange-400' : 'bg-gray-400'}`}
-                                  animate={{ scale: isSelected ? [1, 1.2, 1] : 1 }}
-                                  transition={{ duration: 1, repeat: isSelected ? Infinity : 0 }}
-                                />
-                                <span>{getNetworkName(chainId)} ({networkReceipts.length})</span>
-                                {isSelected && (
-                                  <motion.svg
-                                    className="w-4 h-4 ml-auto text-orange-400"
-                                    fill="currentColor"
-                                    viewBox="0 0 20 20"
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                                  >
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </motion.svg>
-                                )}
-                              </motion.button>
-                            )
-                          })}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
 
           {/* Receipts List */}
           {loading ? (
@@ -553,111 +470,77 @@ export default function DashboardPage() {
             >
               <EmptyState />
             </motion.div>
-          ) : getFilteredReceipts().length === 0 ? (
-            <motion.div 
-              className="text-center py-12"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.8 }}
-            >
-              <div className="w-12 h-12 border border-gray-300 dark:border-gray-700 flex items-center justify-center mx-auto mb-6">
-                <div className="w-3 h-3 bg-gray-300 dark:bg-gray-700"></div>
-              </div>
-              <h3 className="text-lg font-light text-black dark:text-white mb-4 tracking-wide transition-colors duration-300">
-                No receipts found
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-8 text-sm font-light transition-colors duration-300">
-                No receipts found for the selected network. Try selecting a different network or clear the filter.
-              </p>
-              <motion.button
-                onClick={() => handleNetworkFilter(null)}
-                className="btn-primary-minimal text-xs"
-              >
-                Show All Networks
-              </motion.button>
-            </motion.div>
           ) : (
             <>
               <motion.div 
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-12 lg:mb-16"
+                className=""
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6, delay: 0.9 }}
               >
-                <AnimatePresence mode="popLayout">
-                  {getFilteredReceipts().map((receipt, index) => (
-                    <motion.div
-                      key={receipt.id}
-                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                      transition={{ 
-                        duration: 0.4, 
-                        delay: 1 + index * 0.1,
-                        type: "spring",
-                        stiffness: 300,
-                        damping: 25
-                      }}
-                      layout
-                    >
-                      <ReceiptCard receipt={receipt} />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
+                <Swiper
+                  modules={[Navigation, Pagination]}
+                  spaceBetween={24}
+                  navigation={{
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                  }}
+                  pagination={{
+                    el: '.swiper-pagination',
+                    clickable: true,
+                  }}
+                  breakpoints={{
+                    0: {
+                      slidesPerView: 1,
+                      spaceBetween: 16,
+                    },
+                    640: {
+                      slidesPerView: 1,
+                      spaceBetween: 20,
+                    },
+                    768: {
+                      slidesPerView: 1,
+                      spaceBetween: 24,
+                    },
+                    1024: {
+                      slidesPerView: 1,
+                      spaceBetween: 24,
+                    },
+                    1280: {
+                      slidesPerView: 1,
+                      spaceBetween: 24,
+                    },
+                  }}
+                  className="receipts-swiper-grid"
+                >
+                  {Array.from({ length: Math.ceil(receipts.length / itemsPerSlide) }, (_, pageIndex) => (
+                    <SwiperSlide key={pageIndex}>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-6 2xl:grid-rows-2 lg:h-auto">
+                        {receipts.slice(pageIndex * itemsPerSlide, (pageIndex + 1) * itemsPerSlide).map((receipt, index) => (
+                          <motion.div
+                            key={receipt.id}
+                            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                            transition={{ 
+                              duration: 0.4, 
+                              delay: 1 + (pageIndex * itemsPerSlide + index) * 0.1,
+                              type: "spring",
+                              stiffness: 300,
+                              damping: 25
+                            }}
+                          >
+                            <ReceiptCard receipt={receipt} />
+                          </motion.div>
+                        ))}
+                      </div>
+                    </SwiperSlide>
+                  ))}            
+                  {/* Custom Pagination */}
+                  <div className="swiper-pagination"></div>
+                </Swiper>
               </motion.div>
 
-              {/* Pagination */}
-              <AnimatePresence>
-                {pagination.pages > 1 && !selectedNetwork && (
-                  <motion.div 
-                    className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-0 sm:space-x-4"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.5, delay: 1.2 }}
-                  >
-                    <motion.button
-                      onClick={() => handlePageChange(pagination.page - 1)}
-                      disabled={pagination.page === 1}
-                      className="btn-secondary-minimal text-xs py-2 px-4 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                      whileHover={{ scale: pagination.page === 1 ? 1 : 1.05 }}
-                      whileTap={{ scale: pagination.page === 1 ? 1 : 0.95 }}
-                    >
-                      Previous
-                    </motion.button>
-                    
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {[...Array(pagination.pages)].map((_, i) => {
-                        const page = i + 1
-                        return (
-                          <motion.button
-                            key={page}
-                            onClick={() => handlePageChange(page)}
-                            className={`px-3 py-2 text-xs font-light transition-colors duration-300 min-w-[2.5rem] ${
-                              page === pagination.page
-                                ? 'bg-orange-400 text-black'
-                                : 'border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-orange-400 hover:text-orange-400'
-                            }`}
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 1.3 + i * 0.05 }}
-                          >
-                            {page}
-                          </motion.button>
-                        )
-                      })}
-                    </div>
-
-                    <motion.button
-                      onClick={() => handlePageChange(pagination.page + 1)}
-                      disabled={pagination.page === pagination.pages}
-                      className="btn-secondary-minimal text-xs py-2 px-4 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                    >
-                      Next
-                    </motion.button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </>
           )}
         </div>

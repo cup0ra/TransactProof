@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
 import { toast } from 'react-hot-toast'
 import { SiweMessage } from 'siwe'
 import { getAddress } from 'ethers'
@@ -13,6 +13,7 @@ interface User {
 interface AuthResponse {
   walletAddress: string
   expiresAt: string
+  refreshExpiresAt?: string
 }
 
 interface AuthContextType {
@@ -23,49 +24,10 @@ interface AuthContextType {
   signInWithEthereum: (address: string, customSigner: (message: string) => Promise<string>) => Promise<AuthResponse>
   signOut: () => Promise<void>
   checkAuth: () => Promise<void>
+  refreshAuth: () => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
-
-class AuthInitManager {
-  private static instance: AuthInitManager | null = null
-  private initPromise: Promise<any> | null = null
-  private isInitialized = false
-  
-  static getInstance(): AuthInitManager {
-    if (!AuthInitManager.instance) {
-      AuthInitManager.instance = new AuthInitManager()
-    }
-    return AuthInitManager.instance
-  }
-
-  async initialize(initFn: () => Promise<any>): Promise<any> {
-    if (this.isInitialized) {
-      return
-    }
-
-    if (this.initPromise) {
-      return this.initPromise
-    }
-
-    this.initPromise = initFn()
-    
-    try {
-      const result = await this.initPromise
-      this.isInitialized = true
-      return result
-    } finally {
-      this.initPromise = null
-    }
-  }
-
-  reset() {
-    this.isInitialized = false
-    this.initPromise = null
-  }
-}
-
-const authInitManager = AuthInitManager.getInstance()
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -76,22 +38,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
   useEffect(() => {
-    const initializeAuth = async () => {
+    const initializeAuth = async () => {      
       try {
-  
         const response = await fetch(`${apiUrl}/api/auth/me`, {
           credentials: 'include',
         })
-
+        
         if (response.ok) {
           const userData = await response.json()
           setUser(userData)
           setIsAuthenticated(true)
+        } else if (response.status === 401) {
+          setIsAuthenticated(false)
+          setUser(null)
         } else {
           setIsAuthenticated(false)
           setUser(null)
         }
       } catch (error) {
+        console.error('Auth error:', error)
         setIsAuthenticated(false)
         setUser(null)
       } finally {
@@ -99,8 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    authInitManager.initialize(initializeAuth)
-  }, [])
+    initializeAuth()
+  }, [apiUrl])
 
   const checkAuth = useCallback(async () => {
     if (isLoading) {
@@ -189,14 +154,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast.success('Successfully signed in!')
         
         return authData
-      } catch (error: any) {
-        toast.error(error.message || 'Authentication failed')
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Authentication failed'
+        toast.error(errorMessage)
         throw error
       } finally {
         setIsLoading(false)
       }
     })
   }
+
+  const refreshAuth = useCallback(async (): Promise<boolean> => {
+    try {
+      const response = await fetch(`${apiUrl}/api/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setUser({ walletAddress: data.walletAddress })
+        setIsAuthenticated(true)
+        return true
+      } else {
+        setIsAuthenticated(false)
+        setUser(null)
+        return false
+      }
+    } catch (error) {
+      setIsAuthenticated(false)
+      setUser(null)
+      return false
+    }
+  }, [apiUrl])
 
   const signOut = async () => {
     try {
@@ -209,8 +199,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsAuthenticated(false)
       setUser(null)
-      authInitManager.reset()
-      globalAuthManager.clearAll()
       toast.success('Signed out successfully')
     }
   }
@@ -225,6 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithEthereum,
         signOut,
         checkAuth,
+        refreshAuth,
       }}
     >
       {children}

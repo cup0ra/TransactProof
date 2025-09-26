@@ -87,7 +87,7 @@ export default function HelpCenterPage() {
               </div>
             </summary>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-light leading-relaxed">
-              We support Ethereum, Base, Polygon, Optimism, and Arbitrum networks. Base Sepolia is available for testing.
+              We support Ethereum, Base, Polygon, Optimism, Arbitrum, zkSync Era, BNB Smart Chain, and Avalanche C-Chain networks. Base Sepolia is available for testing.
             </p>
           </details>
 

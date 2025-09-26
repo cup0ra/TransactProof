@@ -51,8 +51,6 @@ export default function GeneratePage() {
             parallaxSpeed={0.5}
             minOpacity={0.3}
             opacityFadeRate={0.001}
-            darkThemeImage="/bg1.png"
-            lightThemeImage="/bg3.png"
           />
           
           <motion.div 

@@ -16,15 +16,22 @@ export class CoinGeckoService {
   private coinsListCache: CoinGeckoCoinsListItem[] | null = null
   private coinsListCacheExpiry: number = 0
   
+  // Track token usage for auto-caching frequently used tokens
+  private tokenUsageCount = new Map<string, number>()
+  
   // Cache duration: 24 hours for coins list, 1 hour for token searches
   private readonly COINS_LIST_CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
   private readonly TOKEN_SEARCH_CACHE_DURATION = 60 * 60 * 1000 // 1 hour
+  private readonly AUTO_CACHE_USAGE_THRESHOLD = 3 // Auto-cache tokens used 3+ times
 
   /**
    * Find token ID with fallback strategies
    */
   async findTokenId(symbol: string): Promise<TokenSearchResult | null> {
     const normalizedSymbol = symbol.toUpperCase()
+    
+    // Track usage for auto-caching
+    this.trackTokenUsage(normalizedSymbol)
     
     // Check cache first
     if (this.tokenSearchCache.has(normalizedSymbol)) {
@@ -55,6 +62,7 @@ export class CoinGeckoService {
       const searchResult = await this.searchTokenBySymbol(symbol)
       if (searchResult) {
         this.cacheTokenResult(normalizedSymbol, searchResult)
+        this.autoAddToRuntimeConfig(searchResult) // Auto-add if frequently used
         return searchResult
       }
     } catch (error) {
@@ -66,6 +74,7 @@ export class CoinGeckoService {
       const coinsListResult = await this.searchInCoinsList(symbol)
       if (coinsListResult) {
         this.cacheTokenResult(normalizedSymbol, coinsListResult)
+        this.autoAddToRuntimeConfig(coinsListResult) // Auto-add if frequently used
         return coinsListResult
       }
     } catch (error) {
@@ -237,12 +246,103 @@ export class CoinGeckoService {
   }
 
   /**
+   * Get historical price for a token on a specific date
+   */
+  async getHistoricalPrice(coinGeckoId: string, date: Date): Promise<{ usd: number; usdt?: number } | null> {
+    try {
+      // Format date as DD-MM-YYYY (CoinGecko format)
+      const formattedDate = this.formatDateForCoinGecko(date)
+      
+      // Use CoinGecko history endpoint
+      const url = `${this.baseUrl}/coins/${coinGeckoId}/history?date=${formattedDate}`
+      
+      this.logger.log(`Fetching historical price for ${coinGeckoId} on ${formattedDate}`)
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      
+      if (!data.market_data || !data.market_data.current_price) {
+        this.logger.warn(`No historical price data found for ${coinGeckoId} on ${formattedDate}`)
+        return null
+      }
+
+      const priceData = data.market_data.current_price
+      
+      return {
+        usd: priceData.usd || 0,
+        usdt: priceData.usdt || priceData.usd || 0
+      }
+    } catch (error) {
+      this.logger.error(`Error fetching historical price for ${coinGeckoId} on ${date}:`, error.message)
+      return null
+    }
+  }
+
+  /**
+   * Format date for CoinGecko API (DD-MM-YYYY)
+   */
+  private formatDateForCoinGecko(date: Date): string {
+    const day = date.getDate().toString().padStart(2, '0')
+    const month = (date.getMonth() + 1).toString().padStart(2, '0')
+    const year = date.getFullYear()
+    return `${day}-${month}-${year}`
+  }
+
+  /**
    * Clear all caches (useful for testing or manual refresh)
    */
   clearCaches() {
     this.tokenSearchCache.clear()
     this.coinsListCache = null
     this.coinsListCacheExpiry = 0
+    this.tokenUsageCount.clear()
     this.logger.log('All caches cleared')
+  }
+
+  /**
+   * Track token usage for auto-caching frequently used tokens
+   */
+  private trackTokenUsage(symbol: string): void {
+    const currentCount = this.tokenUsageCount.get(symbol) || 0
+    this.tokenUsageCount.set(symbol, currentCount + 1)
+    
+    const newCount = currentCount + 1
+    if (newCount === this.AUTO_CACHE_USAGE_THRESHOLD) {
+      this.logger.log(`Token ${symbol} reached usage threshold (${newCount}x) - candidate for auto-caching`)
+    }
+  }
+
+  /**
+   * Auto-add frequently used tokens to runtime configuration
+   */
+  private autoAddToRuntimeConfig(tokenResult: TokenSearchResult): void {
+    const usageCount = this.tokenUsageCount.get(tokenResult.symbol) || 0
+    
+    // Only auto-add if token is used frequently and not already in config
+    if (usageCount >= this.AUTO_CACHE_USAGE_THRESHOLD && !getCoinGeckoId(tokenResult.symbol)) {
+      this.logger.log(`🚀 RECOMMENDATION: Token ${tokenResult.symbol} used ${usageCount}x - consider adding to TOKENS_CONFIG for better performance`)
+      this.logger.log(`   Add: { symbol: '${tokenResult.symbol}', coinGeckoId: '${tokenResult.coinGeckoId}', name: '${tokenResult.name}', category: 'altcoin' }`)
+    }
+  }
+
+  /**
+   * Get usage statistics for tokens (useful for optimization)
+   */
+  getTokenUsageStats(): { symbol: string; usageCount: number; inConfig: boolean }[] {
+    return Array.from(this.tokenUsageCount.entries())
+      .map(([symbol, count]) => ({
+        symbol,
+        usageCount: count,
+        inConfig: !!getCoinGeckoId(symbol)
+      }))
+      .sort((a, b) => b.usageCount - a.usageCount)
   }
 }

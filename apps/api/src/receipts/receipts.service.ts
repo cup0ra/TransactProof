@@ -136,6 +136,12 @@ export class ReceiptsService {
       usdtValue: txDetails.usdtValue,
       pricePerToken: txDetails.pricePerToken,
       status: txDetails.status,
+      // Transaction fee data
+      gasUsed: txDetails.gasUsed,
+      gasPrice: txDetails.gasPrice,
+      transactionFeeEth: txDetails.transactionFeeEth,
+      transactionFeeUsd: txDetails.transactionFeeUsd,
+      nativeTokenSymbol: txDetails.nativeTokenSymbol,
     }
     
     const pdfBuffer = await this.pdfService.generateReceiptPdf(pdfData)
@@ -172,21 +178,30 @@ export class ReceiptsService {
     }
   }
 
-  async getUserReceipts(userId: string, page: number = 1, limit: number = 12) {
-    const skip = (page - 1) * limit
+  async getUserReceipts(userId: string, chainId?: number, page?: number, limit?: number) {
+    const whereClause: any = { userId }
     
-    const receipts = await this.prisma.receipt.findMany({
-      where: { userId },
+    // Add chainId filter if provided
+    if (chainId) {
+      whereClause.chainId = chainId
+    }
+    
+    // If pagination is requested, apply it; otherwise return all
+    const queryOptions: any = {
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
-      skip,
-      take: limit,
-    })
+    }
+    
+    if (page && limit) {
+      const skip = (page - 1) * limit
+      queryOptions.skip = skip
+      queryOptions.take = limit
+    }
+    
+    const receipts = await this.prisma.receipt.findMany(queryOptions)
+    const total = await this.prisma.receipt.count({ where: whereClause })
 
-    const total = await this.prisma.receipt.count({
-      where: { userId },
-    })
-
-    return {
+    const response: any = {
       receipts: receipts.map(receipt => ({
         id: receipt.id,
         txHash: receipt.txHash,
@@ -199,13 +214,21 @@ export class ReceiptsService {
         description: receipt.description,
         createdAt: receipt.createdAt.toISOString(),
       })),
-      pagination: {
+    }
+    
+    // Only include pagination if it was requested
+    if (page && limit) {
+      response.pagination = {
         page,
         limit,
         total,
         pages: Math.ceil(total / limit),
-      },
+      }
+    } else {
+      response.total = total
     }
+
+    return response
   }
 
   async getReceipt(id: string, userId?: string) {

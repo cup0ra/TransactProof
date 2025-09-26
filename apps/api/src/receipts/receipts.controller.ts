@@ -63,14 +63,16 @@ export class ReceiptsController {
   })
   async getMyReceipts(
     @Req() req: Request,
-    @Query('page') page: string = '1',
-    @Query('limit') limit: string = '10',
+    @Query('chainId') chainId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     const userId = req.user.id
-    const pageNum = parseInt(page, 10)
-    const limitNum = parseInt(limit, 10)
+    const chainIdNum = chainId ? parseInt(chainId, 10) : undefined
+    const pageNum = page ? parseInt(page, 10) : undefined
+    const limitNum = limit ? parseInt(limit, 10) : undefined
     
-    return this.receiptsService.getUserReceipts(userId, pageNum, limitNum)
+    return this.receiptsService.getUserReceipts(userId, chainIdNum, pageNum, limitNum)
   }
 
   @Get(':id')

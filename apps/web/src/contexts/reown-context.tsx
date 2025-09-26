@@ -5,7 +5,6 @@ import { wagmiAdapter, projectId, networks } from '@/config'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactNode, useEffect } from 'react'
 import { cookieToInitialState, WagmiProvider, type Config } from 'wagmi'
-import { mainnet, base, baseSepolia, polygon, arbitrum, optimism } from '@reown/appkit/networks'
 
 // Set up queryClient
 const queryClient = new QueryClient()
@@ -55,8 +54,8 @@ try {
   appKit = createAppKit({
     adapters: [wagmiAdapter],
     projectId,
-    networks: [mainnet, base, baseSepolia, polygon, arbitrum, optimism],
-    defaultNetwork: baseSepolia,
+    networks: networks as any,
+    defaultNetwork: networks[2], // Base Sepolia
     metadata,
     features: {
       analytics: false,

@@ -13,7 +13,12 @@ export function usePayETH() {
   const [isLoading, setIsLoading] = useState(false)
   const { isConnected, address } = useAccount()
   const chainId = useChainId()
-  const { data: walletClient } = useWalletClient()
+  // Only query wallet client when connected to prevent unnecessary requests
+  const { data: walletClient } = useWalletClient({
+    query: {
+      enabled: isConnected && !!address
+    }
+  })
   const publicClient = usePublicClient()
 
   const payETH = async (amount: number = 0.0000001) => {
@@ -82,23 +87,25 @@ export function usePayETH() {
       
       toast.success('Payment successful!', { id: 'payment' })
       return txHash
-    } catch (error: any) {
+    } catch (error: unknown) {
       
       // Handle specific error types
       let errorMessage = 'Payment failed. Please try again.'
       
-      if (error?.name === 'UserRejectedRequestError' || error?.code === 4001) {
+      const err = error as { name?: string; code?: number; message?: string }
+      
+      if (err?.name === 'UserRejectedRequestError' || err?.code === 4001) {
         errorMessage = 'Transaction was rejected by user'
-      } else if (error?.message?.includes('insufficient funds') || error?.code === -32000) {
+      } else if (err?.message?.includes('insufficient funds') || err?.code === -32000) {
         errorMessage = 'Insufficient funds for transaction'
-      } else if (error?.message?.includes('gas')) {
+      } else if (err?.message?.includes('gas')) {
         errorMessage = 'Gas estimation failed. Please try again.'
-      } else if (error?.message?.includes('connector') || error?.message?.includes('getChainId')) {
+      } else if (err?.message?.includes('connector') || err?.message?.includes('getChainId')) {
         errorMessage = 'Wallet connection error. Please disconnect and reconnect your wallet.'
-      } else if (error?.message?.includes('network')) {
+      } else if (err?.message?.includes('network')) {
         errorMessage = 'Network error. Please check your connection and try again.'
-      } else if (error?.message) {
-        errorMessage = error.message
+      } else if (err?.message) {
+        errorMessage = err.message
       }
       
       toast.error(errorMessage, { id: 'payment' })

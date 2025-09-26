@@ -113,11 +113,11 @@ export function Header() {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center space-x-2">
+          <div className="md:hidden flex items-center space-x-3 ml-auto">
             <ThemeToggle />
             <button
               onClick={toggleMobileMenu}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-orange-400 transition-colors duration-300"
+              className="p-3 text-gray-600 dark:text-gray-400 hover:text-orange-400 transition-colors duration-300 ml-2"
               aria-label="Toggle mobile menu"
             >
               <svg 
@@ -138,57 +138,88 @@ export function Header() {
       </header>
 
       {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
-          <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" onClick={closeMobileMenu}></div>
-          <div className="fixed top-16  z-40 left-0 right-0 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 transition-colors duration-300">
-            <div className="px-4 py-6 space-y-6">
-              {/* Mobile Navigation */}
-              <nav className="space-y-4">
+      <div className={`fixed inset-0 z-[60] md:hidden transition-opacity duration-300 ${
+        mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      }`}>
+        <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm" onClick={closeMobileMenu}></div>
+        {/* Mobile Menu Panel sliding from right */}
+        <div className={`fixed top-0 right-0 bottom-0 w-80 max-w-[80vw] z-[70] bg-white/50 backdrop-blur-md dark:bg-black/50 border-l border-gray-200 dark:border-gray-800 transform transition-transform duration-300 ease-in-out ${
+          mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}>
+          {/* Mobile Menu Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
+            <div className="flex items-center space-x-2">
+              <Logo />
+              <span className="text-sm font-light tracking-wide text-black dark:text-white transition-colors duration-300">TransactProof</span>
+            </div>
+            <button
+              onClick={closeMobileMenu}
+              className="p-2 text-gray-600 dark:text-gray-400 hover:text-orange-400 transition-colors duration-300"
+              aria-label="Close mobile menu"
+            >
+              <svg 
+                className="w-5 h-5" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          {/* Mobile Menu Content */}
+          <div className="flex flex-col px-4 py-4" style={{ height: 'calc(100vh - 73px)' }}>
+            {/* Mobile Navigation */}
+            <nav className="space-y-3">
+              <Link 
+                href="/" 
+                onClick={closeMobileMenu}
+                className={`block text-sm transition-colors font-light tracking-wide py-2 px-2 rounded-lg ${
+                  pathname === '/' 
+                    ? 'text-orange-400' 
+                    : 'text-gray-600 dark:text-gray-400 hover:text-orange-400 hover:bg-gray-50 dark:hover:bg-gray-900'
+                }`}
+              >
+                Home
+              </Link>
+              <Link 
+                href="/generate" 
+                onClick={closeMobileMenu}
+                className={`block text-sm transition-colors font-light tracking-wide py-2 px-2 rounded-lg ${
+                  pathname === '/generate' 
+                    ? 'text-orange-400' 
+                    : 'text-gray-600 dark:text-gray-400 hover:text-orange-400 hover:bg-gray-50 dark:hover:bg-gray-900'
+                }`}
+              >
+                Generate
+              </Link>
+              {isFullyAuthenticated && (
                 <Link 
-                  href="/" 
+                  href="/dashboard" 
                   onClick={closeMobileMenu}
-                  className={`block text-sm transition-colors font-light tracking-wide ${
-                    pathname === '/' 
+                  className={`block text-sm transition-colors font-light tracking-wide py-2 px-2 rounded-lg ${
+                    pathname === '/dashboard' 
                       ? 'text-orange-400' 
-                      : 'text-gray-600 dark:text-gray-400 hover:text-orange-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-orange-400 hover:bg-gray-50 dark:hover:bg-gray-900'
                   }`}
                 >
-                  Home
+                  Dashboard
                 </Link>
-                <Link 
-                  href="/generate" 
-                  onClick={closeMobileMenu}
-                  className={`block text-sm transition-colors font-light tracking-wide ${
-                    pathname === '/generate' 
-                      ? 'text-orange-400' 
-                      : 'text-gray-600 dark:text-gray-400 hover:text-orange-400'
-                  }`}
-                >
-                  Generate
-                </Link>
-                {isFullyAuthenticated && (
-                  <Link 
-                    href="/dashboard" 
-                    onClick={closeMobileMenu}
-                    className={`block text-sm transition-colors font-light tracking-wide ${
-                      pathname === '/dashboard' 
-                        ? 'text-orange-400' 
-                        : 'text-gray-600 dark:text-gray-400 hover:text-orange-400'
-                    }`}
-                  >
-                    Dashboard
-                  </Link>
-                )}
-              </nav>
-              {/* Mobile Connect Button */}
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
-                <ConnectButton />
+              )}
+            </nav>
+            
+            {/* Mobile Connect Button - Right after navigation */}
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
+              <div className="flex justify-center">
+                <div className="[&>button]:w-[100%] [&>div]:flex [&>div]:flex-col [&>div]:gap-3 [&>div]:items-center [&>div>*]:w-full [&>div>*]:justify-center [&>div>*]:text-center [&>div>*]:shadow-sm [&>div>*]:hover:shadow-md [&>div>*]:transition-all [&>div>*]:duration-200">
+                  <ConnectButton />
+                </div>
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
     </>
   )
 }

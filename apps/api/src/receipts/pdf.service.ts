@@ -18,6 +18,12 @@ interface ReceiptData {
   usdtValue?: number
   pricePerToken?: number
   status?: string
+  // Transaction fee data
+  gasUsed?: string
+  gasPrice?: string
+  transactionFeeEth?: number  // Fee in ETH (or native token)
+  transactionFeeUsd?: number  // Fee in USD
+  nativeTokenSymbol?: string  // ETH, BNB, MATIC, etc.
 }
 
 @Injectable()
@@ -120,6 +126,24 @@ export class PdfService {
     // Calculate USDT equivalent if available
     const usdtValue = data.usdtValue?.toFixed(6) || null
     
+    // Format transaction fee data
+    const transactionFeeEth = data.transactionFeeEth?.toFixed(8) || null
+    const transactionFeeUsd = data.transactionFeeUsd?.toFixed(6) || null
+    const nativeSymbol = data.nativeTokenSymbol || 'ETH'
+    
+    // Calculate total including fee if both values are available
+    let totalWithFeeUsd: string | null = null
+    if (data.usdtValue && data.transactionFeeUsd) {
+      totalWithFeeUsd = (data.usdtValue + data.transactionFeeUsd).toFixed(6)
+    }
+    
+    // Calculate total including fee in tokens
+    let totalWithFeeTokens: string | null = null
+    if (data.transactionFeeEth) {
+      const amountNum = parseFloat(data.amount)
+      totalWithFeeTokens = (amountNum + data.transactionFeeEth).toFixed(8)
+    }
+    
     // Get network name
     const getNetworkName = (chainId: number) => {
       switch(chainId) {
@@ -129,6 +153,9 @@ export class PdfService {
         case 137: return 'POLYGON'
         case 10: return 'OPTIMISM'
         case 42161: return 'ARBITRUM'
+        case 324: return 'ZKSYNC ERA'
+        case 56: return 'BNB SMART CHAIN'
+        case 43114: return 'AVALANCHE'
         default: return `CHAIN ${chainId}`
       }
     }
@@ -406,11 +433,17 @@ export class PdfService {
                   <td class="amount">${data.amount}</td>
                   <td class="amount">${usdtValue ? usdtValue : '-'}</td>
                 </tr>
+                <tr>
+                  <td class="number">1</td>
+                  <td><strong>Network Fee</strong></td>
+                  <td class="amount">${transactionFeeEth ? transactionFeeEth : '-'}</td>
+                  <td class="amount">${transactionFeeUsd ? transactionFeeUsd : '-'}</td>
+                </tr>
                 <tr class="total-row">
                   <td></td>
                   <td><strong>TOTAL:</strong></td>
-                  <td class="amount"><strong>${data.amount} ${data.token}</strong></td>
-                  <td class="amount"><strong>${usdtValue ? usdtValue + ' USDT'  : '-'}</strong></td>
+                  <td class="amount"><strong>${totalWithFeeTokens ? totalWithFeeTokens + ' ' + data.token : data.amount + ' ' + data.token}</strong></td>
+                  <td class="amount"><strong>${totalWithFeeUsd ? totalWithFeeUsd + ' USDT' : (usdtValue ? usdtValue + ' USDT' : '-')}</strong></td>
                 </tr>
               </tbody>
             </table>

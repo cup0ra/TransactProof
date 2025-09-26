@@ -77,18 +77,24 @@ export class AuthService {
         create: { walletAddress: siweMessage.address },
       })
 
-      // Create session
+      // Create session with refresh token
       const jwtId = randomBytes(16).toString('hex')
+      const refreshToken = randomBytes(32).toString('hex')
       const expiresAt = new Date(
         Date.now() + parseInt(this.configService.get('SESSION_TTL_MIN', '30')) * 60 * 1000
+      )
+      const refreshExpiresAt = new Date(
+        Date.now() + parseInt(this.configService.get('REFRESH_TTL_DAYS', '7')) * 24 * 60 * 60 * 1000
       )
 
       await this.prisma.session.create({
         data: {
           userId: user.id,
           jwtId,
+          refreshToken,
           expiresAt,
-        },
+          refreshExpiresAt,
+        } as any,
       })
 
       // Generate JWT
@@ -103,7 +109,9 @@ export class AuthService {
       return {
         user,
         accessToken,
+        refreshToken,
         expiresAt: expiresAt.toISOString(),
+        refreshExpiresAt: refreshExpiresAt.toISOString(),
       }
     } catch (error) {
       if (error instanceof UnauthorizedException) {
@@ -137,6 +145,69 @@ export class AuthService {
         throw error
       }
       throw new UnauthorizedException('Invalid session')
+    }
+  }
+
+  async refreshAccessToken(refreshToken: string) {
+    try {
+      // Find session with valid refresh token
+      const session = await this.prisma.session.findFirst({
+        where: {
+          refreshToken,
+          refreshExpiresAt: {
+            gt: new Date(),
+          },
+        } as any,
+        include: { user: true },
+      })
+
+      if (!session) {
+        throw new UnauthorizedException('Invalid or expired refresh token')
+      }
+
+      // Generate new access token and refresh token
+      const newJwtId = randomBytes(16).toString('hex')
+      const newRefreshToken = randomBytes(32).toString('hex')
+      const newExpiresAt = new Date(
+        Date.now() + parseInt(this.configService.get('SESSION_TTL_MIN', '30')) * 60 * 1000
+      )
+      const newRefreshExpiresAt = new Date(
+        Date.now() + parseInt(this.configService.get('REFRESH_TTL_DAYS', '7')) * 24 * 60 * 60 * 1000
+      )
+
+      // Update session with new tokens
+      await this.prisma.session.update({
+        where: { id: session.id },
+        data: {
+          jwtId: newJwtId,
+          refreshToken: newRefreshToken,
+          expiresAt: newExpiresAt,
+          refreshExpiresAt: newRefreshExpiresAt,
+        } as any,
+      })
+
+      // Generate new JWT
+      const payload = {
+        sub: session.user.id,
+        walletAddress: session.user.walletAddress,
+        jti: newJwtId,
+      }
+
+      const accessToken = this.jwtService.sign(payload)
+
+      return {
+        user: session.user,
+        accessToken,
+        refreshToken: newRefreshToken,
+        expiresAt: newExpiresAt.toISOString(),
+        refreshExpiresAt: newRefreshExpiresAt.toISOString(),
+      }
+    } catch (error) {
+      this.logger.error(`Token refresh failed: ${error.message}`, error.stack)
+      if (error instanceof UnauthorizedException) {
+        throw error
+      }
+      throw new UnauthorizedException('Token refresh failed')
     }
   }
 

@@ -16,6 +16,10 @@ interface ParallaxBackgroundProps {
   darkThemeImage?: string
   /** Background image for light theme */
   lightThemeImage?: string
+  /** Mobile background image for dark theme */
+  mobileDarkThemeImage?: string
+  /** Mobile background image for light theme */
+  mobileLightThemeImage?: string
   /** Additional CSS classes */
   className?: string
 }
@@ -25,12 +29,58 @@ export function ParallaxBackground({
   parallaxSpeed = 0.5,
   minOpacity = 0.3,
   opacityFadeRate = 0.001,
-  darkThemeImage = '/bg1.png',
-  lightThemeImage = '/bg3.png',
+  darkThemeImage = '/bg-dark.png',
+  lightThemeImage = '/bg-white.png',
+  mobileDarkThemeImage = '/bg-mb-dark.png',
+  mobileLightThemeImage = '/bg-mb-white.png',
   className = ''
 }: ParallaxBackgroundProps) {
   const [scrollY, setScrollY] = useState(0)
+  const [isDark, setIsDark] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const backgroundRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    // Check initial theme
+    const checkTheme = () => {
+      console.log('Checking theme...', document.documentElement.classList.contains('dark'))  
+      setIsDark(document.documentElement.classList.contains('dark'))
+    }
+    
+    // Check initial screen size
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    checkTheme()
+    checkScreenSize()
+
+    // Listen for theme changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          checkTheme()
+        }
+      })
+    })
+    
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    })
+
+    // Listen for screen size changes
+    const handleResize = () => {
+      checkScreenSize()
+    }
+    
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
 
   useEffect(() => {
     if (!enableParallax) return
@@ -48,28 +98,28 @@ export function ParallaxBackground({
     opacity: Math.max(minOpacity, 1 - scrollY * opacityFadeRate)
   } : {}
 
+  // Choose the right image based on theme and screen size
+  const getBackgroundImage = () => {
+    if (isMobile) {
+      return isDark ? mobileDarkThemeImage : mobileLightThemeImage
+    } else {
+      console.log(isDark ? darkThemeImage : lightThemeImage)
+      return isDark ? darkThemeImage : lightThemeImage
+    }
+  }
+
   return (
     <div 
       ref={backgroundRef}
       className={`absolute inset-0 ${className}`}
       style={parallaxStyle}
     >
-      {/* Background for dark theme */}
+      {/* Single dynamic background image */}
       <Image
-        src={darkThemeImage}
-        alt="Digital receipts background dark"
+        src={getBackgroundImage()}
+        alt="Digital receipts background"
         fill
-        className="object-cover dark:block hidden"
-        priority
-        quality={90}
-      />
-      
-      {/* Background for light theme */}
-      <Image
-        src={lightThemeImage}
-        alt="Digital receipts background light"
-        fill
-        className="object-cover dark:hidden block"
+        className="object-cover"
         priority
         quality={90}
       />

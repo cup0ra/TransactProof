@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Res, Req, UseGuards } from '@nestjs/common'
+import { Controller, Get, Post, Body, Res, Req, UseGuards, UnauthorizedException } from '@nestjs/common'
 import { Response, Request } from 'express'
 import { ThrottlerGuard } from '@nestjs/throttler'
 import { ConfigService } from '@nestjs/config'
@@ -36,6 +36,7 @@ export class AuthController {
     
     const isProduction = this.configService.get('NODE_ENV') === 'production'
     const cookieName = this.configService.get('SESSION_COOKIE_NAME', 'tp_session')
+    const refreshCookieName = this.configService.get('REFRESH_COOKIE_NAME', 'tp_refresh')
     
     // Set JWT cookie with proper cross-domain settings
     const cookieOptions = {
@@ -46,13 +47,81 @@ export class AuthController {
       ...(isProduction && this.configService.get('COOKIE_DOMAIN') && { domain: this.configService.get('COOKIE_DOMAIN') }),
     }
     
+    // Set refresh token cookie with longer expiry
+    const refreshCookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' as const : 'lax' as const,
+      maxAge: parseInt(this.configService.get('REFRESH_TTL_DAYS', '7')) * 24 * 60 * 60 * 1000,
+      ...(isProduction && this.configService.get('COOKIE_DOMAIN') && { domain: this.configService.get('COOKIE_DOMAIN') }),
+    }
+    
     response.cookie(cookieName, result.accessToken, cookieOptions)
+    response.cookie(refreshCookieName, result.refreshToken, refreshCookieOptions)
 
     return {
       walletAddress: result.user.walletAddress,
       expiresAt: result.expiresAt,
+      refreshExpiresAt: result.refreshExpiresAt,
       // Also return token in response for debugging/alternative auth
-      ...(this.configService.get('NODE_ENV') !== 'production' && { accessToken: result.accessToken }),
+      ...(this.configService.get('NODE_ENV') !== 'production' && { 
+        accessToken: result.accessToken, 
+        refreshToken: result.refreshToken 
+      }),
+    }
+  }
+
+  @Post('refresh')
+  @UseGuards(ThrottlerGuard)
+  @ApiOperation({ summary: 'Refresh access token using refresh token' })
+  @ApiResponse({ status: 200, description: 'Token refreshed successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid refresh token' })
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const refreshCookieName = this.configService.get('REFRESH_COOKIE_NAME', 'tp_refresh')
+    const refreshToken = req.cookies[refreshCookieName]
+    
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token not found')
+    }
+
+    const result = await this.authService.refreshAccessToken(refreshToken)
+    
+    const isProduction = this.configService.get('NODE_ENV') === 'production'
+    const cookieName = this.configService.get('SESSION_COOKIE_NAME', 'tp_session')
+    
+    // Set new JWT cookie
+    const cookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' as const : 'lax' as const,
+      maxAge: parseInt(this.configService.get('SESSION_TTL_MIN', '30')) * 60 * 1000,
+      ...(isProduction && this.configService.get('COOKIE_DOMAIN') && { domain: this.configService.get('COOKIE_DOMAIN') }),
+    }
+    
+    // Set new refresh token cookie
+    const refreshCookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' as const : 'lax' as const,
+      maxAge: parseInt(this.configService.get('REFRESH_TTL_DAYS', '7')) * 24 * 60 * 60 * 1000,
+      ...(isProduction && this.configService.get('COOKIE_DOMAIN') && { domain: this.configService.get('COOKIE_DOMAIN') }),
+    }
+    
+    response.cookie(cookieName, result.accessToken, cookieOptions)
+    response.cookie(refreshCookieName, result.refreshToken, refreshCookieOptions)
+
+    return {
+      walletAddress: result.user.walletAddress,
+      expiresAt: result.expiresAt,
+      refreshExpiresAt: result.refreshExpiresAt,
+      // Also return token in response for debugging/alternative auth
+      ...(this.configService.get('NODE_ENV') !== 'production' && { 
+        accessToken: result.accessToken, 
+        refreshToken: result.refreshToken 
+      }),
     }
   }
 
@@ -96,13 +165,17 @@ export class AuthController {
     
     const isProduction = this.configService.get('NODE_ENV') === 'production'
     const cookieName = this.configService.get('SESSION_COOKIE_NAME', 'tp_session')
+    const refreshCookieName = this.configService.get('REFRESH_COOKIE_NAME', 'tp_refresh')
     
-    response.clearCookie(cookieName, {
+    const cookieOptions = {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
+      sameSite: isProduction ? 'none' as const : 'lax' as const,
       domain: isProduction ? this.configService.get('COOKIE_DOMAIN') : undefined,
-    })
+    }
+    
+    response.clearCookie(cookieName, cookieOptions)
+    response.clearCookie(refreshCookieName, cookieOptions)
     
     return { message: 'Logout successful' }
   }

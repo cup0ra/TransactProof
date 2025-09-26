@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { createPublicClient, http, parseAbi, parseAbiItem, formatUnits, PublicClient, decodeEventLog } from 'viem'
-import { mainnet, base, baseSepolia, polygon, arbitrum, optimism } from 'viem/chains'
+import { mainnet, base, baseSepolia, polygon, arbitrum, optimism, zkSync, bsc, avalanche } from 'viem/chains'
 import { PriceService } from './price.service'
 
 interface NetworkConfig {
@@ -24,7 +24,13 @@ interface TransactionDetails {
   explorerUrl: string
   usdtValue?: number
   pricePerToken?: number
-   status?: 'success' | 'reverted' | 'pending'
+  status?: 'success' | 'reverted' | 'pending'
+  // Transaction fee data  
+  gasUsed?: string
+  gasPrice?: string
+  transactionFeeEth?: number  // Fee in ETH (or native token)
+  transactionFeeUsd?: number  // Fee in USD
+  nativeTokenSymbol?: string  // ETH, BNB, MATIC, etc.
 }
 
 export interface ExtendedTransactionDetails {
@@ -118,6 +124,27 @@ export class BlockchainService {
         chain: optimism,
         rpcUrl: this.configService.get('OPTIMISM_RPC_URL') || 'https://mainnet.optimism.io',
         explorerBaseUrl: 'https://optimistic.etherscan.io'
+      },
+      {
+        name: 'zkSync Era',
+        chainId: 324,
+        chain: zkSync,
+        rpcUrl: this.configService.get('ZKSYNC_RPC_URL') || 'https://mainnet.era.zksync.io',
+        explorerBaseUrl: 'https://explorer.zksync.io'
+      },
+      {
+        name: 'BNB Smart Chain',
+        chainId: 56,
+        chain: bsc,
+        rpcUrl: this.configService.get('BSC_RPC_URL') || 'https://bsc-dataseed1.binance.org',
+        explorerBaseUrl: 'https://bscscan.com'
+      },
+      {
+        name: 'Avalanche C-Chain',
+        chainId: 43114,
+        chain: avalanche,
+        rpcUrl: this.configService.get('AVALANCHE_RPC_URL') || 'https://api.avax.network/ext/bc/C/rpc',
+        explorerBaseUrl: 'https://snowtrace.io'
       }
     ]
 
@@ -160,6 +187,12 @@ export class BlockchainService {
         return { symbol: 'ETH', decimals: 18 }
       case 42161: // Arbitrum One
         return { symbol: 'ETH', decimals: 18 }
+      case 324: // zkSync Era
+        return { symbol: 'ETH', decimals: 18 }
+      case 56: // BNB Smart Chain
+        return { symbol: 'BNB', decimals: 18 }
+      case 43114: // Avalanche C-Chain
+        return { symbol: 'AVAX', decimals: 18 }
       default:
         return { symbol: 'ETH', decimals: 18 } // Default fallback
     }
@@ -577,6 +610,52 @@ this.logger.warn("basicDetails", basicDetails)
     }
   }
 
+  /**
+   * Calculate transaction fee in native token and USD
+   */
+  private async calculateTransactionFee(
+    gasUsed: bigint, 
+    gasPrice: bigint, 
+    nativeTokenSymbol: string,
+    transactionDate: Date
+  ): Promise<{ 
+    transactionFeeEth: number; 
+    transactionFeeUsd?: number; 
+    gasUsedFormatted: string;
+    gasPriceGwei: string;
+  }> {
+    // Calculate fee in native token (ETH, BNB, MATIC, etc.)
+    const feeInWei = gasUsed * gasPrice
+    const transactionFeeEth = parseFloat(formatUnits(feeInWei, 18))
+    
+    // Format gas values for display
+    const gasUsedFormatted = gasUsed.toString()
+    const gasPriceGwei = formatUnits(gasPrice, 9) // Convert to Gwei
+    
+    // Get historical price for native token to calculate USD fee
+    let transactionFeeUsd: number | undefined
+    
+    try {
+      const priceData = await this.priceService.getHistoricalTokenPriceInUSDT(
+        nativeTokenSymbol, 
+        transactionFeeEth.toString(), 
+        transactionDate
+      )
+      if (priceData) {
+        transactionFeeUsd = priceData.usdtValue
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to get historical price for transaction fee in ${nativeTokenSymbol}:`, error.message)
+    }
+    
+    return {
+      transactionFeeEth,
+      transactionFeeUsd,
+      gasUsedFormatted,
+      gasPriceGwei
+    }
+  }
+
   async getTransactionDetails(txHash: string): Promise<TransactionDetails | null> {
     // First find which network contains this transaction
     const network = await this.findTransactionNetwork(txHash)
@@ -645,32 +724,50 @@ this.logger.warn("basicDetails", basicDetails)
 
               const amount = formatUnits(args.value, decimals)
               
-              // Get USDT conversion
+              // Get USDT conversion using historical price at transaction time
               let usdtValue: number | undefined
               let pricePerToken: number | undefined
               
               try {
-                const priceData = await this.priceService.getTokenPriceInUSDT(tokenSymbol, amount)
+                const transactionDate = new Date(Number(block.timestamp) * 1000)
+                const priceData = await this.priceService.getHistoricalTokenPriceInUSDT(tokenSymbol, amount, transactionDate)
                 if (priceData) {
                   usdtValue = priceData.usdtValue
                   pricePerToken = priceData.pricePerToken
+                  this.logger.log(`Using historical price for ${tokenSymbol}: ${pricePerToken} USDT on ${transactionDate.toDateString()}`)
                 }
               } catch (error) {
-                this.logger.warn(`Failed to get price for ${tokenSymbol}:`, error.message)
+                this.logger.warn(`Failed to get historical price for ${tokenSymbol}:`, error.message)
               }
+
+              // Calculate transaction fee
+              const nativeTokenInfo = this.getNativeTokenInfo(network.chainId)
+              const transactionDate = new Date(Number(block.timestamp) * 1000)
+              const feeData = await this.calculateTransactionFee(
+                receipt.gasUsed,
+                transaction.gasPrice || 0n,
+                nativeTokenInfo.symbol,
+                transactionDate
+              )
 
               const result = {
                 sender: args.from,
                 receiver: args.to,
                 amount,
                 token: tokenSymbol,
-                timestamp: new Date(Number(block.timestamp) * 1000),
+                timestamp: transactionDate,
                 blockNumber: Number(transaction.blockNumber),
                 chainId: network.chainId,
                 explorerUrl: `${network.explorerBaseUrl}/tx/${txHash}`,
                 usdtValue,
                 pricePerToken,
-                status: receipt.status === 'success' ? 'success' as const : receipt.status === 'reverted' ? 'reverted' as const : 'pending' as const
+                status: receipt.status === 'success' ? 'success' as const : receipt.status === 'reverted' ? 'reverted' as const : 'pending' as const,
+                // Transaction fee data
+                gasUsed: feeData.gasUsedFormatted,
+                gasPrice: feeData.gasPriceGwei,
+                transactionFeeEth: feeData.transactionFeeEth,
+                transactionFeeUsd: feeData.transactionFeeUsd,
+                nativeTokenSymbol: nativeTokenInfo.symbol
               }
               
               return result
@@ -688,32 +785,48 @@ this.logger.warn("basicDetails", basicDetails)
         const amount = formatUnits(transaction.value, nativeTokenInfo.decimals)
         const token = nativeTokenInfo.symbol
         
-        // Get USDT conversion
+        // Get USDT conversion using historical price at transaction time
         let usdtValue: number | undefined
         let pricePerToken: number | undefined
+        const transactionDate = new Date(Number(block.timestamp) * 1000)
         
         try {
-          const priceData = await this.priceService.getTokenPriceInUSDT(token, amount)
+          const priceData = await this.priceService.getHistoricalTokenPriceInUSDT(token, amount, transactionDate)
           if (priceData) {
             usdtValue = priceData.usdtValue
             pricePerToken = priceData.pricePerToken
+            this.logger.log(`Using historical price for ${token}: ${pricePerToken} USDT on ${transactionDate.toDateString()}`)
           }
         } catch (error) {
-          this.logger.warn(`Failed to get price for ${token}:`, error.message)
+          this.logger.warn(`Failed to get historical price for ${token}:`, error.message)
         }
+
+        // Calculate transaction fee
+        const feeData = await this.calculateTransactionFee(
+          receipt.gasUsed,
+          transaction.gasPrice || 0n,
+          token,
+          transactionDate
+        )
 
         const result = {
           sender: transaction.from,
           receiver: transaction.to,
           amount,
           token,
-          timestamp: new Date(Number(block.timestamp) * 1000),
+          timestamp: transactionDate,
           blockNumber: Number(transaction.blockNumber),
           chainId: network.chainId,
           explorerUrl: `${network.explorerBaseUrl}/tx/${txHash}`,
           usdtValue,
           pricePerToken,
-          status: receipt.status === 'success' ? 'success' as const : receipt.status === 'reverted' ? 'reverted' as const : 'pending' as const
+          status: receipt.status === 'success' ? 'success' as const : receipt.status === 'reverted' ? 'reverted' as const : 'pending' as const,
+          // Transaction fee data
+          gasUsed: feeData.gasUsedFormatted,
+          gasPrice: feeData.gasPriceGwei,
+          transactionFeeEth: feeData.transactionFeeEth,
+          transactionFeeUsd: feeData.transactionFeeUsd,
+          nativeTokenSymbol: token
         }
         
         return result
@@ -723,33 +836,49 @@ this.logger.warn("basicDetails", basicDetails)
       const nativeTokenInfo = this.getNativeTokenInfo(network.chainId)
       const amount = formatUnits(transaction.value, nativeTokenInfo.decimals)
       const token = nativeTokenInfo.symbol
+      const transactionDate = new Date(Number(block.timestamp) * 1000)
       
-      // Get USDT conversion for fallback ETH transaction
+      // Get USDT conversion using historical price at transaction time
       let usdtValue: number | undefined
       let pricePerToken: number | undefined
       
       try {
-        const priceData = await this.priceService.getTokenPriceInUSDT(token, amount)
+        const priceData = await this.priceService.getHistoricalTokenPriceInUSDT(token, amount, transactionDate)
         if (priceData) {
           usdtValue = priceData.usdtValue
           pricePerToken = priceData.pricePerToken
+          this.logger.log(`Using historical price for ${token}: ${pricePerToken} USDT on ${transactionDate.toDateString()}`)
         }
       } catch (error) {
-        this.logger.warn(`Failed to get price for ${token}:`, error.message)
+        this.logger.warn(`Failed to get historical price for ${token}:`, error.message)
       }
+
+      // Calculate transaction fee
+      const feeData = await this.calculateTransactionFee(
+        receipt.gasUsed,
+        transaction.gasPrice || 0n,
+        token,
+        transactionDate
+      )
 
       return {
         sender: transaction.from,
         receiver: transaction.to || '0x0000000000000000000000000000000000000000',
         amount,
         token,
-        timestamp: new Date(Number(block.timestamp) * 1000),
+        timestamp: transactionDate,
         blockNumber: Number(transaction.blockNumber),
         chainId: network.chainId,
         explorerUrl: `${network.explorerBaseUrl}/tx/${txHash}`,
         usdtValue,
         pricePerToken,
-        status: receipt.status === 'success' ? 'success' : receipt.status === 'reverted' ? 'reverted' : 'pending'
+        status: receipt.status === 'success' ? 'success' : receipt.status === 'reverted' ? 'reverted' : 'pending',
+        // Transaction fee data
+        gasUsed: feeData.gasUsedFormatted,
+        gasPrice: feeData.gasPriceGwei,
+        transactionFeeEth: feeData.transactionFeeEth,
+        transactionFeeUsd: feeData.transactionFeeUsd,
+        nativeTokenSymbol: token
       }
     } catch (error) {
       this.logger.error(`Error getting transaction details for ${txHash} from ${network.name}:`, error)

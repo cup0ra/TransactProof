@@ -10,11 +10,11 @@ import { useAuth } from '@/hooks/use-auth'
 import { useVerifyTransaction } from '@/hooks/use-verify-transaction'
 import { useAccount, useChainId } from 'wagmi'
 import { globalAuthManager } from '@/utils/global-auth-manager'
-import { APP_CONFIG, getAvailablePaymentOptions, formatPaymentAmount } from '@/config'
+import { APP_CONFIG, getAvailablePaymentOptions } from '@/config'
 import { useTokenBalance } from '@/hooks/use-token-balance'
 import { useMultiTokenBalance } from '@/hooks/use-multi-token-balance'
 import { useETHBalance } from '@/hooks/use-eth-balance'
-import { formatNumber, formatPaymentAmountDisplay, formatBalanceDisplay } from '@/utils/format-numbers'
+import {  formatPaymentAmountDisplay } from '@/utils/format-numbers'
 
 const receiptSchema = z.object({
   txHash: z.string().min(66, 'Transaction hash must be 66 characters').max(66, 'Transaction hash must be 66 characters'),
@@ -357,8 +357,6 @@ export function ReceiptGenerator() {
                     }`}
                   >
                     <div className="font-medium text-sm sm:text-base">{formatPaymentAmountDisplay(option.amount)} {option.symbol}</div>
-                    {/* <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{option.name}</div>
-                    <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">on {option.networkName}</div> */}
                   </button>
                 ))}
               </div>
@@ -368,46 +366,6 @@ export function ReceiptGenerator() {
                 </div>
               )}
             </div>
-            {/* Balance Display */}
-            {/* {selectedPayment && (
-              <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  Your {selectedPayment.symbol} Balance
-                  {isTokenPayment && tokenInfo && (
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {tokenInfo.name} ({tokenInfo.symbol})
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center justify-center space-x-2">
-                  {isBalanceLoading ? (
-                    <div className="w-3 h-3 sm:w-4 sm:h-4 border border-orange-400 border-t-transparent animate-spin"></div>
-                  ) : (
-                    <>
-                      <span className="text-base sm:text-lg font-medium text-gray-900 dark:text-gray-100">
-                        {formatBalanceDisplay(currentBalance, isETHPayment)} {selectedPayment.symbol}
-                      </span>
-                      {hasInsufficientBalance(selectedPayment.amount) && (
-                        <span className="ml-2 px-2 py-1 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs rounded">
-                          Insufficient Balance
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
-                {!isBalanceLoading && hasInsufficientBalance(selectedPayment.amount) && (
-                  <div className="mt-2 text-xs text-red-600 dark:text-red-400">
-                    You need {formatPaymentAmountDisplay(selectedPayment.amount)} {selectedPayment.symbol} but only have {formatBalanceDisplay(currentBalance, isETHPayment)} {selectedPayment.symbol}
-                    {isETHPayment && <span className="block mt-1">(Plus gas fees)</span>}
-                  </div>
-                )}
-                {isTokenPayment && detectedContractAddress && (
-                  <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Contract: {detectedContractAddress.slice(0, 6)}...{detectedContractAddress.slice(-4)}
-                  </div>
-                )}
-              </div>
-            )} */}
             
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <button
