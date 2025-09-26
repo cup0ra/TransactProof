@@ -32,7 +32,7 @@ export default function HelpCenterPage() {
         body: JSON.stringify({
           subject: `[Help Center] ${formData.subject}`,
           message: `From: ${formData.name} <${formData.email}>\n\n${formData.message}`,
-          fromEmail: formData.email,
+          to: formData.email,
         })
       })
 
