@@ -43,7 +43,6 @@ export function ParallaxBackground({
   useEffect(() => {
     // Check initial theme
     const checkTheme = () => {
-      console.log('Checking theme...', document.documentElement.classList.contains('dark'))  
       setIsDark(document.documentElement.classList.contains('dark'))
     }
     
@@ -103,7 +102,6 @@ export function ParallaxBackground({
     if (isMobile) {
       return isDark ? mobileDarkThemeImage : mobileLightThemeImage
     } else {
-      console.log(isDark ? darkThemeImage : lightThemeImage)
       return isDark ? darkThemeImage : lightThemeImage
     }
   }

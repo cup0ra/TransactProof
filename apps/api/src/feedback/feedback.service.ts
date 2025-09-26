@@ -32,6 +32,7 @@ export class FeedbackService {
          this.configService.get('SMTP_PASS'),
           this.configService.get('SMTP_FROM_EMAIL'),
           this.configService.get('SUPPORT_EMAIL'),
+          this.transporter
          )
       const mailOptions = {
         from: this.configService.get('SMTP_FROM_EMAIL') || this.configService.get('SMTP_USER'),
