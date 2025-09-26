@@ -188,7 +188,7 @@ export default function ReceiptDetailPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-black flex flex-col transition-colors duration-300">
-      <main className="flex-1 py-8 sm:py-12 lg:py-16">
+      <main className="flex-1 py-16 sm:py-16 lg:py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 sm:mb-12 lg:mb-16 gap-4 sm:gap-6">

@@ -2,16 +2,16 @@
 
 import { Toaster } from 'react-hot-toast'
 import { ThemeProvider } from '@/contexts/theme-context'
-import { AuthProvider } from '@/contexts/auth-context'
+import { ReduxProvider } from '@/store/ReduxProvider'
 import { WalletAuthProvider } from '@/contexts/wallet-auth-context'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider>
-      <WalletAuthProvider>
-        <AuthProvider>
+    <ReduxProvider>
+      <ThemeProvider>
+        <WalletAuthProvider>
           {children}
-        </AuthProvider>
+        </WalletAuthProvider>
         <Toaster 
           position="top-right"
           toastOptions={{
@@ -61,7 +61,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             },
           }}
         />
-      </WalletAuthProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </ReduxProvider>
   )
 }

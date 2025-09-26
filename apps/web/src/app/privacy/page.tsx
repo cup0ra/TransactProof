@@ -5,7 +5,7 @@ import { APP_CONFIG, formatPaymentAmount } from '@/config'
 export default function PrivacyPolicyPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-black">
-      <div className="py-8 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8">
+      <div className="py-16 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="flex items-center space-x-4 sm:space-x-6 mb-8 sm:mb-12 lg:mb-16">

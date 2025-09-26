@@ -273,7 +273,7 @@ export default function DashboardPage() {
       />
       
       {/* Content */}
-      <div className="relative  z-10 py-8 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8">
+      <div className="relative  z-10 py-12 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           {/* Header Section */}
           <motion.div 
