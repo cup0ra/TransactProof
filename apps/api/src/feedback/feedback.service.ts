@@ -7,6 +7,7 @@ import * as nodemailer from 'nodemailer'
 export class FeedbackService {
   private readonly logger = new Logger(FeedbackService.name)
   private transporter: nodemailer.Transporter
+  private fallbackTried = false
 
   constructor(private readonly configService: ConfigService) {
     // Parse & normalize config
@@ -18,7 +19,9 @@ export class FeedbackService {
     const pass = this.configService.get<string>('SMTP_PASS')
 
     // NOTE: secure should normally be true only for 465
-    const secure = port === 465
+    const secureEnv = this.configService.get<string>('SMTP_SECURE')
+    // If SMTP_SECURE explicitly set, respect it, else infer from port (465 => true)
+    const secure = typeof secureEnv === 'string' ? secureEnv === 'true' : port === 465
 
     this.transporter = nodemailer.createTransport({
       host,
@@ -35,7 +38,38 @@ export class FeedbackService {
         `SMTP transporter verification failed for host=${host} port=${port} secure=${secure}: ${err.message}`,
         err.stack,
       )
+      this.tryFallbackOnTimeout(err, { host, user })
     })
+  }
+
+  private tryFallbackOnTimeout(err: any, ctx: { host: string, user?: string }) {
+    const enableFallback = this.configService.get('ENABLE_SMTP_FALLBACK') !== 'false'
+    if (!enableFallback || this.fallbackTried) return
+    const msg = String(err?.message || '')
+    // Typical nodemailer timeout errors contain 'timeout' or code ETIMEDOUT
+    if (/timeout/i.test(msg) || err?.code === 'ETIMEDOUT' || err?.code === 'ECONNECTION') {
+      // Current transporter settings
+      // If already not port 465 secure true, no sense to fallback
+      // We'll fallback to port 587 STARTTLS (secure=false)
+      // Recreate transporter
+      this.fallbackTried = true
+      const host = this.configService.get<string>('SMTP_HOST') || ctx.host
+      const user = this.configService.get<string>('SMTP_USER') || ctx.user
+      const pass = this.configService.get<string>('SMTP_PASS')
+      const fallbackPort = parseInt(this.configService.get('SMTP_FALLBACK_PORT') || '587', 10)
+      this.logger.warn(`Attempting SMTP fallback to port=${fallbackPort} secure=false host=${host}`)
+      this.transporter = nodemailer.createTransport({
+        host,
+        port: fallbackPort,
+        secure: false,
+        auth: user && pass ? { user, pass } : undefined,
+      })
+      this.transporter.verify().then(() => {
+        this.logger.log(`SMTP fallback transporter verified (host=${host}, port=${fallbackPort}, secure=false)`) 
+      }).catch(fbErr => {
+        this.logger.error(`SMTP fallback verification failed: ${fbErr.message}`, fbErr.stack)
+      })
+    }
   }
 
   async sendFeedback(feedbackDto: SendFeedbackDto): Promise<void> {
@@ -87,6 +121,8 @@ export class FeedbackService {
         `Failed to send feedback email: ${error?.message || 'Unknown error'}`,
         error?.stack,
       )
+      // If initial send fails due to timeout and fallback not yet attempted (e.g. verify race), try fallback here as last resort
+      this.tryFallbackOnTimeout(error, { host: this.configService.get('SMTP_HOST'), user: this.configService.get('SMTP_USER') })
       // Attempt a one-time verification to surface deeper SMTP issues
       try {
         await this.transporter.verify()
