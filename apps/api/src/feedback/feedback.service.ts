@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common'
 import { SendFeedbackDto } from './dto/send-feedback.dto'
 import { ConfigService } from '@nestjs/config'
 import * as nodemailer from 'nodemailer'
@@ -9,31 +9,45 @@ export class FeedbackService {
   private transporter: nodemailer.Transporter
 
   constructor(private readonly configService: ConfigService) {
+    // Parse & normalize config
+    const host = this.configService.get<string>('SMTP_HOST') || 'smtp.gmail.com'
+    const rawPort = this.configService.get<string>('SMTP_PORT') ?? ''
+    const parsedPort = parseInt(rawPort, 10)
+    const port = Number.isNaN(parsedPort) ? 465 : parsedPort
+    const user = this.configService.get<string>('SMTP_USER')
+    const pass = this.configService.get<string>('SMTP_PASS')
+
+    // NOTE: secure should normally be true only for 465
+    const secure = port === 465
 
     this.transporter = nodemailer.createTransport({
-      host: this.configService.get('SMTP_HOST') || 'smtp.gmail.com',
-      port: parseInt(this.configService.get('SMTP_PORT')) || 465,
-      secure: true,
-      auth: {
-        user: this.configService.get('SMTP_USER'),
-        pass: this.configService.get('SMTP_PASS'),
-      },
+      host,
+      port,
+      secure,
+      auth: user && pass ? { user, pass } : undefined,
+    })
+
+    // Perform a lazy async verification without blocking constructor
+    this.transporter.verify().then(() => {
+      this.logger.log(`SMTP transporter verified (host=${host}, port=${port}, secure=${secure})`)
+    }).catch(err => {
+      this.logger.error(
+        `SMTP transporter verification failed for host=${host} port=${port} secure=${secure}: ${err.message}`,
+        err.stack,
+      )
     })
   }
 
   async sendFeedback(feedbackDto: SendFeedbackDto): Promise<void> {
     try {
       const { name, email, subject, message } = feedbackDto
-     this.logger.log(
-      'FeedbackService initialized',
-       this.configService.get('SMTP_HOST') ,
-         parseInt(this.configService.get('SMTP_PORT')),
-         this.configService.get('SMTP_USER'),
-         this.configService.get('SMTP_PASS'),
-          this.configService.get('SMTP_FROM_EMAIL'),
-          this.configService.get('SUPPORT_EMAIL'),
-          this.transporter
-         )
+
+      // Minimal debug (omit password)
+      if (this.configService.get('DEBUG_EMAIL') === 'true') {
+        this.logger.debug(
+          `Preparing feedback email with SMTP_HOST=${this.configService.get('SMTP_HOST')} SMTP_PORT=${this.configService.get('SMTP_PORT')} SMTP_USER=${this.configService.get('SMTP_USER')} FROM=${this.configService.get('SMTP_FROM_EMAIL') || this.configService.get('SMTP_USER')} TO=${this.configService.get('SUPPORT_EMAIL')}`,
+        )
+      }
       const mailOptions = {
         from: this.configService.get('SMTP_FROM_EMAIL') || this.configService.get('SMTP_USER'),
         to: this.configService.get('SUPPORT_EMAIL') || 'support@transactproof.com',
@@ -69,8 +83,22 @@ export class FeedbackService {
       await this.transporter.sendMail(mailOptions)
       this.logger.log(`Feedback email sent successfully from ${email}`)
     } catch (error) {
-      this.logger.error('Failed to send feedback email', error)
-      throw new Error('Failed to send feedback email')
+      this.logger.error(
+        `Failed to send feedback email: ${error?.message || 'Unknown error'}`,
+        error?.stack,
+      )
+      // Attempt a one-time verification to surface deeper SMTP issues
+      try {
+        await this.transporter.verify()
+        this.logger.warn('Transporter verification succeeded after failure. Original sendMail error may be content-related or transient.')
+      } catch (verifyErr) {
+        this.logger.error(
+          `Transporter verification after failure also failed: ${verifyErr?.message}`,
+          verifyErr?.stack,
+        )
+      }
+      // Re-throw with original message preserved (but hide internal details from client)
+      throw new InternalServerErrorException('Failed to send feedback email')
     }
   }
 }
