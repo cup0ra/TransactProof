@@ -76,6 +76,28 @@ railway variables set THROTTLE_LIMIT=100
   curl https://your-app.railway.app/api/health
    ```
 
+4. **(Optional) Persistent Volume for Generated PDFs**
+
+   By default generated PDFs are written to an ephemeral filesystem and are lost after a new deployment. To persist them temporarily (until you move to S3/R2):
+
+   1. In Railway dashboard open your API service → Storage → Add Volume
+   2. Choose size (start with 1GB) and mount path: `/app/uploads`
+   3. Set environment variable:
+      ```bash
+      railway variables set FILE_STORAGE=volume
+      ```
+      (Optional) override path:
+      ```bash
+      railway variables set UPLOADS_DIR=/app/uploads
+      ```
+   4. Redeploy the service (`railway up`)
+   5. Generate a PDF, then redeploy again to confirm the file still exists (same hash URL should work)
+
+   Notes:
+   - This is NOT a substitute for object storage; scaling to multiple instances will require a shared external store.
+   - Clean up old files manually or implement a retention job if volume size growth becomes an issue.
+   - Future migration to S3 will only require swapping `FILE_STORAGE` and adding an S3 adapter.
+
 ## Troubleshooting
 
 ### JWT_SECRET Error
