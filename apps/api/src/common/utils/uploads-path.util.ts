@@ -1,6 +1,8 @@
 import * as fs from 'fs'
 import * as path from 'path'
 
+let didLogResolve = false
+
 /**
  * Resolves the absolute path to the uploads directory.
  * Priority:
@@ -29,6 +31,18 @@ export function resolveUploadsDir(): string {
 
   if (!fs.existsSync(target)) {
     fs.mkdirSync(target, { recursive: true })
+  }
+
+  // One-time diagnostic log to help understand path resolution in production
+  if (!didLogResolve) {
+    // eslint-disable-next-line no-console
+    console.log('[uploads] resolveUploadsDir()', {
+      FILE_STORAGE: process.env.FILE_STORAGE,
+      UPLOADS_DIR: process.env.UPLOADS_DIR,
+      resolved: target,
+      __dirname,
+    })
+    didLogResolve = true
   }
 
   return target
