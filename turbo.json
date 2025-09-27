@@ -41,7 +41,9 @@
         "SMTP_USER",
         "SMTP_PASS",
         "SMTP_FROM_EMAIL",
-        "SUPPORT_EMAIL"
+        "SUPPORT_EMAIL",
+        "FILE_STORAGE",
+        "UPLOADS_DIR"
         ],
       "outputs": ["dist/**"]
     },
@@ -73,7 +75,9 @@
         "SMTP_USER",
         "SMTP_PASS",
         "SMTP_FROM_EMAIL",
-        "SUPPORT_EMAIL"
+        "SUPPORT_EMAIL",
+        "FILE_STORAGE",
+        "UPLOADS_DIR"
         ],
       "cache": false
     },
