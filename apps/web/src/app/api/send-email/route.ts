@@ -1,13 +1,10 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
+// Explicitly mark this route to run on the Node.js runtime so "nodemailer" works (not the edge runtime)
+export const runtime = 'nodejs'
 
-
-function required(name: string, value: string | undefined) {
-  if (!value) throw new Error(`Missing env: ${name}`)
-  return value
-}
-
+// Lazily created transporter (module-level singleton).
 const transporter = (() => {
   const host = process.env.SMTP_HOST || 'smtp.gmail.com'
   const port = parseInt(process.env.SMTP_PORT || '465', 10)
@@ -43,16 +40,18 @@ export async function POST(req: NextRequest) {
 
     await transporter.sendMail({
       from: process.env.SMTP_USER,
-      to: process.env.SUPPORT_EMAIL,
+      // Send to support (or fallback to provided 'to' if SUPPORT_EMAIL not set)
+      to: process.env.SUPPORT_EMAIL || to,
       subject,
       text: message,
       html: `<pre style="font-size:14px; line-height:1.4;">${escapeHtml(message)}</pre>`
     })
 
     return NextResponse.json({ ok: true })
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Internal error'
     console.error('[send-email] error', err)
-    return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 

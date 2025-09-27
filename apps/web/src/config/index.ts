@@ -120,8 +120,6 @@ export const APP_CONFIG = {
   } as Record<number, string>
 }
 
-
-console.log('Using networks:', networks)
 // Set up the Wagmi Adapter (Config)
 export const wagmiAdapter = new WagmiAdapter({
   storage: createStorage({
