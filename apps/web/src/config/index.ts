@@ -82,7 +82,7 @@ export const APP_CONFIG = {
         1: '0xA0b86a33E6351b8B8B53EEbF3C7F65b3e9B5AE8D',     // Ethereum Mainnet (USDC)
         8453: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',   // Base Mainnet (USDC)
         84532: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',  // Base Sepolia (USDC)
-        137: '0x2791Bca1f2de4661ED88A30c99A7a9449Aa84174',   // Polygon Mainnet (USDC - Bridged)
+        137: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',   // Polygon Mainnet (USDC - Bridged)
         10: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',    // Optimism Mainnet (USDC)
         42161: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', // Arbitrum One (USDC)
         324: '0x3355df6D4c9C3035724Fd0e3914dE96A5a83aaf4',   // zkSync Era (USDC)
