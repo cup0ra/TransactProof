@@ -1,24 +1,52 @@
-import { cookieStorage, createStorage, http } from '@wagmi/core'
+import { cookieStorage, createStorage } from '@wagmi/core'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { mainnet, arbitrum, base, baseSepolia, polygon, optimism, zkSync, bsc, avalanche } from '@reown/appkit/networks'
 
 // Get projectId from https://dashboard.reown.com
 export const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'demo-project-id'
+export const isDev = process.env.NODE_ENV === 'development'
+export const PAYMENT_AMOUNT = process.env.NEXT_PUBLIC_PAYMENT_AMOUNT ? parseFloat(process.env.NEXT_PUBLIC_PAYMENT_AMOUNT) : 0.1
+
+const devNentwork = [
+  mainnet,
+  base,
+  baseSepolia,
+  polygon,
+  arbitrum,
+  optimism,
+  zkSync,
+  bsc,
+  avalanche
+]
+
+const prodNentwork = [
+  mainnet,
+  base,
+  polygon,
+  arbitrum,
+  optimism,
+  zkSync,
+  bsc,
+  avalanche
+]
+
+export const networks = isDev ? devNentwork : prodNentwork
 
 // Application configuration
 export const APP_CONFIG = {
+  DEFAULT_CHAIN_ID: process.env.NEXT_PUBLIC_BASE_CHAIN_ID ? parseInt(process.env.NEXT_PUBLIC_BASE_CHAIN_ID) : 8453, // Base Mainnet
   PAYMENT_OPTIONS: [
-    {
+    ...(isDev ? [{
       type: 'ETH',
       amount: 0.0000001,
       symbol: 'ETH',
       name: 'Ethereum',
       contractAddress: null,
       supportedNetworks: [1, 8453, 84532, 137, 10, 42161, 324, 56, 43114],
-    },
+    }] : []),
     {
       type: 'USDT',
-      amount: 0.5,
+      amount: PAYMENT_AMOUNT,
       symbol: 'USDT',
       name: 'Tether USD',
       contractAddresses: {
@@ -47,7 +75,7 @@ export const APP_CONFIG = {
     },
     {
       type: 'USDC',
-      amount: 0.5,
+      amount: PAYMENT_AMOUNT,
       symbol: 'USDC',
       name: 'USD Coin',
       contractAddresses: {
@@ -92,18 +120,8 @@ export const APP_CONFIG = {
   } as Record<number, string>
 }
 
-export const networks = [
-  mainnet,
-  base,
-  baseSepolia,
-  polygon,
-  arbitrum,
-  optimism,
-  zkSync,
-  bsc,
-  avalanche
-]
 
+console.log('Using networks:', networks)
 // Set up the Wagmi Adapter (Config)
 export const wagmiAdapter = new WagmiAdapter({
   storage: createStorage({

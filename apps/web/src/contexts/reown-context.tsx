@@ -1,7 +1,7 @@
 'use client'
 
 import { createAppKit } from '@reown/appkit/react'
-import { wagmiAdapter, projectId, networks } from '@/config'
+import { wagmiAdapter, projectId, networks, APP_CONFIG } from '@/config'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactNode, useEffect } from 'react'
 import { cookieToInitialState, WagmiProvider, type Config } from 'wagmi'
@@ -48,14 +48,14 @@ const metadata = {
   icons: ['https://avatars.githubusercontent.com/u/179229932']
 }
 
-let appKit: any = null
 
 try {  
-  appKit = createAppKit({
+  const defaultNetwork = networks.find(n => n.id === APP_CONFIG.DEFAULT_CHAIN_ID) || networks[0]
+  createAppKit({
     adapters: [wagmiAdapter],
     projectId,
     networks: networks as any,
-    defaultNetwork: networks[2], // Base Sepolia
+    defaultNetwork, // Base Sepolia
     metadata,
     features: {
       analytics: false,

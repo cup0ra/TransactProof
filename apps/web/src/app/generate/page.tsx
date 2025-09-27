@@ -59,34 +59,6 @@ export default function GeneratePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: "easeOut" }}
           >
-            {/* Hero Header
-            <motion.div 
-              className="mb-8 sm:mb-12 lg:mb-16"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, delay: 0.2 }}
-            >
-        
-              <motion.h1 
-                className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl font-thin mb-4 sm:mb-6 lg:mb-8 tracking-wider transition-colors duration-300"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.2, delay: 0.3 }}
-              >
-                Generate Receipt
-              </motion.h1>
-              <div className="w-16 sm:w-20 md:w-24 lg:w-32 h-px bg-gradient-to-r from-transparent via-orange-500 to-transparent mx-auto mb-4 sm:mb-6 lg:mb-8"></div>
-              <motion.p 
-                className="text-sm sm:text-base md:text-lg lg:text-xl mb-6 sm:mb-8 lg:mb-12 max-w-2xl mx-auto leading-relaxed transition-colors duration-300"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: 0.3 }}
-              >
-                Transform your blockchain transactions into professional receipts.
-                <br />
-             
-              </motion.p>
-            </motion.div> */}
             
             {/* Receipt Generator Card */}
             <motion.div 
@@ -96,18 +68,6 @@ export default function GeneratePage() {
               transition={{ duration: 0.2, delay: 0.3 }}
             >
               <div className="border border-gray-300/50 dark:border-gray-800/50 p-4 sm:p-6 md:p-8 lg:p-12 bg-white/50 backdrop-blur-md dark:bg-black/50 backdrop-blur-md transition-colors duration-300 shadow-2xl bg-white/30 backdrop-blur-sm">
-                {/* <motion.div 
-                  className="mb-4 sm:mb-6 md:mb-8 lg:mb-10 text-center"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.2, delay: 0.5 }}
-                >
-                  <div className="inline-flex items-center space-x-2 sm:space-x-3 md:space-x-4">
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-orange-400 animate-pulse"></div>
-                    <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-light text-black dark:text-white tracking-wide transition-colors duration-300">Start Generation</h2>
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-orange-400 animate-pulse"></div>
-                  </div>
-                </motion.div> */}
                 <ReceiptGenerator />
               </div>
               

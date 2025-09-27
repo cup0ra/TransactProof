@@ -1,5 +1,6 @@
 'use client'
 
+import { PAYMENT_AMOUNT } from '@/config'
 import { useState } from 'react'
 
 export default function HelpCenterPage() {
@@ -77,7 +78,8 @@ export default function HelpCenterPage() {
               </div>
             </summary>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-light leading-relaxed">
-              Connect your MetaMask wallet, enter the transaction hash, add a description (optional), and pay a small fee in ETH to generate a professional PDF receipt.
+              Connect your MetaMask wallet, enter the transaction hash, add a description (optional), and pay a small fee in {PAYMENT_AMOUNT} USDT / USDC to generate a professional PDF receipt.
+
             </p>
           </details>
 
@@ -101,7 +103,7 @@ export default function HelpCenterPage() {
               </div>
             </summary>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-light leading-relaxed">
-              Receipt generation costs 0.0000001 ETH or 0.5 USDT/USDC (depending on your chosen payment method).
+              Receipt generation costs {PAYMENT_AMOUNT} USDT / USDC (depending on your chosen payment method).
             </p>
           </details>
 

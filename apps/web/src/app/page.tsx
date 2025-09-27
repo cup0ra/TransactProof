@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { useRef } from 'react'
 import { ParallaxBackground } from '@/components/parallax-background'
+import { PAYMENT_AMOUNT } from '@/config'
 
 export default function HomePage() {
   const ref = useRef(null)
@@ -151,7 +152,7 @@ export default function HomePage() {
                 },
                 {
                   title: 'Generate Receipt',
-                  description: 'Pay a small fee in ETH and receive a professional PDF receipt with verified transaction details.'
+                  description: 'Pay a small fee in USDT / USDC and receive a professional PDF receipt with verified transaction details.'
                 }
               ].map((step, index) => (
                 <div key={index} className="text-center group">
@@ -194,7 +195,7 @@ export default function HomePage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                       </svg>
                     </div>
-                    <div className="text-xl sm:text-2xl font-light text-orange-400 mb-2 group-hover:text-orange-500 transition-colors duration-300">0.5 USDT / USDC</div>
+                    <div className="text-xl sm:text-2xl font-light text-orange-400 mb-2 group-hover:text-orange-500 transition-colors duration-300">{PAYMENT_AMOUNT} USDT / USDC</div>
                     <div className="text-sm sm:text-base font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2 transition-colors duration-300">Service Fee</div>
                     <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 leading-relaxed transition-colors duration-300">
                       Affordable flat rate for all transactions. No hidden costs or percentage fees.
