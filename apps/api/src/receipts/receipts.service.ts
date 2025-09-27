@@ -23,12 +23,35 @@ export class ReceiptsService {
     private readonly configService: ConfigService,
   ) {}
 
+  /**
+   * Introduce a short delay to allow freshly submitted blockchain transactions
+   * to propagate before we attempt to verify them. Default 10s, configurable
+   * via env VERIFICATION_DELAY_MS.
+   */
+  private async delayForNetwork() {
+    const configured = this.configService.get<string>('VERIFICATION_DELAY_MS')
+    let delayMs = 10000 // default 10 seconds
+    if (configured) {
+      const parsed = parseInt(configured, 10)
+      if (!isNaN(parsed) && parsed >= 0 && parsed <= 60000) { // clamp to 60s max safety
+        delayMs = parsed
+      }
+    }
+    if (delayMs > 0) {
+      this.logger.log(`Waiting ${delayMs}ms before verification to allow transaction propagation...`)
+      await new Promise(resolve => setTimeout(resolve, delayMs))
+    }
+  }
+
   async payAndGenerate(
     payAndGenerateDto: PayAndGenerateDto,
     userAddress?: string,
     userId?: string,
   ) {
     const { txHash, description, paymentTxHash, paymentAmount, paymentType, paymentContractAddress } = payAndGenerateDto
+
+    // Optional propagation delay so transaction/payment appears on chain
+    await this.delayForNetwork()
 
     // 1. Verify transaction exists in supported networks before processing payment
     this.logger.log(`Verifying transaction ${txHash} exists in supported networks...`)
