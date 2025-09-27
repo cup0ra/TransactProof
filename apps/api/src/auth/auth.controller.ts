@@ -38,26 +38,37 @@ export class AuthController {
     const cookieName = this.configService.get('SESSION_COOKIE_NAME', 'tp_session')
     const refreshCookieName = this.configService.get('REFRESH_COOKIE_NAME', 'tp_refresh')
     
-    // Set JWT cookie with proper cross-domain settings
-    const cookieOptions = {
-      httpOnly: true,
-      secure: isProduction, // Only HTTPS in production
-      sameSite: isProduction ? 'none' as const : 'lax' as const, // 'none' allows cross-domain
-      maxAge: parseInt(this.configService.get('SESSION_TTL_MIN', '30')) * 60 * 1000,
-      ...(isProduction && this.configService.get('COOKIE_DOMAIN') && { domain: this.configService.get('COOKIE_DOMAIN') }),
-    }
-    
-    // Set refresh token cookie with longer expiry
-    const refreshCookieOptions = {
+    // Base cookie attributes (host-only; avoids domain issues on iOS Safari)
+    const sessionTtlMs = parseInt(this.configService.get('SESSION_TTL_MIN', '30')) * 60 * 1000
+    const refreshTtlMs = parseInt(this.configService.get('REFRESH_TTL_DAYS', '7')) * 24 * 60 * 60 * 1000
+
+    const commonCookie = {
       httpOnly: true,
       secure: isProduction,
       sameSite: isProduction ? 'none' as const : 'lax' as const,
-      maxAge: parseInt(this.configService.get('REFRESH_TTL_DAYS', '7')) * 24 * 60 * 60 * 1000,
-      ...(isProduction && this.configService.get('COOKIE_DOMAIN') && { domain: this.configService.get('COOKIE_DOMAIN') }),
+      path: '/',
     }
-    
-    response.cookie(cookieName, result.accessToken, cookieOptions)
+
+    const sessionCookieOptions = { ...commonCookie, maxAge: sessionTtlMs }
+    const refreshCookieOptions = { ...commonCookie, maxAge: refreshTtlMs }
+
+    response.cookie(cookieName, result.accessToken, sessionCookieOptions)
     response.cookie(refreshCookieName, result.refreshToken, refreshCookieOptions)
+
+    // Debug log (avoid printing tokens)
+    if (process.env.NODE_ENV !== 'test') {
+      // eslint-disable-next-line no-console
+      console.log('[Auth][verify] Set cookies', {
+        cookieName,
+        refreshCookieName,
+        secure: commonCookie.secure,
+        sameSite: commonCookie.sameSite,
+        path: commonCookie.path,
+        sessionMaxAge: sessionCookieOptions.maxAge,
+        refreshMaxAge: refreshCookieOptions.maxAge,
+        userAgent: (response.req as any)?.headers?.['user-agent'],
+      })
+    }
 
     return {
       walletAddress: result.user.walletAddress,
@@ -92,26 +103,34 @@ export class AuthController {
     const isProduction = this.configService.get('NODE_ENV') === 'production'
     const cookieName = this.configService.get('SESSION_COOKIE_NAME', 'tp_session')
     
-    // Set new JWT cookie
-    const cookieOptions = {
+    // New cookies (host-only)
+    const sessionTtlMs = parseInt(this.configService.get('SESSION_TTL_MIN', '30')) * 60 * 1000
+    const refreshTtlMs = parseInt(this.configService.get('REFRESH_TTL_DAYS', '7')) * 24 * 60 * 60 * 1000
+    const commonCookie = {
       httpOnly: true,
       secure: isProduction,
       sameSite: isProduction ? 'none' as const : 'lax' as const,
-      maxAge: parseInt(this.configService.get('SESSION_TTL_MIN', '30')) * 60 * 1000,
-      ...(isProduction && this.configService.get('COOKIE_DOMAIN') && { domain: this.configService.get('COOKIE_DOMAIN') }),
+      path: '/',
     }
-    
-    // Set new refresh token cookie
-    const refreshCookieOptions = {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'none' as const : 'lax' as const,
-      maxAge: parseInt(this.configService.get('REFRESH_TTL_DAYS', '7')) * 24 * 60 * 60 * 1000,
-      ...(isProduction && this.configService.get('COOKIE_DOMAIN') && { domain: this.configService.get('COOKIE_DOMAIN') }),
-    }
-    
-    response.cookie(cookieName, result.accessToken, cookieOptions)
+    const sessionCookieOptions = { ...commonCookie, maxAge: sessionTtlMs }
+    const refreshCookieOptions = { ...commonCookie, maxAge: refreshTtlMs }
+
+    response.cookie(cookieName, result.accessToken, sessionCookieOptions)
     response.cookie(refreshCookieName, result.refreshToken, refreshCookieOptions)
+
+    if (process.env.NODE_ENV !== 'test') {
+      // eslint-disable-next-line no-console
+      console.log('[Auth][refresh] Set cookies', {
+        cookieName,
+        refreshCookieName,
+        secure: commonCookie.secure,
+        sameSite: commonCookie.sameSite,
+        path: commonCookie.path,
+        sessionMaxAge: sessionCookieOptions.maxAge,
+        refreshMaxAge: refreshCookieOptions.maxAge,
+        userAgent: req.headers['user-agent'],
+      })
+    }
 
     return {
       walletAddress: result.user.walletAddress,
@@ -167,15 +186,14 @@ export class AuthController {
     const cookieName = this.configService.get('SESSION_COOKIE_NAME', 'tp_session')
     const refreshCookieName = this.configService.get('REFRESH_COOKIE_NAME', 'tp_refresh')
     
-    const cookieOptions = {
+    const clearOptions = {
       httpOnly: true,
       secure: isProduction,
       sameSite: isProduction ? 'none' as const : 'lax' as const,
-      domain: isProduction ? this.configService.get('COOKIE_DOMAIN') : undefined,
+      path: '/',
     }
-    
-    response.clearCookie(cookieName, cookieOptions)
-    response.clearCookie(refreshCookieName, cookieOptions)
+    response.clearCookie(cookieName, clearOptions)
+    response.clearCookie(refreshCookieName, clearOptions)
     
     return { message: 'Logout successful' }
   }

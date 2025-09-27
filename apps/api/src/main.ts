@@ -14,15 +14,20 @@ async function bootstrap() {
   // Security
   app.use(helmet())
   
-  // CORS
-  const corsOrigin = configService.get('CORS_ORIGIN')
+  // CORS (Strict origin for credentialed cookies; avoid wildcard with credentials)
+  const configuredOrigin = configService.get('CORS_ORIGIN') || 'https://transact-proof.vercel.app'
   app.enableCors({
-    origin: corsOrigin || true, // Allow all origins if not specified
-    credentials: true, // Critical for cookies in cross-origin requests
+    origin: (origin, callback) => {
+      // Allow non-browser / server side requests without origin header
+      if (!origin) return callback(null, true)
+      if (origin === configuredOrigin) return callback(null, true)
+      return callback(new Error(`Origin not allowed: ${origin}`), false)
+    },
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    exposedHeaders: ['Set-Cookie'],
   })
+  console.log('[CORS] Allowed origin:', configuredOrigin)
 
   // Cookies
   app.use(cookieParser())
