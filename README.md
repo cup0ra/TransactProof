@@ -67,6 +67,26 @@ npm run dev
 - `npm run docker:up` - Запуск Docker контейнеров
 - `npm run docker:down` - Остановка Docker контейнеров
 
+### Локальная разработка на SQLite (упрощённый режим)
+
+Для быстрого старта без локального Postgres можно использовать отдельную SQLite-схему (не для production):
+
+1. В папке `apps/api`: 
+   ```bash
+   npm run db:sqlite:push
+   npm run start:dev:sqlite
+   ```
+2. Откроется база `prisma/dev.db` (игнорируется в git).
+3. Studio для неё: 
+   ```bash
+   npm run db:sqlite:studio
+   ```
+
+Важно:
+- Не коммить миграции из SQLite — production использует PostgreSQL и `schema.prisma`.
+- Все изменения модели делай в `schema.prisma`, затем при необходимости прогоняй `db:sqlite:push` (он не создаёт миграций, просто синхронизирует).
+- Перед созданием production миграций проверяй изменения на Postgres.
+
 ## Функциональность
 
 ### Основные возможности
