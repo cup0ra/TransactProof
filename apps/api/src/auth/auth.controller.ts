@@ -23,126 +23,128 @@ export class AuthController {
     return this.authService.generateNonce()
   }
 
-  @Post('verify')
-  @UseGuards(ThrottlerGuard)
-  @ApiOperation({ summary: 'Verify SIWE signature and authenticate user' })
-  @ApiResponse({ status: 200, description: 'Authentication successful' })
-  @ApiResponse({ status: 401, description: 'Invalid signature' })
-  async verify(
-    @Body() verifyDto: VerifyDto,
-    @Res({ passthrough: true }) response: Response,
-  ) {
-    const result = await this.authService.verifySiweMessage(verifyDto)
-    
-    const isProduction = this.configService.get('NODE_ENV') === 'production'
-    const cookieName = this.configService.get('SESSION_COOKIE_NAME', 'tp_session')
-    const refreshCookieName = this.configService.get('REFRESH_COOKIE_NAME', 'tp_refresh')
-    
-    // Base cookie attributes (host-only; avoids domain issues on iOS Safari)
-    const sessionTtlMs = parseInt(this.configService.get('SESSION_TTL_MIN', '30')) * 60 * 1000
-    const refreshTtlMs = parseInt(this.configService.get('REFRESH_TTL_DAYS', '7')) * 24 * 60 * 60 * 1000
+@Post('verify')
+@UseGuards(ThrottlerGuard)
+@ApiOperation({ summary: 'Verify SIWE signature and authenticate user' })
+@ApiResponse({ status: 200, description: 'Authentication successful' })
+@ApiResponse({ status: 401, description: 'Invalid signature' })
+async verify(
+  @Body() verifyDto: VerifyDto,
+  @Req() req: Request,
+  @Res({ passthrough: true }) res: Response,
+) {
+  const isProd = this.configService.get('NODE_ENV') === 'production';
+  const cookieName = this.configService.get('SESSION_COOKIE_NAME', 'tp_session');
+  const refreshCookieName = this.configService.get('REFRESH_COOKIE_NAME', 'tp_refresh');
+
+  const sessionTtlMs = Number(this.configService.get('SESSION_TTL_MIN') ?? 30) * 60 * 1000;
+  const refreshTtlMs = Number(this.configService.get('REFRESH_TTL_DAYS') ?? 7) * 24 * 60 * 60 * 1000;
+
+
+  const topLevelDomain = this.configService.get<string>('TOP_LEVEL_DOMAIN');
+  const origin = (req.headers.origin ?? '') as string;
+  const host = req.hostname ?? '';
+
+  const isSameSite =
+    !!topLevelDomain &&
+    host.endsWith(topLevelDomain) &&
+    origin.includes(topLevelDomain);
+
+  const sameSite: 'lax' | 'none' = isSameSite ? 'lax' : 'none';
+
+  try {
+    const result = await this.authService.verifySiweMessage(verifyDto);
 
     const commonCookie = {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'none' as const : 'lax' as const,
-      path: '/',
-    }
+      secure: isProd,   
+      sameSite,
+      path: '/',           
+    } as const;
 
-    const sessionCookieOptions = { ...commonCookie, maxAge: sessionTtlMs }
-    const refreshCookieOptions = { ...commonCookie, maxAge: refreshTtlMs }
+    res.cookie(cookieName, result.accessToken, { ...commonCookie, maxAge: sessionTtlMs });
+    res.cookie(refreshCookieName, result.refreshToken, { ...commonCookie, maxAge: refreshTtlMs });
 
-    response.cookie(cookieName, result.accessToken, sessionCookieOptions)
-    response.cookie(refreshCookieName, result.refreshToken, refreshCookieOptions)
-
-    // Debug log (avoid printing tokens)
-    if (process.env.NODE_ENV !== 'test') {
-      // eslint-disable-next-line no-console
-      console.log('[Auth][verify] Set cookies', {
-        cookieName,
-        refreshCookieName,
-        secure: commonCookie.secure,
-        sameSite: commonCookie.sameSite,
-        path: commonCookie.path,
-        sessionMaxAge: sessionCookieOptions.maxAge,
-        refreshMaxAge: refreshCookieOptions.maxAge,
-        userAgent: (response.req as any)?.headers?.['user-agent'],
-      })
-    }
+    res.setHeader('Cache-Control', 'no-store');
 
     return {
+      ok: true,
       walletAddress: result.user.walletAddress,
       expiresAt: result.expiresAt,
       refreshExpiresAt: result.refreshExpiresAt,
-      // Also return token in response for debugging/alternative auth
-      ...(this.configService.get('NODE_ENV') !== 'production' && { 
-        accessToken: result.accessToken, 
-        refreshToken: result.refreshToken 
-      }),
-    }
+      ...(isProd ? {} : { accessToken: result.accessToken, refreshToken: result.refreshToken }),
+    };
+  } catch (e) {
+    const clearOpts = { path: '/', httpOnly: true, secure: isProd, sameSite } as const;
+    res.clearCookie(cookieName, clearOpts);
+    res.clearCookie(refreshCookieName, clearOpts);
+    throw new UnauthorizedException('Invalid signature');
+  }
+}
+
+@Post('refresh')
+@UseGuards(ThrottlerGuard)
+@ApiOperation({ summary: 'Refresh access token using refresh token' })
+@ApiResponse({ status: 200, description: 'Token refreshed successfully' })
+@ApiResponse({ status: 401, description: 'Invalid refresh token' })
+async refresh(
+  @Req() req: Request,
+  @Res({ passthrough: true }) res: Response,
+) {
+  const isProd = this.configService.get('NODE_ENV') === 'production';
+  const cookieName = this.configService.get('SESSION_COOKIE_NAME', 'tp_session');
+  const refreshCookieName = this.configService.get('REFRESH_COOKIE_NAME', 'tp_refresh');
+
+  const sessionTtlMs = Number(this.configService.get('SESSION_TTL_MIN') ?? 30) * 60 * 1000;
+  const refreshTtlMs = Number(this.configService.get('REFRESH_TTL_DAYS') ?? 7) * 24 * 60 * 60 * 1000;
+
+  const topLevelDomain = this.configService.get<string>('TOP_LEVEL_DOMAIN');
+  const origin = String(req.headers.origin ?? '');
+  const host = req.hostname ?? '';
+  const isSameSite =
+    !!topLevelDomain &&
+    host.endsWith(topLevelDomain) &&
+    origin.includes(topLevelDomain);
+
+  const sameSite: 'lax' | 'none' = isSameSite ? 'lax' : 'none';
+
+  const clearOpts = { path: '/', httpOnly: true, secure: isProd, sameSite } as const;
+
+  const refreshToken = req.cookies?.[refreshCookieName];
+  if (!refreshToken) {
+    res.clearCookie(cookieName, clearOpts);
+    res.clearCookie(refreshCookieName, clearOpts);
+    throw new UnauthorizedException('Refresh token not found');
   }
 
-  @Post('refresh')
-  @UseGuards(ThrottlerGuard)
-  @ApiOperation({ summary: 'Refresh access token using refresh token' })
-  @ApiResponse({ status: 200, description: 'Token refreshed successfully' })
-  @ApiResponse({ status: 401, description: 'Invalid refresh token' })
-  async refresh(
-    @Req() req: Request,
-    @Res({ passthrough: true }) response: Response,
-  ) {
-    const refreshCookieName = this.configService.get('REFRESH_COOKIE_NAME', 'tp_refresh')
-    const refreshToken = req.cookies[refreshCookieName]
-    
-    if (!refreshToken) {
-      throw new UnauthorizedException('Refresh token not found')
-    }
+  try {
+    const result = await this.authService.refreshAccessToken(refreshToken);
 
-    const result = await this.authService.refreshAccessToken(refreshToken)
-    
-    const isProduction = this.configService.get('NODE_ENV') === 'production'
-    const cookieName = this.configService.get('SESSION_COOKIE_NAME', 'tp_session')
-    
-    // New cookies (host-only)
-    const sessionTtlMs = parseInt(this.configService.get('SESSION_TTL_MIN', '30')) * 60 * 1000
-    const refreshTtlMs = parseInt(this.configService.get('REFRESH_TTL_DAYS', '7')) * 24 * 60 * 60 * 1000
     const commonCookie = {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'none' as const : 'lax' as const,
-      path: '/',
-    }
-    const sessionCookieOptions = { ...commonCookie, maxAge: sessionTtlMs }
-    const refreshCookieOptions = { ...commonCookie, maxAge: refreshTtlMs }
+      secure: isProd, 
+      sameSite,
+      path: '/',          
+    } as const;
 
-    response.cookie(cookieName, result.accessToken, sessionCookieOptions)
-    response.cookie(refreshCookieName, result.refreshToken, refreshCookieOptions)
+    res.cookie(cookieName, result.accessToken, { ...commonCookie, maxAge: sessionTtlMs });
+    res.cookie(refreshCookieName, result.refreshToken, { ...commonCookie, maxAge: refreshTtlMs });
 
-    if (process.env.NODE_ENV !== 'test') {
-      // eslint-disable-next-line no-console
-      console.log('[Auth][refresh] Set cookies', {
-        cookieName,
-        refreshCookieName,
-        secure: commonCookie.secure,
-        sameSite: commonCookie.sameSite,
-        path: commonCookie.path,
-        sessionMaxAge: sessionCookieOptions.maxAge,
-        refreshMaxAge: refreshCookieOptions.maxAge,
-        userAgent: req.headers['user-agent'],
-      })
-    }
+    res.setHeader('Cache-Control', 'no-store');
 
     return {
+      ok: true,
       walletAddress: result.user.walletAddress,
       expiresAt: result.expiresAt,
       refreshExpiresAt: result.refreshExpiresAt,
-      // Also return token in response for debugging/alternative auth
-      ...(this.configService.get('NODE_ENV') !== 'production' && { 
-        accessToken: result.accessToken, 
-        refreshToken: result.refreshToken 
-      }),
-    }
+      ...(isProd ? {} : { accessToken: result.accessToken, refreshToken: result.refreshToken }),
+    };
+  } catch {
+    res.clearCookie(cookieName, clearOpts);
+    res.clearCookie(refreshCookieName, clearOpts);
+    throw new UnauthorizedException('Invalid refresh token');
   }
+}
 
   @Get('debug/cookies')
   @ApiOperation({ summary: 'Debug endpoint to check cookies (remove in production)' })
