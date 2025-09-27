@@ -1,17 +1,94 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
+  "globalDependencies": [
+    "**/.env*",
+    "apps/api/prisma/schema.prisma"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "dist/**"
+      ]
+    },
+    "build:api": {
+      "dependsOn": ["^build"],
+       "env": [
+        "JWT_SECRET",
+        "NODE_ENV",
+        "DATABASE_URL",
+        "SIWE_DOMAIN",
+        "CORS_ORIGIN",
+        "SERVICE_ETH_ADDRESS",
+        "USDT_CONTRACT",
+        "PORT",
+        "SESSION_COOKIE_NAME",
+        "SESSION_TTL_MIN",
+        "BASE_CHAIN_ID",
+        "ALCHEMY_BASE_RPC",
+        "ETHEREUM_RPC_URL",
+        "BASE_RPC_URL",
+        "ARBITRUM_RPC_URL",
+        "OPTIMISM_RPC_URL",
+        "POLYGON_RPC_URL",
+        "THROTTLE_TTL",
+        "THROTTLE_LIMIT",
+        "API_PUBLIC_URL",
+        "SMTP_HOST",
+        "SMTP_PORT",
+        "SMTP_USER",
+        "SMTP_PASS",
+        "SMTP_FROM_EMAIL",
+        "SUPPORT_EMAIL",
+        "FILE_STORAGE",
+        "UPLOADS_DIR"
+        ],
+      "outputs": ["dist/**"]
+    },
+    "start:prod": {
+      "dependsOn": ["build"],
+      "env": [
+        "JWT_SECRET",
+        "NODE_ENV",
+        "DATABASE_URL",
+        "SIWE_DOMAIN",
+        "CORS_ORIGIN",
+        "SERVICE_ETH_ADDRESS",
+        "USDT_CONTRACT",
+        "PORT",
+        "SESSION_COOKIE_NAME",
+        "SESSION_TTL_MIN",
+        "BASE_CHAIN_ID",
+        "ALCHEMY_BASE_RPC",
+        "ETHEREUM_RPC_URL",
+        "BASE_RPC_URL",
+        "ARBITRUM_RPC_URL",
+        "OPTIMISM_RPC_URL",
+        "POLYGON_RPC_URL",
+        "THROTTLE_TTL",
+        "THROTTLE_LIMIT",
+        "API_PUBLIC_URL",
+        "SMTP_HOST",
+        "SMTP_PORT",
+        "SMTP_USER",
+        "SMTP_PASS",
+        "SMTP_FROM_EMAIL",
+        "SUPPORT_EMAIL",
+        "FILE_STORAGE",
+        "UPLOADS_DIR"
+        ],
+      "cache": false
     },
     "dev": {
       "cache": false,
       "persistent": true
     },
     "start": {
-      "dependsOn": ["build"]
+      "dependsOn": ["build"],
+      "cache": false,
+      "persistent": true
     },
     "lint": {
       "outputs": []

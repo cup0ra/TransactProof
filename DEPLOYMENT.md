@@ -202,7 +202,7 @@ npx prisma migrate deploy
 docker-compose -f infra/docker-compose.yml ps
 
 # Health checks
-curl http://your-api-domain.com/health
+curl http://your-api-domain.com/api/health
 curl http://your-frontend-domain.com/api/health
 ```
 

@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi'
-import { parseEther } from 'viem'
+import { useAccount, useChainId, useWalletClient, usePublicClient } from 'wagmi'
+import { parseEther, formatEther } from 'viem'
+import { formatNumber } from '@/utils/format-numbers'
 
 // Service address for ETH payments
 const SERVICE_ADDRESS = process.env.NEXT_PUBLIC_SERVICE_ETH_ADDRESS || '0x1234567890123456789012345678901234567890'
@@ -11,7 +12,14 @@ const SERVICE_ADDRESS = process.env.NEXT_PUBLIC_SERVICE_ETH_ADDRESS || '0x123456
 export function usePayETH() {
   const [isLoading, setIsLoading] = useState(false)
   const { isConnected, address } = useAccount()
-  const { sendTransactionAsync } = useSendTransaction()
+  const chainId = useChainId()
+  // Only query wallet client when connected to prevent unnecessary requests
+  const { data: walletClient } = useWalletClient({
+    query: {
+      enabled: isConnected && !!address
+    }
+  })
+  const publicClient = usePublicClient()
 
   const payETH = async (amount: number = 0.0000001) => {
     if (!isConnected || !address) {
@@ -19,22 +27,44 @@ export function usePayETH() {
       return null
     }
 
+    if (!walletClient) {
+      toast.error('Wallet client not available. Please reconnect your wallet.')
+      return null
+    }
+
+    if (!publicClient) {
+      toast.error('Public client not available. Please check your connection.')
+      return null
+    }
+
     // Validate service address
     if (!SERVICE_ADDRESS || SERVICE_ADDRESS === '0x1234567890123456789012345678901234567890') {
-      console.error('Invalid service address:', SERVICE_ADDRESS)
       toast.error('Service configuration error. Please contact support.')
       return null
     }
 
-    console.log('Starting ETH payment:', {
-      amount,
-      serviceAddress: SERVICE_ADDRESS,
-      isConnected,
-      userAddress: address
-    })
-
     try {
       setIsLoading(true)
+      
+      toast.loading('Checking ETH balance...', { id: 'payment' })
+      
+      // Check ETH balance before attempting transaction
+      try {
+        const balanceRaw = await publicClient.getBalance({
+          address: address,
+        })
+
+        const currentBalance = parseFloat(formatEther(balanceRaw))
+        const gasBuffer = chainId === 1 ? 0.001 : 0.0001 // Mainnet vs L2 networks
+        const totalRequired = amount + gasBuffer
+        
+        if (currentBalance < totalRequired) {
+          toast.error(`Insufficient ETH balance. You have ${formatNumber(currentBalance, 8)} ETH, but need ${formatNumber(totalRequired, 8)} ETH (including gas).`, { id: 'payment' })
+          return null
+        }
+      } catch (balanceError) {
+        // Could not check balance, proceed with transaction
+      }
       
       toast.loading('Preparing transaction...', { id: 'payment' })
       
@@ -48,39 +78,34 @@ export function usePayETH() {
         amountString = amount.toString()
       }
       
-      console.log('Amount conversion:', {
-        originalAmount: amount,
-        amountString,
-        isScientific: amount.toString().includes('e')
-      })
-      
-      const txData = {
+      // Send ETH transaction using wallet client directly
+      const txHash = await walletClient.sendTransaction({
+        account: address,
         to: SERVICE_ADDRESS as `0x${string}`,
         value: parseEther(amountString),
-      }
+      })
       
-      console.log('Transaction data:', txData)
-      
-      // Send ETH transaction using wagmi async method
-      const txHash = await sendTransactionAsync(txData)
-      
-      console.log('Transaction sent successfully:', txHash)
       toast.success('Payment successful!', { id: 'payment' })
       return txHash
-    } catch (error: any) {
-      console.error('Payment error:', error)
+    } catch (error: unknown) {
       
       // Handle specific error types
       let errorMessage = 'Payment failed. Please try again.'
       
-      if (error?.name === 'UserRejectedRequestError') {
+      const err = error as { name?: string; code?: number; message?: string }
+      
+      if (err?.name === 'UserRejectedRequestError' || err?.code === 4001) {
         errorMessage = 'Transaction was rejected by user'
-      } else if (error?.message?.includes('insufficient funds')) {
+      } else if (err?.message?.includes('insufficient funds') || err?.code === -32000) {
         errorMessage = 'Insufficient funds for transaction'
-      } else if (error?.message?.includes('gas')) {
+      } else if (err?.message?.includes('gas')) {
         errorMessage = 'Gas estimation failed. Please try again.'
-      } else if (error?.message) {
-        errorMessage = error.message
+      } else if (err?.message?.includes('connector') || err?.message?.includes('getChainId')) {
+        errorMessage = 'Wallet connection error. Please disconnect and reconnect your wallet.'
+      } else if (err?.message?.includes('network')) {
+        errorMessage = 'Network error. Please check your connection and try again.'
+      } else if (err?.message) {
+        errorMessage = err.message
       }
       
       toast.error(errorMessage, { id: 'payment' })

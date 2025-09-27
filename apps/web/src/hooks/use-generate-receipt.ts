@@ -7,6 +7,10 @@ import { ApiClient } from '@/lib/api-client'
 interface GenerateReceiptParams {
   txHash: string
   description?: string
+  paymentTxHash?: string
+  paymentAmount?: number
+  paymentType?: string
+  paymentContractAddress?: string
 }
 
 interface ReceiptResponse {
@@ -36,7 +40,6 @@ export function useGenerateReceipt() {
       toast.success('Receipt generated successfully!', { id: 'generate' })
       return receipt
     } catch (error) {
-      // Не показываем toast для ошибки аутентификации, так как ApiClient уже перенаправил
       if (error instanceof Error && error.message !== 'Authentication required') {
         toast.error(error.message || 'Failed to generate receipt', { id: 'generate' })
       }

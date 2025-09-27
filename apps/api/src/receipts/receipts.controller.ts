@@ -16,8 +16,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { ReceiptsService } from './receipts.service'
 import { PayAndGenerateDto } from './dto/pay-and-generate.dto'
 import { ReceiptResponseDto } from './dto/receipt-response.dto'
-import * as path from 'path'
 import * as fs from 'fs'
+import { resolveUploadsDir, buildUploadFilePath } from '../common/utils/uploads-path.util'
 
 @ApiTags('receipts')
 @Controller('receipts')
@@ -63,17 +63,20 @@ export class ReceiptsController {
   })
   async getMyReceipts(
     @Req() req: Request,
-    @Query('page') page: string = '1',
-    @Query('limit') limit: string = '10',
+    @Query('chainId') chainId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     const userId = req.user.id
-    const pageNum = parseInt(page, 10)
-    const limitNum = parseInt(limit, 10)
+    const chainIdNum = chainId ? parseInt(chainId, 10) : undefined
+    const pageNum = page ? parseInt(page, 10) : undefined
+    const limitNum = limit ? parseInt(limit, 10) : undefined
     
-    return this.receiptsService.getUserReceipts(userId, pageNum, limitNum)
+    return this.receiptsService.getUserReceipts(userId, chainIdNum, pageNum, limitNum)
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get receipt by ID' })
   @ApiResponse({ 
     status: 200, 
@@ -90,6 +93,7 @@ export class ReceiptsController {
   }
 
   @Get(':id/pdf')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Download receipt PDF' })
   @ApiResponse({ status: 200, description: 'PDF file' })
   @ApiResponse({ status: 404, description: 'Receipt not found' })
@@ -134,6 +138,7 @@ export class ReceiptsController {
   }
 
   @Get('files/:filename')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Serve PDF files' })
   @ApiResponse({ status: 200, description: 'PDF file served' })
   @ApiResponse({ status: 404, description: 'File not found' })
@@ -142,23 +147,33 @@ export class ReceiptsController {
     @Res() res: Response,
   ) {
     try {
-      const filePath = path.join(process.cwd(), 'uploads', filename)
-      
+      const uploadsDir = resolveUploadsDir()
+      const filePath = buildUploadFilePath(filename)
+      const user = (res.req as any)?.user
+      const logMeta = {
+        filename,
+        uploadsDir,
+        filePath,
+        cwd: process.cwd(),
+        user: user ? { id: user.id, wallet: user.walletAddress } : null,
+      }
+
       if (!fs.existsSync(filePath)) {
+        console.warn('[serveFile] File not found', logMeta)
         return res.status(404).json({ message: 'File not found' })
       }
 
-      // Check if filename is a valid PDF receipt
       if (!filename.startsWith('receipt-') || !filename.endsWith('.pdf')) {
+        console.warn('[serveFile] Access denied (invalid pattern)', logMeta)
         return res.status(403).json({ message: 'Access denied' })
       }
 
       res.setHeader('Content-Type', 'application/pdf')
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
-      
-      const fileStream = fs.createReadStream(filePath)
-      fileStream.pipe(res)
+      console.log('[serveFile] Streaming file', logMeta)
+      fs.createReadStream(filePath).pipe(res)
     } catch (error) {
+      console.error('[serveFile] Internal error', { filename, error: (error as Error).message })
       return res.status(500).json({ message: 'Internal server error' })
     }
   }

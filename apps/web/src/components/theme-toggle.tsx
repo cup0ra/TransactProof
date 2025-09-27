@@ -10,7 +10,6 @@ interface ThemeToggleProps {
 export function ThemeToggle({ className = '' }: ThemeToggleProps) {
   const [mounted, setMounted] = useState(false)
   
-  // Безопасно получаем контекст темы
   let theme: 'light' | 'dark' | 'system' = 'system'
   let toggleTheme: () => void = () => {}
   let resolvedTheme: 'light' | 'dark' = 'dark'
@@ -21,15 +20,13 @@ export function ThemeToggle({ className = '' }: ThemeToggleProps) {
     toggleTheme = themeContext.toggleTheme
     resolvedTheme = themeContext.resolvedTheme
   } catch (error) {
-    // Если ThemeProvider недоступен, используем значения по умолчанию
-    // Silent fallback to defaults
+
   }
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Не показываем кнопку до монтирования чтобы избежать hydration mismatch
   if (!mounted) {
     return (
       <div className={`w-8 h-8 ${className}`}>
@@ -39,7 +36,6 @@ export function ThemeToggle({ className = '' }: ThemeToggleProps) {
   }
 
   const handleThemeChange = () => {
-    // Используем toggleTheme из контекста
     toggleTheme()
   }
 

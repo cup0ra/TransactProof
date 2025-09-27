@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { createPublicClient, http, parseAbi, formatUnits, PublicClient, decodeEventLog } from 'viem'
-import { mainnet, base, baseSepolia, polygon, arbitrum, optimism } from 'viem/chains'
+import { createPublicClient, http, parseAbi, parseAbiItem, formatUnits, PublicClient, decodeEventLog } from 'viem'
+import { mainnet, base, baseSepolia, polygon, arbitrum, optimism, zkSync, bsc, avalanche } from 'viem/chains'
 import { PriceService } from './price.service'
 
 interface NetworkConfig {
@@ -24,7 +24,13 @@ interface TransactionDetails {
   explorerUrl: string
   usdtValue?: number
   pricePerToken?: number
-   status?: 'success' | 'reverted' | 'pending'
+  status?: 'success' | 'reverted' | 'pending'
+  // Transaction fee data  
+  gasUsed?: string
+  gasPrice?: string
+  transactionFeeEth?: number  // Fee in ETH (or native token)
+  transactionFeeUsd?: number  // Fee in USD
+  nativeTokenSymbol?: string  // ETH, BNB, MATIC, etc.
 }
 
 export interface ExtendedTransactionDetails {
@@ -60,6 +66,7 @@ export class BlockchainService {
   private readonly networks: Map<string, NetworkConfig> = new Map()
   private readonly usdtContract: string
   private readonly serviceAddress: string
+  private readonly serviceUsdtAddress?: string
 
   constructor(
     private readonly configService: ConfigService,
@@ -68,6 +75,7 @@ export class BlockchainService {
   ) {
     this.usdtContract = configService.get('USDT_CONTRACT')
     this.serviceAddress = configService.get('SERVICE_ETH_ADDRESS')
+    this.serviceUsdtAddress = configService.get('SERVICE_USDT_ADDRESS') || this.serviceAddress
     
     // Initialize all supported networks
     this.initializeNetworks()
@@ -116,6 +124,27 @@ export class BlockchainService {
         chain: optimism,
         rpcUrl: this.configService.get('OPTIMISM_RPC_URL') || 'https://mainnet.optimism.io',
         explorerBaseUrl: 'https://optimistic.etherscan.io'
+      },
+      {
+        name: 'zkSync Era',
+        chainId: 324,
+        chain: zkSync,
+        rpcUrl: this.configService.get('ZKSYNC_RPC_URL') || 'https://mainnet.era.zksync.io',
+        explorerBaseUrl: 'https://explorer.zksync.io'
+      },
+      {
+        name: 'BNB Smart Chain',
+        chainId: 56,
+        chain: bsc,
+        rpcUrl: this.configService.get('BSC_RPC_URL') || 'https://bsc-dataseed1.binance.org',
+        explorerBaseUrl: 'https://bscscan.com'
+      },
+      {
+        name: 'Avalanche C-Chain',
+        chainId: 43114,
+        chain: avalanche,
+        rpcUrl: this.configService.get('AVALANCHE_RPC_URL') || 'https://api.avax.network/ext/bc/C/rpc',
+        explorerBaseUrl: 'https://snowtrace.io'
       }
     ]
 
@@ -158,6 +187,12 @@ export class BlockchainService {
         return { symbol: 'ETH', decimals: 18 }
       case 42161: // Arbitrum One
         return { symbol: 'ETH', decimals: 18 }
+      case 324: // zkSync Era
+        return { symbol: 'ETH', decimals: 18 }
+      case 56: // BNB Smart Chain
+        return { symbol: 'BNB', decimals: 18 }
+      case 43114: // Avalanche C-Chain
+        return { symbol: 'AVAX', decimals: 18 }
       default:
         return { symbol: 'ETH', decimals: 18 } // Default fallback
     }
@@ -225,7 +260,8 @@ export class BlockchainService {
     try {
       // Look for recent ETH transfers to service address from user
       const currentBlock = await this.publicClient.getBlockNumber()
-      const fromBlock = currentBlock - BigInt(100) // Look back fewer blocks for efficiency
+      this.logger.log(`Current block number: ${currentBlock}`)
+      const fromBlock = currentBlock - BigInt(5_000)  // Look back fewer blocks for efficiency
       
       this.logger.log(`Checking blocks ${fromBlock} to ${currentBlock} for ETH payment`)
 
@@ -267,6 +303,225 @@ export class BlockchainService {
       return false
     } catch (error) {
       this.logger.error('Error verifying ETH payment:', error)
+      return false
+    }
+  }
+
+  /**
+   * Verify ETH payment by transaction hash - much more efficient than scanning blocks
+   */
+  async verifyETHPaymentByHash(paymentTxHash: string, fromAddress: string, expectedAmount: number): Promise<boolean> {
+    try {
+      // Find which network the payment transaction is on
+      const network = await this.findTransactionNetwork(paymentTxHash)
+      if (!network || !network.client) {
+        this.logger.error(`Payment transaction ${paymentTxHash} not found in any supported network`)
+        return false
+      }
+
+      this.logger.log(`Verifying payment transaction ${paymentTxHash} on ${network.name}`)
+
+      // Get the transaction details
+      const transaction = await network.client.getTransaction({
+        hash: paymentTxHash as `0x${string}`,
+      })
+
+      if (!transaction) {
+        this.logger.error(`Payment transaction ${paymentTxHash} not found`)
+        return false
+      }
+
+      // Get transaction receipt to check if it was successful
+      const receipt = await network.client.getTransactionReceipt({
+        hash: paymentTxHash as `0x${string}`,
+      })
+
+      if (receipt.status !== 'success') {
+        this.logger.warn(`Payment transaction ${paymentTxHash} was not successful (status: ${receipt.status})`)
+        return false
+      }
+
+      // Verify payment details
+      const isCorrectSender = transaction.from?.toLowerCase() === fromAddress.toLowerCase()
+      const isCorrectReceiver = transaction.to?.toLowerCase() === this.serviceAddress.toLowerCase()
+      
+      // Convert expected amount to wei with tolerance
+      const expectedAmountWei = BigInt(Math.floor(expectedAmount * 1e18))
+      const tolerance = BigInt(Math.floor(0.000001 * 1e18)) // 0.000001 ETH tolerance
+      
+      const diff = transaction.value > expectedAmountWei ? 
+        transaction.value - expectedAmountWei : 
+        expectedAmountWei - transaction.value
+      
+      const isCorrectAmount = diff <= tolerance
+
+      if (isCorrectSender && isCorrectReceiver && isCorrectAmount) {
+        this.logger.log(`ETH payment verified by hash: ${fromAddress} -> ${this.serviceAddress} (${transaction.value} wei, expected ${expectedAmountWei} wei)`)
+        return true
+      } else {
+        this.logger.warn(`Payment verification failed:`, {
+          paymentTxHash,
+          isCorrectSender,
+          isCorrectReceiver,
+          isCorrectAmount,
+          actualFrom: transaction.from,
+          actualTo: transaction.to,
+          actualValue: transaction.value.toString(),
+          expectedAmount: expectedAmountWei.toString()
+        })
+        return false
+      }
+    } catch (error) {
+      this.logger.error(`Error verifying ETH payment by hash ${paymentTxHash}:`, error)
+      return false
+    }
+  }
+
+  /**
+   * Verify token payment by transaction hash - efficient verification for ERC20 tokens
+   */
+  async verifyTokenPaymentByHash(
+    paymentTxHash: string, 
+    fromAddress: string, 
+    contractAddress: string,
+    expectedAmount: number,
+    tokenSymbol: string,
+    decimals: number = 6
+  ): Promise<boolean> {
+    try {
+      // Find which network the payment transaction is on
+      const network = await this.findTransactionNetwork(paymentTxHash)
+      if (!network || !network.client) {
+        this.logger.error(`Payment transaction ${paymentTxHash} not found in any supported network`)
+        return false
+      }
+
+      this.logger.log(`Verifying ${tokenSymbol} payment transaction ${paymentTxHash} on ${network.name}`)
+
+      // Get the transaction receipt to check logs
+      const receipt = await network.client.getTransactionReceipt({
+        hash: paymentTxHash as `0x${string}`,
+      })
+
+      if (receipt.status !== 'success') {
+        this.logger.warn(`Payment transaction ${paymentTxHash} was not successful (status: ${receipt.status})`)
+        return false
+      }
+
+      // Parse Transfer events from logs
+      const transferEventAbi = parseAbi([
+        'event Transfer(address indexed from, address indexed to, uint256 value)'
+      ])
+
+      for (const log of receipt.logs) {
+        try {
+          // Check if this log is from the expected contract
+          if (log.address.toLowerCase() !== contractAddress.toLowerCase()) {
+            continue
+          }
+
+          // Try to decode as Transfer event
+          const decoded = decodeEventLog({
+            abi: transferEventAbi,
+            data: log.data,
+            topics: log.topics,
+          })
+
+          if (decoded.eventName === 'Transfer') {
+            const args = decoded.args as {
+              from: string
+              to: string
+              value: bigint
+            }
+
+            // Check if this is the payment we're looking for
+            const isCorrectSender = args.from.toLowerCase() === fromAddress.toLowerCase()
+            const isCorrectReceiver = args.to.toLowerCase() === this.serviceAddress.toLowerCase()
+
+            if (isCorrectSender && isCorrectReceiver) {
+              // Convert expected amount to token units
+              const expectedAmountUnits = BigInt(Math.floor(expectedAmount * Math.pow(10, decimals)))
+              const tolerance = BigInt(Math.floor(0.01 * Math.pow(10, decimals))) // 0.01 token tolerance
+
+              const diff = args.value > expectedAmountUnits ? 
+                args.value - expectedAmountUnits : 
+                expectedAmountUnits - args.value
+
+              if (diff <= tolerance) {
+                this.logger.log(`${tokenSymbol} payment verified by hash: ${fromAddress} -> ${this.serviceAddress} (${args.value} units, expected ${expectedAmountUnits} units)`)
+                return true
+              } else {
+                this.logger.warn(`${tokenSymbol} payment amount mismatch: received ${args.value}, expected ${expectedAmountUnits}, diff: ${diff}`)
+              }
+            }
+          }
+        } catch (decodeError) {
+          // Skip logs that can't be decoded as Transfer events
+          continue
+        }
+      }
+
+      this.logger.warn(`${tokenSymbol} payment not found in transaction ${paymentTxHash}`)
+      return false
+    } catch (error) {
+      this.logger.error(`Error verifying ${tokenSymbol} payment by hash ${paymentTxHash}:`, error)
+      return false
+    }
+  }
+
+  async verifyUSDTPayment(fromAddress: string, minAmount: number = 1): Promise<boolean> {
+    try {
+      const baseChainId = parseInt(this.configService.get('BASE_CHAIN_ID') || '8453')
+      const network = this.networks.get(baseChainId.toString())
+
+      if (!network || !network.client) {
+        this.logger.error(`Base network client not available for chainId ${baseChainId}`)
+        return false
+      }
+
+      if (!this.usdtContract) {
+        this.logger.error('USDT_CONTRACT not configured')
+        return false
+      }
+
+      if (!this.serviceUsdtAddress) {
+        this.logger.error('SERVICE_USDT_ADDRESS or SERVICE_ETH_ADDRESS not configured')
+        return false
+      }
+
+      const client = network.client
+      const currentBlock = await client.getBlockNumber()
+      const lookback = BigInt(5_000) // ~5000 blocks
+      const fromBlock = currentBlock > lookback ? currentBlock - lookback : 0n
+
+      const transferEvent = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
+
+      // Filter by indexed args (from, to)
+      const logs = await client.getLogs({
+        address: this.usdtContract as `0x${string}`,
+        event: transferEvent,
+        fromBlock,
+        toBlock: currentBlock,
+        args: {
+          from: fromAddress as `0x${string}`,
+          to: this.serviceUsdtAddress as `0x${string}`,
+        },
+      })
+
+      const minUnits = BigInt(Math.round(minAmount * 1_000_000)) // USDT has 6 decimals
+
+      for (const log of logs) {
+        const value = (log as any).args?.value as bigint | undefined
+        if (typeof value === 'bigint' && value >= minUnits) {
+          this.logger.log(`USDT payment verified: from ${fromAddress} to ${this.serviceUsdtAddress} value=${value}`)
+          return true
+        }
+      }
+
+      this.logger.warn(`USDT payment not found: from ${fromAddress} to ${this.serviceUsdtAddress} >= ${minAmount} USDT`)
+      return false
+    } catch (error) {
+      this.logger.error('Error verifying USDT payment:', error)
       return false
     }
   }
@@ -315,7 +570,8 @@ export class BlockchainService {
       if (!basicDetails) {
         return null
       }
-
+this.logger.warn('receipt', receipt)
+this.logger.warn("basicDetails", basicDetails)
       return {
         hash: txHash,
         sender: basicDetails.sender,
@@ -351,6 +607,52 @@ export class BlockchainService {
     } catch (error) {
       this.logger.error(`Error getting extended transaction details for ${txHash}:`, error)
       return null
+    }
+  }
+
+  /**
+   * Calculate transaction fee in native token and USD
+   */
+  private async calculateTransactionFee(
+    gasUsed: bigint, 
+    gasPrice: bigint, 
+    nativeTokenSymbol: string,
+    transactionDate: Date
+  ): Promise<{ 
+    transactionFeeEth: number; 
+    transactionFeeUsd?: number; 
+    gasUsedFormatted: string;
+    gasPriceGwei: string;
+  }> {
+    // Calculate fee in native token (ETH, BNB, MATIC, etc.)
+    const feeInWei = gasUsed * gasPrice
+    const transactionFeeEth = parseFloat(formatUnits(feeInWei, 18))
+    
+    // Format gas values for display
+    const gasUsedFormatted = gasUsed.toString()
+    const gasPriceGwei = formatUnits(gasPrice, 9) // Convert to Gwei
+    
+    // Get historical price for native token to calculate USD fee
+    let transactionFeeUsd: number | undefined
+    
+    try {
+      const priceData = await this.priceService.getHistoricalTokenPriceInUSDT(
+        nativeTokenSymbol, 
+        transactionFeeEth.toString(), 
+        transactionDate
+      )
+      if (priceData) {
+        transactionFeeUsd = priceData.usdtValue
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to get historical price for transaction fee in ${nativeTokenSymbol}:`, error.message)
+    }
+    
+    return {
+      transactionFeeEth,
+      transactionFeeUsd,
+      gasUsedFormatted,
+      gasPriceGwei
     }
   }
 
@@ -422,32 +724,50 @@ export class BlockchainService {
 
               const amount = formatUnits(args.value, decimals)
               
-              // Get USDT conversion
+              // Get USDT conversion using historical price at transaction time
               let usdtValue: number | undefined
               let pricePerToken: number | undefined
               
               try {
-                const priceData = await this.priceService.getTokenPriceInUSDT(tokenSymbol, amount)
+                const transactionDate = new Date(Number(block.timestamp) * 1000)
+                const priceData = await this.priceService.getHistoricalTokenPriceInUSDT(tokenSymbol, amount, transactionDate)
                 if (priceData) {
                   usdtValue = priceData.usdtValue
                   pricePerToken = priceData.pricePerToken
+                  this.logger.log(`Using historical price for ${tokenSymbol}: ${pricePerToken} USDT on ${transactionDate.toDateString()}`)
                 }
               } catch (error) {
-                this.logger.warn(`Failed to get price for ${tokenSymbol}:`, error.message)
+                this.logger.warn(`Failed to get historical price for ${tokenSymbol}:`, error.message)
               }
+
+              // Calculate transaction fee
+              const nativeTokenInfo = this.getNativeTokenInfo(network.chainId)
+              const transactionDate = new Date(Number(block.timestamp) * 1000)
+              const feeData = await this.calculateTransactionFee(
+                receipt.gasUsed,
+                transaction.gasPrice || 0n,
+                nativeTokenInfo.symbol,
+                transactionDate
+              )
 
               const result = {
                 sender: args.from,
                 receiver: args.to,
                 amount,
                 token: tokenSymbol,
-                timestamp: new Date(Number(block.timestamp) * 1000),
+                timestamp: transactionDate,
                 blockNumber: Number(transaction.blockNumber),
                 chainId: network.chainId,
                 explorerUrl: `${network.explorerBaseUrl}/tx/${txHash}`,
                 usdtValue,
                 pricePerToken,
-                status: receipt.status === 'success' ? 'success' as const : receipt.status === 'reverted' ? 'reverted' as const : 'pending' as const
+                status: receipt.status === 'success' ? 'success' as const : receipt.status === 'reverted' ? 'reverted' as const : 'pending' as const,
+                // Transaction fee data
+                gasUsed: feeData.gasUsedFormatted,
+                gasPrice: feeData.gasPriceGwei,
+                transactionFeeEth: feeData.transactionFeeEth,
+                transactionFeeUsd: feeData.transactionFeeUsd,
+                nativeTokenSymbol: nativeTokenInfo.symbol
               }
               
               return result
@@ -465,32 +785,48 @@ export class BlockchainService {
         const amount = formatUnits(transaction.value, nativeTokenInfo.decimals)
         const token = nativeTokenInfo.symbol
         
-        // Get USDT conversion
+        // Get USDT conversion using historical price at transaction time
         let usdtValue: number | undefined
         let pricePerToken: number | undefined
+        const transactionDate = new Date(Number(block.timestamp) * 1000)
         
         try {
-          const priceData = await this.priceService.getTokenPriceInUSDT(token, amount)
+          const priceData = await this.priceService.getHistoricalTokenPriceInUSDT(token, amount, transactionDate)
           if (priceData) {
             usdtValue = priceData.usdtValue
             pricePerToken = priceData.pricePerToken
+            this.logger.log(`Using historical price for ${token}: ${pricePerToken} USDT on ${transactionDate.toDateString()}`)
           }
         } catch (error) {
-          this.logger.warn(`Failed to get price for ${token}:`, error.message)
+          this.logger.warn(`Failed to get historical price for ${token}:`, error.message)
         }
+
+        // Calculate transaction fee
+        const feeData = await this.calculateTransactionFee(
+          receipt.gasUsed,
+          transaction.gasPrice || 0n,
+          token,
+          transactionDate
+        )
 
         const result = {
           sender: transaction.from,
           receiver: transaction.to,
           amount,
           token,
-          timestamp: new Date(Number(block.timestamp) * 1000),
+          timestamp: transactionDate,
           blockNumber: Number(transaction.blockNumber),
           chainId: network.chainId,
           explorerUrl: `${network.explorerBaseUrl}/tx/${txHash}`,
           usdtValue,
           pricePerToken,
-          status: receipt.status === 'success' ? 'success' as const : receipt.status === 'reverted' ? 'reverted' as const : 'pending' as const
+          status: receipt.status === 'success' ? 'success' as const : receipt.status === 'reverted' ? 'reverted' as const : 'pending' as const,
+          // Transaction fee data
+          gasUsed: feeData.gasUsedFormatted,
+          gasPrice: feeData.gasPriceGwei,
+          transactionFeeEth: feeData.transactionFeeEth,
+          transactionFeeUsd: feeData.transactionFeeUsd,
+          nativeTokenSymbol: token
         }
         
         return result
@@ -500,33 +836,49 @@ export class BlockchainService {
       const nativeTokenInfo = this.getNativeTokenInfo(network.chainId)
       const amount = formatUnits(transaction.value, nativeTokenInfo.decimals)
       const token = nativeTokenInfo.symbol
+      const transactionDate = new Date(Number(block.timestamp) * 1000)
       
-      // Get USDT conversion for fallback ETH transaction
+      // Get USDT conversion using historical price at transaction time
       let usdtValue: number | undefined
       let pricePerToken: number | undefined
       
       try {
-        const priceData = await this.priceService.getTokenPriceInUSDT(token, amount)
+        const priceData = await this.priceService.getHistoricalTokenPriceInUSDT(token, amount, transactionDate)
         if (priceData) {
           usdtValue = priceData.usdtValue
           pricePerToken = priceData.pricePerToken
+          this.logger.log(`Using historical price for ${token}: ${pricePerToken} USDT on ${transactionDate.toDateString()}`)
         }
       } catch (error) {
-        this.logger.warn(`Failed to get price for ${token}:`, error.message)
+        this.logger.warn(`Failed to get historical price for ${token}:`, error.message)
       }
+
+      // Calculate transaction fee
+      const feeData = await this.calculateTransactionFee(
+        receipt.gasUsed,
+        transaction.gasPrice || 0n,
+        token,
+        transactionDate
+      )
 
       return {
         sender: transaction.from,
         receiver: transaction.to || '0x0000000000000000000000000000000000000000',
         amount,
         token,
-        timestamp: new Date(Number(block.timestamp) * 1000),
+        timestamp: transactionDate,
         blockNumber: Number(transaction.blockNumber),
         chainId: network.chainId,
         explorerUrl: `${network.explorerBaseUrl}/tx/${txHash}`,
         usdtValue,
         pricePerToken,
-        status: receipt.status === 'success' ? 'success' : receipt.status === 'reverted' ? 'reverted' : 'pending'
+        status: receipt.status === 'success' ? 'success' : receipt.status === 'reverted' ? 'reverted' : 'pending',
+        // Transaction fee data
+        gasUsed: feeData.gasUsedFormatted,
+        gasPrice: feeData.gasPriceGwei,
+        transactionFeeEth: feeData.transactionFeeEth,
+        transactionFeeUsd: feeData.transactionFeeUsd,
+        nativeTokenSymbol: token
       }
     } catch (error) {
       this.logger.error(`Error getting transaction details for ${txHash} from ${network.name}:`, error)

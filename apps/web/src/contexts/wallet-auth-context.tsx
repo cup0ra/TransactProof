@@ -17,17 +17,14 @@ export function WalletAuthProvider({ children }: { children: ReactNode }) {
 
   const startAuth = useCallback(async (address: string): Promise<boolean> => {
     
-    // Если уже идет аутентификация для этого же адреса - блокируем
     if (isAuthInProgress && currentAuthAddress.current === address) {
       return false
     }
     
-    // Если идет аутентификация для другого адреса - тоже блокируем
     if (isAuthInProgress && currentAuthAddress.current !== address) {
       return false
     }
     
-    // Начинаем новую аутентификацию
     setIsAuthInProgress(true)
     currentAuthAddress.current = address
     return true

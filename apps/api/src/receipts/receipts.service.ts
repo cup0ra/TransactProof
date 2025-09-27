@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../database/prisma.service'
-import { BlockchainService, ExtendedTransactionDetails } from './blockchain.service'
+import { BlockchainService } from './blockchain.service'
 import { PdfService } from './pdf.service'
 import { PayAndGenerateDto } from './dto/pay-and-generate.dto'
 import { PaymentRequiredException } from '../common/exceptions/payment-required.exception'
@@ -28,7 +28,7 @@ export class ReceiptsService {
     userAddress?: string,
     userId?: string,
   ) {
-    const { txHash, description } = payAndGenerateDto
+    const { txHash, description, paymentTxHash, paymentAmount, paymentType, paymentContractAddress } = payAndGenerateDto
 
     // 1. Verify transaction exists in supported networks before processing payment
     this.logger.log(`Verifying transaction ${txHash} exists in supported networks...`)
@@ -42,16 +42,66 @@ export class ReceiptsService {
 
     this.logger.log(`Transaction ${txHash} verified - found in supported networks`)
 
-    // 2. Verify ETH payment (0.0000001 ETH to service address)
+    // 2. Verify payment (dynamic amount and type from UI, fallback to ETH)
     if (userAddress) {
-      const paymentVerified = await this.blockchainService.verifyETHPayment(
-        userAddress,
-        0.0000001, // 0.0000001 ETH
-      )
+      const expectedPaymentAmount = paymentAmount || 0.0000001 // Default fallback
+      const paymentTokenType = paymentType || 'ETH' // Default to ETH
+      let paymentVerified = false
+      
+      if (paymentTxHash) {
+        // Use efficient hash-based verification if payment hash is provided
+        this.logger.log(`Verifying ${paymentTokenType} payment using transaction hash: ${paymentTxHash} for amount: ${expectedPaymentAmount}`)
+        
+        if (paymentTokenType === 'ETH') {
+          paymentVerified = await this.blockchainService.verifyETHPaymentByHash(
+            paymentTxHash,
+            userAddress,
+            expectedPaymentAmount
+          )
+        } else if ((paymentTokenType === 'USDT' || paymentTokenType === 'USDC') && paymentContractAddress) {
+          // For token payments, use the new token verification method
+          paymentVerified = await this.blockchainService.verifyTokenPaymentByHash(
+            paymentTxHash,
+            userAddress,
+            paymentContractAddress,
+            expectedPaymentAmount,
+            paymentTokenType,
+            6 // USDT/USDC typically have 6 decimals
+          )
+        } else {
+          this.logger.error(`Unsupported payment type: ${paymentTokenType} or missing contract address`)
+          throw new BadRequestException(`Unsupported payment type: ${paymentTokenType}`)
+        }
+      } else {
+        // Fallback to old method if no payment hash provided (for backward compatibility)
+        this.logger.log(`Using fallback payment verification method for ${paymentTokenType}: ${expectedPaymentAmount}`)
+        
+        if (paymentTokenType === 'ETH') {
+          paymentVerified = await this.blockchainService.verifyETHPayment(
+            userAddress,
+            expectedPaymentAmount,
+          )
+        } else if (paymentTokenType === 'USDT') {
+          paymentVerified = await this.blockchainService.verifyUSDTPayment(
+            userAddress,
+            expectedPaymentAmount,
+          )
+        } else {
+          this.logger.error(`Fallback verification not supported for payment type: ${paymentTokenType}`)
+          throw new BadRequestException(`Please provide paymentTxHash for ${paymentTokenType} payments`)
+        }
+      }
       
       if (!paymentVerified) {
+        this.logger.error(`Payment verification failed:`, {
+          paymentTxHash,
+          paymentTokenType,
+          expectedPaymentAmount,
+          userAddress,
+          paymentContractAddress
+        })
         throw new PaymentRequiredException(
-          'Payment of 0.0000001 ETH to service address not found. Please complete payment first.'
+          `Payment of ${expectedPaymentAmount} ${paymentTokenType} to service address not found. Please complete payment first.`
         )
       }
     }
@@ -86,6 +136,12 @@ export class ReceiptsService {
       usdtValue: txDetails.usdtValue,
       pricePerToken: txDetails.pricePerToken,
       status: txDetails.status,
+      // Transaction fee data
+      gasUsed: txDetails.gasUsed,
+      gasPrice: txDetails.gasPrice,
+      transactionFeeEth: txDetails.transactionFeeEth,
+      transactionFeeUsd: txDetails.transactionFeeUsd,
+      nativeTokenSymbol: txDetails.nativeTokenSymbol,
     }
     
     const pdfBuffer = await this.pdfService.generateReceiptPdf(pdfData)
@@ -122,21 +178,30 @@ export class ReceiptsService {
     }
   }
 
-  async getUserReceipts(userId: string, page: number = 1, limit: number = 12) {
-    const skip = (page - 1) * limit
+  async getUserReceipts(userId: string, chainId?: number, page?: number, limit?: number) {
+    const whereClause: any = { userId }
     
-    const receipts = await this.prisma.receipt.findMany({
-      where: { userId },
+    // Add chainId filter if provided
+    if (chainId) {
+      whereClause.chainId = chainId
+    }
+    
+    // If pagination is requested, apply it; otherwise return all
+    const queryOptions: any = {
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
-      skip,
-      take: limit,
-    })
+    }
+    
+    if (page && limit) {
+      const skip = (page - 1) * limit
+      queryOptions.skip = skip
+      queryOptions.take = limit
+    }
+    
+    const receipts = await this.prisma.receipt.findMany(queryOptions)
+    const total = await this.prisma.receipt.count({ where: whereClause })
 
-    const total = await this.prisma.receipt.count({
-      where: { userId },
-    })
-
-    return {
+    const response: any = {
       receipts: receipts.map(receipt => ({
         id: receipt.id,
         txHash: receipt.txHash,
@@ -149,13 +214,21 @@ export class ReceiptsService {
         description: receipt.description,
         createdAt: receipt.createdAt.toISOString(),
       })),
-      pagination: {
+    }
+    
+    // Only include pagination if it was requested
+    if (page && limit) {
+      response.pagination = {
         page,
         limit,
         total,
         pages: Math.ceil(total / limit),
-      },
+      }
+    } else {
+      response.total = total
     }
+
+    return response
   }
 
   async getReceipt(id: string, userId?: string) {

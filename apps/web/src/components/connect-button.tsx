@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { toast } from 'react-hot-toast'
 import { useAuth } from '@/hooks/use-auth'
-import { useAccount, useDisconnect, useChainId, useSwitchChain } from 'wagmi'
-import { useAppKit, useAppKitNetwork, useAppKitAccount } from '@reown/appkit/react'
+import { useAccount, useDisconnect, useChainId, useSwitchChain, useWalletClient } from 'wagmi'
+import { useAppKit } from '@reown/appkit/react'
 import { networks } from '@/config'
 import { useWalletAuth } from '@/contexts/wallet-auth-context'
 import { globalAuthManager } from '@/utils/global-auth-manager'
@@ -13,27 +13,30 @@ export function ConnectButton() {
   const { isAuthenticated, user, signInWithEthereum, signOut, isLoading } = useAuth()
   const { address, isConnected } = useAccount()
   const { disconnect } = useDisconnect()
+  // Only get wallet client when actually connected
+  const { data: walletClient } = useWalletClient({ 
+    query: { 
+      enabled: isConnected && !!address 
+    } 
+  })
   const { open, close } = useAppKit()
-  const { isConnected: appkitConnected } = useAppKitAccount()
-  // Отслеживаем состояние модального окна через DOM
   const [modalIsOpen, setModalIsOpen] = useState(false)
   const chainId = useChainId()
   const { switchChain } = useSwitchChain()
-  const { caipNetwork, switchNetwork } = useAppKitNetwork()
   const { isAuthInProgress, startAuth, finishAuth, cancelAuth } = useWalletAuth()
   const [mounted, setMounted] = useState(false)
   const [showNetworkDropdown, setShowNetworkDropdown] = useState(false)
   const [isDisconnecting, setIsDisconnecting] = useState(false)
-  const [globalAuthState, setGlobalAuthState] = useState(false) // Локальное состояние для глобальной аутентификации
-  const [recentlyDisconnected, setRecentlyDisconnected] = useState(false) // Флаг для предотвращения автооткрытия
+  const [globalAuthState, setGlobalAuthState] = useState(false)
+  const [recentlyDisconnected, setRecentlyDisconnected] = useState(false)
+  const [wasConnectedBefore, setWasConnectedBefore] = useState(false)
 
-  // Отслеживаем состояние модального окна через DOM
   useEffect(() => {
     const checkModalState = () => {
       const modals = document.querySelectorAll('w3m-modal, appkit-modal, [data-testid="w3m-modal"]')
       const isOpen = modals.length > 0
       
-      // Закрываем модальные окна только при явном отключении
+
       if (isOpen && isDisconnecting) {
         modals.forEach(modal => {
           if (modal instanceof HTMLElement) {
@@ -77,16 +80,31 @@ export function ConnectButton() {
     }
   }, [address])
 
-  // Вычисляем итоговое состояние аутентификации
-  const isFullyAuthenticated = (
-    isAuthenticated && user?.walletAddress?.toLowerCase() === address?.toLowerCase()
-  ) || globalAuthState
+  useEffect(() => {
+    if (isConnected && address) {
+      setWasConnectedBefore(true)
+    } else if (!isConnected) {
+      const timeoutId = setTimeout(() => {
+        setWasConnectedBefore(false)
+      }, 1000)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [isConnected, address])
+
+
+  const isFullyAuthenticated = isConnected && (
+    (isAuthenticated && user?.walletAddress?.toLowerCase() === address?.toLowerCase()) ||
+    globalAuthState
+  )
   
-  // Получаем информацию о текущей сети
-  const currentNetwork = networks.find(network => network.id === chainId) || networks[0]
+  const currentNetwork = useMemo(() => 
+    networks.find(network => network.id === chainId) || networks[0],
+    [chainId]
+  )
 
   const handleAuthenticate = useCallback(async () => {
-    if (!isConnected || !address) {
+    // Early returns to prevent unnecessary calls
+    if (!isConnected || !address || !mounted) {
       return
     }
 
@@ -98,47 +116,99 @@ export function ConnectButton() {
       return
     }
 
+    if (isDisconnecting || recentlyDisconnected) {
+      return
+    }
+
     const canStartAuth = await startAuth(address)
     if (!canStartAuth) {
       return
     }
     
     try {
-      await signInWithEthereum(address)
+      // Wait for wallet client if not available yet
+      let attempts = 0
+      while (!walletClient && attempts < 5) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+        attempts++
+      }
+
+      const customSigner = async (message: string) => {
+        if (!walletClient) {
+          throw new Error('Wallet client not available after retries')
+        }
+        
+        const signature = await walletClient.signMessage({
+          message,
+          account: address as `0x${string}`,
+        })
+        
+        return signature
+      }
+
+      await signInWithEthereum(address, customSigner)
       finishAuth()
     } catch (error) {
       cancelAuth()
     }
-  }, [isConnected, address, isFullyAuthenticated, user?.walletAddress, signInWithEthereum, startAuth, finishAuth, cancelAuth])
+  }, [isConnected, address, isFullyAuthenticated, signInWithEthereum, startAuth, finishAuth, cancelAuth, walletClient, mounted, isDisconnecting, recentlyDisconnected])
 
-  // Автоматическая аутентификация при подключении кошелька
+  // Auto authentication when wallet connects - with debounce
   useEffect(() => {
-    // Не запускаем автоаутентификацию если происходит отключение или недавно было отключение
-    if (isDisconnecting || recentlyDisconnected) {
+    if (!mounted || isDisconnecting || recentlyDisconnected || !isConnected || !address) {
       return
     }
     
-    if (isFullyAuthenticated) {
+    if (isFullyAuthenticated || isLoading || isAuthInProgress) {
       return
     }
     
-    if (isConnected && address && !isFullyAuthenticated && !isLoading && !isDisconnecting && !isAuthInProgress) {
-      // Уменьшаем задержку для более быстрого восстановления
-      const timeoutId = setTimeout(() => {
-        // Дополнительная проверка что мы всё ещё не отключаемся
-        if (!isDisconnecting && !recentlyDisconnected) {
-          handleAuthenticate()
-        }
-      }, 50) // Уменьшили с 100ms до 50ms
+    const timeoutId = setTimeout(() => {
+      if (isConnected && address && !isDisconnecting && !recentlyDisconnected && !isFullyAuthenticated) {
+        handleAuthenticate()
+      }
+    }, 200) // Increased delay to prevent rapid calls
       
-      return () => clearTimeout(timeoutId)
-    }
-  }, [isConnected, address, isAuthenticated, isFullyAuthenticated, isLoading, handleAuthenticate, isDisconnecting, isAuthInProgress, user?.walletAddress, globalAuthState, recentlyDisconnected])
+    return () => clearTimeout(timeoutId)
+  }, [mounted, isConnected, address, isFullyAuthenticated, isLoading, isAuthInProgress, isDisconnecting, recentlyDisconnected, handleAuthenticate])
 
-  // Сброс состояния при смене адреса
+  // Reset state on address change
   useEffect(() => {
     cancelAuth()
   }, [address, cancelAuth])
+
+  // Auto logout on wallet disconnect with better state management
+  useEffect(() => {
+    if (!mounted || isDisconnecting || recentlyDisconnected || !wasConnectedBefore) {
+      return
+    }
+
+    const wasAuthenticated = isAuthenticated || globalAuthState
+    
+    if (!isConnected && wasAuthenticated) {
+      const timeoutId = setTimeout(async () => {
+        // Double check state before cleanup
+        if (!isConnected && !isDisconnecting && (isAuthenticated || globalAuthState)) {
+          try {
+            if (isAuthenticated) {
+              await signOut()
+            }
+            
+            globalAuthManager.clearAll()
+            setGlobalAuthState(false)
+            
+            toast.success('Wallet disconnected - signed out automatically')
+          } catch (error) {
+            // Silent cleanup on error
+            globalAuthManager.clearAll()
+            setGlobalAuthState(false)
+          }
+        }
+      }, 800) // Increased delay for stability
+      
+      return () => clearTimeout(timeoutId)
+    }
+  }, [isConnected, isAuthenticated, globalAuthState, signOut, mounted, isDisconnecting, recentlyDisconnected, wasConnectedBefore])
 
   const handleConnect = async () => {
     try {      
@@ -147,11 +217,9 @@ export function ConnectButton() {
         return
       }
       
-      // Сбрасываем все блокирующие состояния при явном подключении
       setRecentlyDisconnected(false)
       setIsDisconnecting(false)
       
-      // Закрываем модальное окно если оно открыто
       if (modalIsOpen && close) {
         close()
         await new Promise(resolve => setTimeout(resolve, 200))
@@ -159,27 +227,19 @@ export function ConnectButton() {
       
       cancelAuth()
       
-      // Отключаем существующее соединение если есть
       if (isConnected) {
         disconnect()
         await new Promise(resolve => setTimeout(resolve, 300))
       }
       
-      // Проверяем состояние перед открытием
-      const modalBefore = document.querySelector('w3m-modal, appkit-modal, [data-testid="w3m-modal"]')
-      
       await open()
       
-      // Проверяем, действительно ли модальное окно открылось
       setTimeout(() => {
         const modal = document.querySelector('w3m-modal, appkit-modal, [data-testid="w3m-modal"]')
         
         if (modal) {
 
         } else {
-          
-          // Попробуем создать модальное окно принудительно
-          console.log('ConnectButton: Attempting to create modal manually')
           const manualModal = document.createElement('w3m-modal')
           manualModal.style.position = 'fixed'
           manualModal.style.zIndex = '99999'
@@ -204,14 +264,13 @@ export function ConnectButton() {
   const handleDisconnect = async () => {
     try {
       setIsDisconnecting(true)
-      setRecentlyDisconnected(true) // Устанавливаем флаг недавнего отключения
+      setRecentlyDisconnected(true)
+      setWasConnectedBefore(false)
       
-      // Принудительно закрываем все модальные окна
       if (modalIsOpen && close) {
         close()
       }
       
-      // Дополнительно закрываем через DOM (если нужно)
       const modals = document.querySelectorAll('w3m-modal, appkit-modal, [data-testid="w3m-modal"]')
       modals.forEach(modal => {
         if (modal instanceof HTMLElement) {
@@ -222,7 +281,6 @@ export function ConnectButton() {
       
       cancelAuth()
       
-      // Очищаем конкретный адрес из глобального менеджера
       if (address) {
         globalAuthManager.clearAddress(address)
       } else {
@@ -237,12 +295,10 @@ export function ConnectButton() {
       
       toast.success('Wallet disconnected')
       
-      // Сбрасываем состояние отключения быстрее
       setTimeout(() => {
         setIsDisconnecting(false)
       }, 200)
       
-      // Сокращаем время блокировки до 500ms вместо 2 секунд
       setTimeout(() => {
         setRecentlyDisconnected(false)
       }, 500)
@@ -263,7 +319,6 @@ export function ConnectButton() {
     }
   }
 
-  // Закрытие дропдауна при клике вне его
   useEffect(() => {
     const handleClickOutside = () => setShowNetworkDropdown(false)
     if (showNetworkDropdown) {
@@ -272,14 +327,29 @@ export function ConnectButton() {
     }
   }, [showNetworkDropdown])
 
-  // Функция для получения цвета сети
-  const getNetworkColor = (network: any) => {
-    if (network?.nativeCurrency?.symbol === 'ETH') return '#627EEA'
-    if (network?.nativeCurrency?.symbol === 'POL') return '#8247E5'
-    if (network?.name?.toLowerCase().includes('optimism')) return '#FF0420'
-    if (network?.name?.toLowerCase().includes('arbitrum')) return '#28A0F0'
-    if (network?.name?.toLowerCase().includes('base')) return '#0052FF'
-    return '#000'
+  const getNetworkColor = (network: { id?: number }) => {
+    switch (network?.id) {
+      case 1: // Ethereum Mainnet
+        return '#627EEA'
+      case 8453: // Base Mainnet
+        return '#0052FF'
+      case 84532: // Base Sepolia
+        return '#0052FF'
+      case 137: // Polygon Mainnet
+        return '#8247E5'
+      case 10: // Optimism Mainnet
+        return '#FF0420'
+      case 42161: // Arbitrum One
+        return '#28A0F0'
+      case 324: // zkSync Era
+        return '#3A7BD5'
+      case 56: // BNB Smart Chain
+        return '#F3BA2F'
+      case 43114: // Avalanche C-Chain
+        return '#E84142'
+      default:
+        return '#627EEA' // Default to Ethereum blue
+    }
   }
 
   if (!mounted) {
@@ -300,15 +370,20 @@ export function ConnectButton() {
               e.stopPropagation()
               setShowNetworkDropdown(!showNetworkDropdown)
             }}
-            className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-all duration-300 font-light text-xs tracking-wide"
+            className="flex w-[180px] items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white/30 backdrop-blur-md dark:bg-black/30 text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-all duration-300 font-light text-xs tracking-wide"
           >
             <div 
               className="w-4 h-4 rounded-full" 
               style={{ backgroundColor: getNetworkColor(currentNetwork) }}
             />
-            <span className="text-sm font-medium">{currentNetwork?.name}</span>
+            <span 
+              className="text-sm font-medium flex-1 truncate" 
+              title={currentNetwork?.name}
+            >
+              {currentNetwork?.name}
+            </span>
             <svg 
-              className={`w-4 h-4 transition-transform ${showNetworkDropdown ? 'rotate-180' : ''}`} 
+              className={`w-4 h-4 ml-auto transition-transform ${showNetworkDropdown ? 'rotate-180' : ''}`} 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -319,7 +394,7 @@ export function ConnectButton() {
 
           {/* Network Dropdown */}
           {showNetworkDropdown && (
-            <div className="absolute top-full left-0 mt-1 w-52 bg-white dark:bg-black border border-gray-300 dark:border-gray-700 shadow-lg z-50">
+            <div className="absolute w-[180px] top-full left-0 mt-1 bg-white/30 backdrop-blur-md dark:bg-black/30 border border-gray-300 dark:border-gray-700 shadow-lg z-50">
               {networks.map((network) => (
                 <button
                   key={network.id}
@@ -332,7 +407,12 @@ export function ConnectButton() {
                     className="w-4 h-4 rounded-full flex-shrink-0" 
                     style={{ backgroundColor: getNetworkColor(network) }}
                   />
-                  <span className="flex-1">{network.name}</span>
+                  <span 
+                    className="flex-1 truncate" 
+                    title={network.name}
+                  >
+                    {network.name}
+                  </span>
                   {network.id === chainId && (
                     <svg className="w-3 h-3 text-orange-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -345,7 +425,7 @@ export function ConnectButton() {
         </div>
 
         {/* User Info */}
-        <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-black text-gray-700 dark:text-gray-300">
+        <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white/30 backdrop-blur-md dark:bg-black/30 text-gray-700 dark:text-gray-300">
           <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
           <span className="font-light text-xs tracking-wide">
             {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Connected'}

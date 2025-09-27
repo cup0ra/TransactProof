@@ -50,6 +50,9 @@ railway variables set USDT_CONTRACT="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 railway variables set SIWE_DOMAIN="your-domain.com"
 railway variables set CORS_ORIGIN="https://your-frontend-domain.com"
 
+# Cookie settings for cross-domain (only if API and frontend on different domains)
+railway variables set COOKIE_DOMAIN=".yourdomain.com"
+
 # Rate Limiting
 railway variables set THROTTLE_TTL=60
 railway variables set THROTTLE_LIMIT=100
@@ -70,8 +73,30 @@ railway variables set THROTTLE_LIMIT=100
 3. **Verify Deployment**
    ```bash
    railway logs
-   curl https://your-app.railway.app/api/api/health
+  curl https://your-app.railway.app/api/health
    ```
+
+4. **(Optional) Persistent Volume for Generated PDFs**
+
+   By default generated PDFs are written to an ephemeral filesystem and are lost after a new deployment. To persist them temporarily (until you move to S3/R2):
+
+   1. In Railway dashboard open your API service → Storage → Add Volume
+   2. Choose size (start with 1GB) and mount path: `/app/uploads`
+   3. Set environment variable:
+      ```bash
+      railway variables set FILE_STORAGE=volume
+      ```
+      (Optional) override path:
+      ```bash
+      railway variables set UPLOADS_DIR=/app/uploads
+      ```
+   4. Redeploy the service (`railway up`)
+   5. Generate a PDF, then redeploy again to confirm the file still exists (same hash URL should work)
+
+   Notes:
+   - This is NOT a substitute for object storage; scaling to multiple instances will require a shared external store.
+   - Clean up old files manually or implement a retention job if volume size growth becomes an issue.
+   - Future migration to S3 will only require swapping `FILE_STORAGE` and adding an S3 adapter.
 
 ## Troubleshooting
 
@@ -131,3 +156,6 @@ railway logs
 # Connect to database
 railway connect
 ```
+
+### Puppeteer / Chromium issues
+If PDF generation fails on Railway, ensure your Docker image (or Nixpacks config) installs system Chromium and that env var `PUPPETEER_EXECUTABLE_PATH` points to it (Dockerfile in `apps/api` already does this). Also verify `NODE_ENV=production` and that server has permission to write `/app/apps/api/uploads`.

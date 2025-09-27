@@ -1,0 +1,33 @@
+[phases.setup]
+nixPkgs = [
+  "bash",
+  "coreutils",
+  "curl",
+  "gnutar",
+  "gzip",
+  "nodejs_18",
+  "chromium",
+  "nss",
+  "freetype",
+  "harfbuzz",
+  "fontconfig",
+  "dejavu_fonts"
+]
+
+[variables]
+PUPPETEER_SKIP_DOWNLOAD = "true"
+PORT = "3001"
+
+[phases.install]
+cmds = [
+  "npm ci",
+  "npx prisma generate --schema=./apps/api/prisma/schema.prisma"
+]
+
+[phases.build]
+cmds = [
+  "npm run build:api"
+]
+
+[phases.start]
+cmd = "cd apps/api && export PUPPETEER_EXECUTABLE_PATH=\"$(which chromium)\" && sh ./scripts/prestart.sh && (npx prisma migrate deploy || npx prisma db push --accept-data-loss) && node dist/main.js"

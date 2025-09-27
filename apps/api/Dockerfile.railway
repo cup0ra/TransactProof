@@ -1,0 +1,79 @@
+
+#############################################
+# TransactProof API — Railway Dockerfile (API-only)
+# Multi-stage, Puppeteer-ready, no monorepo deps
+#############################################
+
+# ---------- Base builder (API only) ----------
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# System deps for building and Prisma
+RUN apk add --no-cache bash python3 make g++ \
+    chromium nss freetype harfbuzz ca-certificates ttf-freefont \
+    && rm -rf /var/cache/apk/*
+
+# Use system Chromium for Puppeteer
+ENV PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    PUPPETEER_DISABLE_HEADLESS_WARNING=true \
+    CHROME_BIN=/usr/bin/chromium-browser \
+    NODE_ENV=production \
+    PORT=3001
+
+# Copy API manifests and install deps
+COPY apps/api/package*.json ./
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+# Prisma schema and generate client
+COPY apps/api/prisma ./prisma
+RUN npx prisma generate --schema=./prisma/schema.prisma
+
+# Copy API source
+COPY apps/api/tsconfig*.json ./
+COPY apps/api/nest-cli.json ./
+COPY apps/api/src ./src
+
+# Build API
+RUN npm run build
+
+# Prune dev deps for runtime
+RUN npm prune --omit=dev
+
+
+# ---------- Runtime ----------
+FROM node:18-alpine AS runner
+
+WORKDIR /app
+
+# System deps for Puppeteer runtime
+RUN apk add --no-cache dumb-init \
+    chromium nss freetype harfbuzz ca-certificates ttf-freefont \
+    && rm -rf /var/cache/apk/*
+
+ENV NODE_ENV=production \
+    PORT=3001 \
+    PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    PUPPETEER_DISABLE_HEADLESS_WARNING=true \
+    CHROME_BIN=/usr/bin/chromium-browser
+
+# Copy production node_modules, dist and prisma from builder
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+COPY apps/api/scripts ./scripts
+RUN chmod +x ./scripts/prestart.sh ./scripts/check-browser.js || true
+
+# Prepare uploads dir (ephemeral)
+RUN mkdir -p /app/uploads && chown -R 1001:1001 /app/uploads
+
+# Non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001 -G nodejs
+USER nestjs
+
+EXPOSE 3001
+ENTRYPOINT ["dumb-init", "--"]
+
+CMD ["sh", "-lc", "sh ./scripts/prestart.sh && (npx prisma migrate deploy || npx prisma db push --accept-data-loss) && node dist/main.js"]

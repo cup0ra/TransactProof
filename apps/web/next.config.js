@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   transpilePackages: ['@transactproof/ui', '@transactproof/core'],
   images: {
     domains: ['avatars.githubusercontent.com'],

@@ -6,22 +6,25 @@ import * as cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import { AppModule } from './app.module'
 import './auth/types/user.type'
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
+  const app = await NestFactory.create<NestExpressApplication>(AppModule)
   const configService = app.get(ConfigService)
 
   // Security
   app.use(helmet())
   
-  // CORS
+  // CORS (Strict origin for credentialed cookies; avoid wildcard with credentials)
+  const configuredOrigin = configService.get('CORS_ORIGIN') || 'https://transact-proof.vercel.app'
+  app.set('trust proxy', 1);
   app.enableCors({
-    origin: configService.get('CORS_ORIGIN'),
+    origin: [configuredOrigin],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-
+    methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+    allowedHeaders: ['Content-Type','Authorization'],
+    exposedHeaders: ['Set-Cookie'],
+  });
   // Cookies
   app.use(cookieParser())
 
