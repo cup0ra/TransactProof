@@ -10,7 +10,9 @@
       "outputs": [
         ".next/**",
         "!.next/cache/**",
-        "dist/**"
+        "dist/**",
+        "public/sitemap*.xml",
+        "public/robots.txt"
       ]
     },
     "build:api": {
