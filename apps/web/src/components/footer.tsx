@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { Logo } from './logo'
+import { Twitter } from 'lucide-react'
 export function Footer() {
   return (
     <footer className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-black py-16 transition-colors duration-300">
       <div className="max-w-6xl mx-auto px-4">
-        <div className="grid md:grid-cols-4 gap-12">
+  <div className="grid md:grid-cols-5 gap-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center space-x-3 mb-6">
@@ -38,6 +39,24 @@ export function Footer() {
               <li><Link href="/privacy" className="hover:text-orange-400 transition-colors duration-300">Privacy Policy</Link></li>
               <li><Link href="/terms" className="hover:text-orange-400 transition-colors duration-300">Terms of Service</Link></li>
               <li><Link href="/disclaimer" className="hover:text-orange-400 transition-colors duration-300">Disclaimer</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-light text-xs uppercase tracking-wider mb-6 text-orange-400">Socials</h3>
+            <ul className="space-y-3 text-xs text-gray-600 dark:text-gray-400 font-light">
+              <li>
+                <Link
+                  href="https://twitter.com/TransactProof"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group inline-flex items-center space-x-2 hover:text-orange-400 transition-colors duration-300"
+                  aria-label="TransactProof on Twitter"
+                >
+                  <Twitter className="h-4 w-4 text-gray-500 group-hover:text-orange-400 transition-colors duration-300" strokeWidth={1.5} />
+                  <span>Twitter</span>
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
