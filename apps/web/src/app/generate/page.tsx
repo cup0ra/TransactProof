@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ReceiptGenerator } from '@/components/receipt-generator'
-import { APP_CONFIG, formatPaymentAmount } from '@/config'
+import { APP_CONFIG, formatPaymentAmount, PAYMENT_AMOUNT } from '@/config'
 import { useAuth } from '@/hooks/use-auth'
 import { useAccount } from 'wagmi'
 import { motion } from 'framer-motion'
@@ -127,7 +127,7 @@ export default function GeneratePage() {
                 {
                   number: "02", 
                   title: "Secure Payment",
-                  description: `Pay a minimal fee of ${formatPaymentAmount(APP_CONFIG.PAYMENT_AMOUNT)} ETH to process your professional receipt generation.`,
+                  description: `Pay a minimal fee of ${PAYMENT_AMOUNT} USDT / USDC to process your professional receipt generation.`,
                   icon: "◊"
                 },
                 {

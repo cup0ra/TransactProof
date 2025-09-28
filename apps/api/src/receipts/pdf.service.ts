@@ -189,7 +189,7 @@ export class PdfService {
           
           .header {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
           }
           
           .logo {
@@ -220,7 +220,7 @@ export class PdfService {
             text-align: center;
             font-size: 16px;
             font-weight: bold;
-            margin: 20px 0;
+            margin: 15px 0;
             text-transform: uppercase;
           }
           
@@ -338,7 +338,6 @@ export class PdfService {
           }
           
           .footer {
-            margin-top: 10px;
             text-align: center;
             font-size: 10px;
             color: #666;
@@ -371,7 +370,6 @@ export class PdfService {
         </svg>
             <span>TRANSACTPROOF</span>
             </div>
-            <div class="website">https://transactproof.com</div>
           </div>
 
           <div class="divider"></div>
@@ -510,6 +508,7 @@ export class PdfService {
           <div class="footer">
             <div><strong>TransactProof Receipt Generation System</strong></div>
             <div>Blockchain Transaction Verification Service</div>
+            <div>https://transactproof.com</div>
           </div>
         </div>
       </body>
