@@ -9,18 +9,64 @@ import ReownProvider from '@/contexts/reown-context'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'TransactProof - Crypto Receipt Generator',
-  description: 'Generate PDF receipts for your crypto transactions with USDT payment',
-  keywords: ['crypto', 'receipt', 'pdf', 'blockchain', 'base', 'usdt'],
-  authors: [{ name: 'TransactProof Team' }],
+  title: 'TransactProof — Generate Verified Crypto Transaction Receipts (PDF)',
+  description:
+    'TransactProof lets you instantly create verifiable PDF receipts for your crypto transactions. Pay 1 USDT on supported networks — Ethereum Mainnet, Base, Polygon, Optimism, Arbitrum, zkSync Era, BNB Smart Chain, and Avalanche C-Chain — and receive a tamper-proof document with complete blockchain details.',
+  keywords: [
+    'crypto receipt generator',
+    'blockchain transaction proof',
+    'PDF crypto invoice',
+    'USDT receipt',
+    'Ethereum Mainnet',
+    'Base network',
+    'Polygon',
+    'Optimism',
+    'Arbitrum',
+    'zkSync Era',
+    'BNB Smart Chain',
+    'Avalanche C-Chain',
+    'crypto tax report',
+    'on-chain proof'
+  ],
+  authors: [{ name: 'TransactProof Team', url: 'https://transactproof.com' }],
   creator: 'TransactProof',
   publisher: 'TransactProof',
+  applicationName: 'TransactProof',
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
-}
+  openGraph: {
+    type: 'website',
+    url: 'https://transactproof.com',
+    title: 'TransactProof — Verified Crypto Receipts',
+    description:
+      'Generate tamper-proof PDF receipts for your blockchain transactions with a simple 1 USDT payment on Ethereum, Base, Polygon, Optimism, Arbitrum, zkSync, BNB Smart Chain, and Avalanche.',
+    images: [
+      {
+        url: '/bg-dark.png',
+        width: 1200,
+        height: 630,
+        alt: 'TransactProof Crypto Receipt Generator'
+      }
+    ]
+  },
+  twitter: {
+    card: 'summary_large_image',
+    site: '@TransactProof',
+    creator: '@TransactProof',
+    title: 'TransactProof — Crypto Receipt Generator',
+    description:
+      'Create verifiable PDF receipts for your crypto transactions with a simple 1 USDT payment on Ethereum, Base, Polygon, Optimism, Arbitrum, zkSync, BNB Smart Chain, and Avalanche.',
+    images: ['/bg-dark.png']
+  },
+  icons: {
+    icon: '/favicon.png',
+    shortcut: '/favicon.png',
+  },
+};
+
 
 export default async function RootLayout({
   children,
