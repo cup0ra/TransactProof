@@ -70,7 +70,7 @@ const PlanCard: React.FC<PlanCardProps & { footerContent?: React.ReactNode; subt
         className={
           highlight
             ? 'bg-orange-400 text-white dark:text-black rounded-none hover:bg-orange-600 hover:text-white dark:hover:text-black transition-all duration-300 border-2 border-transparent hover:border-orange-600 tracking-wide focus:outline-none focus:ring-0 focus:ring-offset-0'
-            : 'w-full bg-transparent font-light text-orange-400 dark:text-orange-400 border border-orange-400 rounded-none hover:border-orange-500 hover:text-orange-500 hover:bg-orange-950/10 dark:hover:bg-orange-950 transition-all duration-300 tracking-wide focus:outline-none focus:ring-0 focus:ring-offset-0'
+            : 'bg-white/20 dark:bg-black/20 font-light text-orange-400 dark:text-orange-400 border border-orange-400 rounded-none hover:border-orange-500 hover:text-orange-500 hover:bg-orange-950/10 dark:hover:bg-orange-950 transition-all duration-300 tracking-wide focus:outline-none focus:ring-0 focus:ring-offset-0'
         }
       >
         {cta}

@@ -247,7 +247,7 @@ export class ReceiptsService {
       throw new ForbiddenException('User not authenticated')
     }
 
-    const PACK_GENERATIONS = this.configService.get<number>('PACK_GENERATIONS')
+    const PACK_GENERATIONS = this.configService.get<number>('PACK_GENERATIONS') ? parseInt(this.configService.get<string>('PACK_GENERATIONS')!, 10) : 20
     const expectedAmount = paymentAmount ?? 9.99
     const tokenSymbol = paymentType
     const decimals = 6 // Stablecoins
