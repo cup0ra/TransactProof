@@ -337,6 +337,68 @@ export default function DashboardPage() {
             </motion.div>
           </motion.div>
 
+          {/* Subscription / Free Generations Status */}
+          {user && (
+            (() => {
+              let freeUntil: Date | null = null
+              if (user.freeUntil) {
+                const raw = user.freeUntil as unknown
+                if (raw instanceof Date) freeUntil = raw
+                else if (typeof raw === 'string' || typeof raw === 'number') {
+                  const d = new Date(raw)
+                  if (!isNaN(d.getTime())) freeUntil = d
+                }
+              }
+              const now = new Date()
+              const hasActiveSub = !!freeUntil && freeUntil > now
+              const remainingFree = typeof user.freeGenerationsRemaining === 'number' ? user.freeGenerationsRemaining : undefined
+              const formattedUntil = hasActiveSub && freeUntil ? freeUntil.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : null
+
+              if (!hasActiveSub && (!remainingFree || remainingFree <= 0)) return null
+
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.35 }}
+                  className="mb-8"
+                >
+                  <div className="relative overflow-hidden border border-orange-300/60 dark:border-orange-500/40 bg-gradient-to-r from-orange-50/70 via-amber-50/60 to-orange-100/60 dark:from-orange-900/20 dark:via-orange-800/10 dark:to-orange-900/20 px-4 sm:px-6 py-4 backdrop-blur rounded-sm flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                      <p className="text-[11px] sm:text-xs tracking-wide font-medium text-orange-700 dark:text-orange-300 uppercase">Usage Status</p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs font-light text-orange-800 dark:text-orange-200">
+                      {hasActiveSub && (
+                        <span className="inline-flex items-center gap-1">
+                          <span className="font-medium text-orange-600 dark:text-orange-300">Subscription Active</span>
+                          <span className="opacity-70">until</span>
+                          <span className="font-medium">{formattedUntil}</span>
+                        </span>
+                      )}
+                      {hasActiveSub && remainingFree && remainingFree > 0 && (
+                        <span className="hidden sm:inline opacity-50">•</span>
+                      )}
+                      {!hasActiveSub && remainingFree && remainingFree > 0 && (
+                        <span className="inline-flex items-center gap-1">
+                          <span className="font-medium text-orange-600 dark:text-orange-300">{remainingFree}</span>
+                          <span className="opacity-80">free generations left</span>
+                        </span>
+                      )}
+                      {hasActiveSub && remainingFree && remainingFree > 0 && (
+                        <span className="inline-flex items-center gap-1">
+                          <span className="font-medium text-orange-600 dark:text-orange-300">{remainingFree}</span>
+                          <span className="opacity-80">remaining in pack</span>
+                        </span>
+                      )}
+                    </div>
+                    <div className="sm:ml-auto text-[10px] sm:text-[11px] text-orange-500/70 dark:text-orange-300/60 italic">Manage in Subscriptions</div>
+                  </div>
+                </motion.div>
+              )
+            })()
+          )}
+
           {/* Stats Cards */}
           <motion.div 
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-8 lg:mb-8"

@@ -40,7 +40,7 @@ export function Header() {
   )
 
   const pathname = useMemo(() => {
-    const mainPages = ['/', '/generate', '/dashboard']
+    const mainPages = ['/', '/generate', '/dashboard', '/subscription']
     if (mainPages.includes(actualPathname)) {
       return actualPathname
     }
@@ -55,6 +55,11 @@ export function Header() {
     }`,
     generate: `text-sm transition-colors font-light tracking-wide ${
       pathname === '/generate' 
+        ? 'text-orange-400 border-b border-orange-400 pb-1' 
+        : 'text-gray-600 dark:text-gray-400 hover:text-orange-400'
+    }`,
+    subscription: `text-sm transition-colors font-light tracking-wide ${
+      pathname === '/subscription' 
         ? 'text-orange-400 border-b border-orange-400 pb-1' 
         : 'text-gray-600 dark:text-gray-400 hover:text-orange-400'
     }`,
@@ -96,6 +101,12 @@ export function Header() {
               className={navClasses.generate}
             >
               Generate
+            </Link>
+            <Link 
+              href="/subscription" 
+              className={navClasses.subscription}
+            >
+              Subscription
             </Link>
             {isFullyAuthenticated && (
               <Link 
@@ -193,6 +204,17 @@ export function Header() {
                 }`}
               >
                 Generate
+              </Link>
+              <Link 
+                href="/subscription" 
+                onClick={closeMobileMenu}
+                className={`block text-sm transition-colors font-light tracking-wide py-2 px-2 rounded-lg ${
+                  pathname === '/subscription' 
+                    ? 'text-orange-400' 
+                    : 'text-gray-600 dark:text-gray-400 hover:text-orange-400 hover:bg-gray-50 dark:hover:bg-gray-900'
+                }`}
+              >
+                Subscription
               </Link>
               {isFullyAuthenticated && (
                 <Link 

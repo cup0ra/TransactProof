@@ -19,8 +19,11 @@
   "db:migrate": "prisma migrate dev",
   "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
-    "db:seed": "ts-node prisma/seed.ts",
-    "db:studio": "prisma studio",
+  "db:seed": "ts-node src/scripts/seed.ts",
+  "db:studio": "prisma studio",
+  "db:sqlite:push": "prisma db push --schema=prisma/schema.sqlite.prisma",
+  "db:sqlite:studio": "prisma studio --schema=prisma/schema.sqlite.prisma",
+  "start:dev:sqlite": "DATABASE_URL='file:./prisma/dev.db' nest start --watch",
     "clean": "rm -rf dist"
   },
   "dependencies": {

@@ -11,6 +11,8 @@ import { BlockchainService } from './blockchain.service'
 import { PdfService } from './pdf.service'
 import { PayAndGenerateDto } from './dto/pay-and-generate.dto'
 import { PaymentRequiredException } from '../common/exceptions/payment-required.exception'
+import { PurchasePackDto } from './dto/purchase-pack.dto'
+import { PurchaseSubscriptionDto } from './dto/purchase-subscription.dto'
 
 @Injectable()
 export class ReceiptsService {
@@ -50,6 +52,27 @@ export class ReceiptsService {
   ) {
     const { txHash, description, paymentTxHash, paymentAmount, paymentType, paymentContractAddress } = payAndGenerateDto
 
+    // If user is authenticated, fetch free generation status
+  let usingFreeGeneration = false
+  let decrementFreeCounter = false
+    if (userId) {
+      const user: any = await this.prisma.user.findUnique({
+        where: { id: userId },
+      })
+      if (user) {
+        const now = new Date()
+        const dateValid = user.freeUntil && user.freeUntil > now
+        const hasCounter = user.freeGenerationsRemaining && user.freeGenerationsRemaining > 0
+        if (hasCounter || dateValid) {
+          usingFreeGeneration = true
+          // Only decrement if we actually consumed from counter
+            if (hasCounter) {
+              decrementFreeCounter = true
+            }
+        }
+      }
+    }
+
     // Optional propagation delay so transaction/payment appears on chain
     await this.delayForNetwork()
 
@@ -65,8 +88,8 @@ export class ReceiptsService {
 
     this.logger.log(`Transaction ${txHash} verified - found in supported networks`)
 
-    // 2. Verify payment (dynamic amount and type from UI, fallback to ETH)
-    if (userAddress) {
+    // 2. Verify payment unless using free generation
+    if (userAddress && !usingFreeGeneration) {
       const expectedPaymentAmount = paymentAmount || 0.0000001 // Default fallback
       const paymentTokenType = paymentType || 'ETH' // Default to ETH
       let paymentVerified = false
@@ -127,6 +150,17 @@ export class ReceiptsService {
           `Payment of ${expectedPaymentAmount} ${paymentTokenType} to service address not found. Please complete payment first.`
         )
       }
+    }
+    
+    // Decrement free generation if used
+    if (usingFreeGeneration && decrementFreeCounter && userId) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { freeGenerationsRemaining: { decrement: 1 } } as any,
+      })
+      this.logger.log(`Using free generation (counter) for user ${userId}. Remaining decremented.`)
+    } else if (usingFreeGeneration) {
+      this.logger.log(`Using date-based free generation for user ${userId}. Counter not decremented.`)
     }
 
     // 3. Get real transaction details from blockchain
@@ -198,6 +232,131 @@ export class ReceiptsService {
       pdfUrl: receipt.pdfUrl,
       description: receipt.description,
       createdAt: receipt.createdAt.toISOString(),
+    }
+  }
+
+  /**
+   * Purchase a generations pack (e.g., 20 generations for fixed price) by verifying
+   * a token payment transaction hash (USDT / USDC). On success increments user's
+   * freeGenerationsRemaining counter.
+   */
+  async purchasePack(purchasePackDto: PurchasePackDto, userAddress?: string, userId?: string) {
+    const { paymentTxHash, paymentAmount, paymentType, paymentContractAddress } = purchasePackDto
+
+    if (!userAddress || !userId) {
+      throw new ForbiddenException('User not authenticated')
+    }
+
+    const PACK_GENERATIONS = this.configService.get<number>('PACK_GENERATIONS')
+    const expectedAmount = paymentAmount ?? 9.99
+    const tokenSymbol = paymentType
+    const decimals = 6 // Stablecoins
+
+    // Basic validation
+    if (!paymentTxHash || paymentTxHash.length !== 66) {
+      throw new BadRequestException('Invalid payment transaction hash')
+    }
+    if (!paymentContractAddress || !paymentContractAddress.startsWith('0x')) {
+      throw new BadRequestException('Invalid token contract address')
+    }
+    if (!['USDT', 'USDC'].includes(tokenSymbol)) {
+      throw new BadRequestException('Unsupported payment token')
+    }
+
+    // Allow propagation delay (re-use logic)
+    await this.delayForNetwork()
+
+    // Verify payment via hash
+    let verified = false
+    try {
+      verified = await this.blockchainService.verifyTokenPaymentByHash(
+        paymentTxHash,
+        userAddress,
+        paymentContractAddress,
+        expectedAmount,
+        tokenSymbol,
+        decimals
+      )
+    } catch (e) {
+      this.logger.error('Error verifying pack payment', e)
+    }
+
+    if (!verified) {
+      throw new PaymentRequiredException(`Payment of ${expectedAmount} ${tokenSymbol} not verified`)
+    }
+
+    // Increment user's free generations
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: { freeGenerationsRemaining: { increment: PACK_GENERATIONS } } as any,
+    })
+
+    this.logger.log(`Pack purchased: +${PACK_GENERATIONS} generations for user ${userId}`)
+
+    return {
+      ok: true,
+      added: PACK_GENERATIONS,
+  freeGenerationsRemaining: (updatedUser as any).freeGenerationsRemaining,
+      paymentTxHash,
+      paymentAmount: expectedAmount,
+      paymentType: tokenSymbol,
+    }
+  }
+
+  /**
+   * Purchase monthly subscription: verifies payment and sets freeUntil + extends counter.
+   */
+  async purchaseSubscription(dto: PurchaseSubscriptionDto, userAddress?: string, userId?: string) {
+    const { paymentTxHash, paymentAmount, paymentType, paymentContractAddress } = dto
+    if (!userAddress || !userId) {
+      throw new ForbiddenException('User not authenticated')
+    }
+    if (!paymentTxHash || paymentTxHash.length !== 66) {
+      throw new BadRequestException('Invalid payment transaction hash')
+    }
+    if (!['USDT','USDC'].includes(paymentType)) {
+      throw new BadRequestException('Unsupported token')
+    }
+    if (!paymentContractAddress) {
+      throw new BadRequestException('Missing contract address')
+    }
+
+    const expectedAmount = paymentAmount ?? 29.99
+    const decimals = 6
+
+    await this.delayForNetwork()
+    const verified = await this.blockchainService.verifyTokenPaymentByHash(
+      paymentTxHash,
+      userAddress,
+      paymentContractAddress,
+      expectedAmount,
+      paymentType,
+      decimals
+    )
+    if (!verified) {
+      throw new PaymentRequiredException(`Payment of ${expectedAmount} ${paymentType} not verified`)
+    }
+
+    // Update subscription: extend freeUntil 30 days from now and ensure counter at least 500
+    const now = new Date()
+    const newUntil = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        freeUntil: newUntil,
+        freeGenerationsRemaining: { set: 500 },
+      } as any,
+    })
+
+    return {
+      ok: true,
+      type: 'subscription',
+      freeUntil: newUntil.toISOString(),
+      freeGenerationsRemaining: (updated as any).freeGenerationsRemaining,
+      paymentTxHash,
+      paymentAmount: expectedAmount,
+      paymentType,
     }
   }
 
