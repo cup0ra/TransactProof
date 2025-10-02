@@ -61,11 +61,11 @@ export const metadata = {
       'Create verifiable PDF receipts for your crypto transactions with a simple 1 USDT payment on Ethereum, Base, Polygon, Optimism, Arbitrum, zkSync, BNB Smart Chain, and Avalanche.',
     images: ['/bg-dark.png']
   },
-icons: {
-  icon: '/logo.ico',
-  shortcut: '/logo.ico',
-  apple: '/logo.png'
-}
+  icons: {
+    icon: '/logo.ico',
+    shortcut: '/logo.ico',
+    apple: '/logo.png',
+  },
 };
 
 
