@@ -62,8 +62,9 @@ export const metadata = {
     images: ['/bg-dark.png']
   },
   icons: {
-    icon: '/favicon.png',
-    shortcut: '/favicon.png',
+    icon: '/logo.ico',
+    shortcut: '/logo.ico',
+    apple: '/logo.png',
   },
 };
 
