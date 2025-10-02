@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { toast } from 'react-hot-toast'
 import { z } from 'zod'
 import { usePayETH } from '@/hooks/use-pay-eth'
@@ -23,52 +23,93 @@ const receiptSchema = z.object({
 
 type ReceiptForm = z.infer<typeof receiptSchema>
 
+// Refactored for readability & maintainability: introduced Step enum, helper utilities, and decomposed rendering.
+enum Step {
+  INPUT = 'input',
+  VERIFYING = 'verifying',
+  FREE = 'free',
+  PAYMENT = 'payment',
+  GENERATING = 'generating',
+  COMPLETE = 'complete'
+}
+
+interface FreeGenerationInfo {
+  hasFree: boolean
+  count: number
+  dateActive: boolean
+}
+
+// Narrow user type locally to avoid 'any' while remaining flexible
+interface MinimalUser {
+  freeGenerationsRemaining?: number
+  freeUntil?: string | Date | null
+  walletAddress?: string
+}
+
+function computeFreeInfo(user: MinimalUser | undefined): FreeGenerationInfo {
+  if (!user) return { hasFree: false, count: 0, dateActive: false }
+  const count = typeof user.freeGenerationsRemaining === 'number' ? user.freeGenerationsRemaining : 0
+  const freeUntilDate = user.freeUntil ? new Date(user.freeUntil) : null
+  const dateActive = !!freeUntilDate && freeUntilDate > new Date()
+  return { hasFree: count > 0 || dateActive, count, dateActive }
+}
+
 export function ReceiptGenerator() {
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, user, checkAuth } = useAuth()
   const { address, isConnected } = useAccount()
   const chainId = useChainId()
   const [form, setForm] = useState<ReceiptForm>({ txHash: '', description: '' })
-  const [step, setStep] = useState<'input' | 'verifying' | 'payment' | 'generating' | 'complete'>('input')
-  const [receiptData, setReceiptData] = useState<any>(null)
+  const [step, setStep] = useState<Step>(Step.INPUT)
+  const freeInfo = computeFreeInfo(user || undefined)
+  interface GeneratedReceipt { id: string; pdfUrl: string }
+  const [receiptData, setReceiptData] = useState<GeneratedReceipt | null>(null)
   const [mounted, setMounted] = useState(false)
   const [globalAuthState, setGlobalAuthState] = useState(false)
   
   // Get available payment options for current network
-  const availablePaymentOptions = getAvailablePaymentOptions(chainId || 1)
+  const availablePaymentOptions = useMemo(() => getAvailablePaymentOptions(chainId || 1), [chainId])
   const [selectedPayment, setSelectedPayment] = useState(availablePaymentOptions[0] || APP_CONFIG.PAYMENT_OPTIONS[0])
 
   const { payETH, isLoading: isPaymentETHLoading } = usePayETH()
   const { payToken, isLoading: isPaymentTokenLoading } = usePayToken()
-  const { generateReceipt, isLoading: isGenerating } = useGenerateReceipt()
-  const { verifyTransaction, isVerifying } = useVerifyTransaction()
+  const { generateReceipt } = useGenerateReceipt()
+  const { verifyTransaction } = useVerifyTransaction()
 
   // Get balance for selected payment option
-  const { balance: tokenBalance, isLoading: isTokenBalanceLoading, hasInsufficientBalance: hasInsufficientTokenBalance } = useTokenBalance(
+  const { hasInsufficientBalance: hasInsufficientTokenBalance } = useTokenBalance(
     selectedPayment?.contractAddress || undefined,
     selectedPayment?.decimals
   )
   
   // Use multi-token balance for better token support (especially on Polygon)
   const { 
-    balance: multiTokenBalance, 
-    isLoading: isMultiTokenBalanceLoading, 
     hasInsufficientBalance: hasInsufficientMultiTokenBalance,
     contractAddress: detectedContractAddress,
-    tokenInfo
   } = useMultiTokenBalance(
     selectedPayment?.type || '',
     selectedPayment?.decimals
   )
   
-  const { balance: ethBalance, isLoading: isETHBalanceLoading, hasInsufficientBalance: hasInsufficientETHBalance } = useETHBalance()
+  const { hasInsufficientBalance: hasInsufficientETHBalance } = useETHBalance()
   
   // Determine which balance and functions to use based on payment type
   const isETHPayment = selectedPayment?.type === 'ETH'
   const isTokenPayment = selectedPayment?.type === 'USDT' || selectedPayment?.type === 'USDC'
   
-  const currentBalance = isETHPayment ? ethBalance : (isTokenPayment ? multiTokenBalance : tokenBalance)
-  const isBalanceLoading = isETHPayment ? isETHBalanceLoading : (isTokenPayment ? isMultiTokenBalanceLoading : isTokenBalanceLoading)
-  const hasInsufficientBalance = isETHPayment ? hasInsufficientETHBalance : (isTokenPayment ? hasInsufficientMultiTokenBalance : hasInsufficientTokenBalance)
+  // Consolidated insufficient balance flag (normalize possible function/boolean variants from hooks)
+  const insufficientBalance: boolean = useMemo(() => {
+    const raw = isETHPayment
+      ? hasInsufficientETHBalance
+      : (isTokenPayment ? hasInsufficientMultiTokenBalance : hasInsufficientTokenBalance)
+    if (typeof raw === 'function') {
+      try {
+        return raw(selectedPayment?.amount || 0)
+      } catch {
+        return true
+      }
+    }
+    return !!raw
+  }, [isETHPayment, isTokenPayment, hasInsufficientETHBalance, hasInsufficientMultiTokenBalance, hasInsufficientTokenBalance, selectedPayment?.amount])
 
   const isPaymentLoading = isPaymentETHLoading || isPaymentTokenLoading
 
@@ -81,7 +122,7 @@ export function ReceiptGenerator() {
       const newOption = newAvailableOptions.find(opt => opt.type === currentType) || newAvailableOptions[0]
       setSelectedPayment(newOption)
     }
-  }, [chainId])
+  }, [chainId, selectedPayment?.type])
 
   useEffect(() => {
     const unsubscribe = globalAuthManager.onAuthChange((changedAddress, isAuth) => {
@@ -110,13 +151,13 @@ export function ReceiptGenerator() {
   }, [])
 
   useEffect(() => {
-    if (!isConnected && (step === 'payment' || step === 'generating')) {
-      setStep('input')
+    if (!isConnected && (step === Step.PAYMENT || step === Step.GENERATING)) {
+      setStep(Step.INPUT)
       toast.error('Wallet disconnected. Please reconnect to continue.')
     }
   }, [isConnected, step])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!isFullyAuthenticated) {
@@ -138,19 +179,51 @@ export function ReceiptGenerator() {
       }
     }
 
-    if (step === 'input') {
-      setStep('verifying')
+    if (step === Step.INPUT) {
+      setStep(Step.VERIFYING)
       const transactionExists = await verifyTransaction(form.txHash)
       
       if (transactionExists) {
-        setStep('payment')
+        if (freeInfo.hasFree) {
+          setStep(Step.FREE)
+          return
+        }
+        setStep(Step.PAYMENT)
       } else {
-        setStep('input')
+        setStep(Step.INPUT)
       }
     }
-  }
+  }, [isFullyAuthenticated, form, step, verifyTransaction, freeInfo.hasFree])
 
-  const handlePayment = async () => {
+  const [isFreeGenerating, setIsFreeGenerating] = useState(false)
+
+  const handleFreeGenerate = useCallback(async () => {
+    if (isFreeGenerating) return
+    setIsFreeGenerating(true)
+    setStep(Step.GENERATING)
+    try {
+      const receipt = await generateReceipt({
+        txHash: form.txHash,
+        description: form.description || undefined,
+      })
+      if (receipt) {
+        setReceiptData(receipt)
+        try { await checkAuth() } catch { /* ignore */ }
+        setStep(Step.COMPLETE)
+        toast.success('Receipt generated for free!')
+      } else {
+        setStep(Step.FREE)
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to generate receipt'
+      toast.error(message)
+      setStep(Step.FREE)
+    } finally {
+      setIsFreeGenerating(false)
+    }
+  }, [isFreeGenerating, generateReceipt, form, checkAuth])
+
+  const handlePayment = useCallback(async () => {
     if (!selectedPayment) {
       toast.error('Please select a payment method')
       return
@@ -178,7 +251,7 @@ export function ReceiptGenerator() {
       
       
       if (paymentTxHash) {
-        setStep('generating')
+  setStep(Step.GENERATING)
         
         // Generate receipt for the ORIGINAL transaction hash the user entered,
         // and pass the payment transaction hash for efficient verification
@@ -191,23 +264,26 @@ export function ReceiptGenerator() {
           paymentContractAddress: selectedPayment.contractAddress || undefined, // Pass contract address for tokens
         })
         
-        setReceiptData(receipt)
-        setStep('complete')
-        toast.success('Receipt generated successfully!')
+        if (receipt) {
+          setReceiptData(receipt)
+          // Update user state (in case future paid logic adjusts counters/promos)
+          try { await checkAuth() } catch { /* ignore */ }
+          setStep(Step.COMPLETE)
+          toast.success('Receipt generated successfully!')
+        } else {
+          setStep(Step.PAYMENT)
+        }
       } else {
-        // Stay on payment step so user can try again
-        setStep('payment')
+        setStep(Step.PAYMENT)
       }
-    } catch (error: any) {
-      
-      const errorMessage = error?.message || 'Failed to process payment or generate receipt'
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to process payment or generate receipt'
       toast.error(errorMessage)
-      // Stay on payment step so user can try again
-      setStep('payment')
+      setStep(Step.PAYMENT)
     }
-  }
+  }, [selectedPayment, payETH, payToken, detectedContractAddress, generateReceipt, form, checkAuth])
 
-  const handleDownload = () => {
+  const handleDownload = useCallback(() => {
     if (receiptData?.pdfUrl) {
       const link = document.createElement('a')
       link.href = receiptData.pdfUrl
@@ -216,13 +292,13 @@ export function ReceiptGenerator() {
       link.click()
       document.body.removeChild(link)
     }
-  }
+  }, [receiptData])
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setForm({ txHash: '', description: '' })
-    setStep('input')
+    setStep(Step.INPUT)
     setReceiptData(null)
-  }
+  }, [])
 
   if (!mounted) {
     return (
@@ -235,7 +311,7 @@ export function ReceiptGenerator() {
     )
   }
 
-  if (step === 'complete' && receiptData) {
+  if (step === Step.COMPLETE && receiptData) {
     return (
       <div className="border border-gray-300 dark:border-gray-800 bg-white/20 backdrop-blur-md dark:bg-black/30 p-6 sm:p-8 transition-colors duration-300">
         <div className="text-center">
@@ -282,7 +358,11 @@ export function ReceiptGenerator() {
         </div> */}
         <h2 className="text-lg sm:text-xl md:text-2xl font-light text-black dark:text-white mb-3 sm:mb-4 tracking-wide transition-colors duration-300">Generate Transaction Receipt</h2>
         <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-light leading-relaxed transition-colors duration-300">
-          Enter your transaction hash and pay {formatPaymentAmountDisplay(selectedPayment.amount)} {selectedPayment.symbol} to generate a verified PDF receipt
+          {freeInfo.hasFree ? (
+            <span>You have a free receipt available. Enter a transaction hash to generate it without payment.</span>
+          ) : (
+            <span>Enter your transaction hash and pay {formatPaymentAmountDisplay(selectedPayment.amount)} {selectedPayment.symbol} to generate a verified PDF receipt</span>
+          )}
         </p>
       </div>
 
@@ -316,7 +396,7 @@ export function ReceiptGenerator() {
           />
         </div>
 
-        {step === 'input' && (
+        {step === Step.INPUT && (
           <button
             type="submit"
             disabled={!form.txHash || !isFullyAuthenticated}
@@ -330,7 +410,7 @@ export function ReceiptGenerator() {
           </button>
         )}
 
-        {step === 'verifying' && (
+        {step === Step.VERIFYING && (
           <div className="text-center py-6 sm:py-8">
             <div className="w-5 h-5 sm:w-6 sm:h-6 border border-orange-400 border-t-transparent animate-spin mx-auto mb-3 sm:mb-4"></div>
             <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-light transition-colors duration-300">Verifying transaction on blockchain...</p>
@@ -338,7 +418,7 @@ export function ReceiptGenerator() {
           </div>
         )}
 
-        {step === 'payment' && (
+        {step === Step.PAYMENT && (
           <div className="text-center">
             <p className="text-gray-600 dark:text-gray-400 mb-4 sm:mb-4 text-xs sm:text-sm font-light transition-colors duration-300">Choose your payment method</p>
             
@@ -370,7 +450,7 @@ export function ReceiptGenerator() {
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <button
                 type="button"
-                onClick={() => setStep('input')}
+                onClick={() => setStep(Step.INPUT)}
                 className="btn-secondary-minimal text-xs sm:text-sm py-2.5 sm:py-3"
               >
                 Back
@@ -379,19 +459,17 @@ export function ReceiptGenerator() {
                 type="button"
                 onClick={handlePayment}
                 disabled={
-                  isPaymentLoading || 
-                  hasInsufficientBalance(selectedPayment?.amount || 0)
+                  isPaymentLoading || insufficientBalance
                 }
                 className={`text-xs sm:text-sm py-2.5 sm:py-3 transition-all duration-300 ${
-                  isPaymentLoading || 
-                  hasInsufficientBalance(selectedPayment?.amount || 0)
+                  isPaymentLoading || insufficientBalance
                     ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-gray-300 dark:border-gray-700'
                     : 'btn-primary-minimal'
                 }`}
               >
                 {isPaymentLoading 
                   ? 'Processing...' 
-                  : hasInsufficientBalance(selectedPayment?.amount || 0)
+                  : insufficientBalance
                     ? `Insufficient ${selectedPayment?.symbol} Balance`
                     : `Pay ${formatPaymentAmountDisplay(selectedPayment.amount)} ${selectedPayment.symbol}`
                 }
@@ -400,7 +478,47 @@ export function ReceiptGenerator() {
           </div>
         )}
 
-        {step === 'generating' && (
+        {step === Step.FREE && (
+          <div className="text-center">
+            <p className="text-gray-600 dark:text-gray-400 mb-4 sm:mb-4 text-xs sm:text-sm font-light transition-colors duration-300">
+              You have a free receipt available. Generate it now without payment.
+              {freeInfo.count > 0 && (
+                <span className="block mt-2 text-[11px] tracking-wide text-orange-500 dark:text-orange-400">
+                  Free receipts left: <span className="font-medium">{freeInfo.count}</span>
+                </span>
+              )}
+              {user?.freeUntil && (
+                <span className="block mt-1 text-[10px] text-gray-500 dark:text-gray-500">
+                  Free access until: {new Date(user.freeUntil).toLocaleString()}
+                </span>
+              )}
+            </p>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <button
+                type="button"
+                onClick={() => setStep(Step.INPUT)}
+                className="btn-secondary-minimal text-xs sm:text-sm py-2.5 sm:py-3"
+                disabled={isFreeGenerating}
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={handleFreeGenerate}
+                disabled={isFreeGenerating}
+                className={`text-xs sm:text-sm py-2.5 sm:py-3 transition-all duration-300 ${
+                  isFreeGenerating
+                    ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-gray-300 dark:border-gray-700'
+                    : 'btn-primary-minimal'
+                }`}
+              >
+                {isFreeGenerating ? 'Generating...' : 'Generate'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === Step.GENERATING && (
           <div className="text-center py-6 sm:py-8">
             <div className="w-10 h-10 sm:w-12 sm:h-12 border border-gray-300 dark:border-gray-600 flex items-center justify-center mx-auto mb-3 sm:mb-4 transition-colors duration-300">
               <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-orange-400 border-t-transparent animate-spin"></div>

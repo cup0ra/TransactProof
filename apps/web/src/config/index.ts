@@ -6,6 +6,8 @@ import { mainnet, arbitrum, base, baseSepolia, polygon, optimism, zkSync, bsc, a
 export const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'demo-project-id'
 export const isDev = process.env.NODE_ENV === 'development'
 export const PAYMENT_AMOUNT = process.env.NEXT_PUBLIC_PAYMENT_AMOUNT ? parseFloat(process.env.NEXT_PUBLIC_PAYMENT_AMOUNT) : 0.1
+export const PAYMENT_AMOUNT_PACK = process.env.NEXT_PUBLIC_PAYMENT_PACK_AMOUNT ? parseFloat(process.env.NEXT_PUBLIC_PAYMENT_PACK_AMOUNT) : 9.99
+export const PAYMENT_AMOUNT_SUBSCRIPTION = process.env.NEXT_PUBLIC_PAYMENT_SUBSCRIPTION_AMOUNT ? parseFloat(process.env.NEXT_PUBLIC_PAYMENT_SUBSCRIPTION_AMOUNT) : 29.99
 
 const devNentwork = [
   mainnet,

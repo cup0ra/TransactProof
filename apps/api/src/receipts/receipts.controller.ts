@@ -16,6 +16,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { ReceiptsService } from './receipts.service'
 import { PayAndGenerateDto } from './dto/pay-and-generate.dto'
 import { ReceiptResponseDto } from './dto/receipt-response.dto'
+import { PurchasePackDto } from './dto/purchase-pack.dto'
+import { PurchaseSubscriptionDto } from './dto/purchase-subscription.dto'
 import * as fs from 'fs'
 import { resolveUploadsDir, buildUploadFilePath } from '../common/utils/uploads-path.util'
 
@@ -50,6 +52,33 @@ export class ReceiptsController {
       userAddress,
       userId,
     )
+  }
+
+  @Post('purchase-pack')
+  @UseGuards(ThrottlerGuard, JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Purchase generations pack (USDT/USDC)' })
+  @ApiResponse({ status: 201, description: 'Pack purchased, generations added' })
+  @ApiResponse({ status: 400, description: 'Invalid data or payment not verified' })
+  async purchasePack(
+    @Body() purchasePackDto: PurchasePackDto,
+    @Req() req: Request,
+  ) {
+    const userAddress = req.user?.walletAddress
+    const userId = req.user?.id
+    return this.receiptsService.purchasePack(purchasePackDto, userAddress, userId)
+  }
+
+  @Post('purchase-subscription')
+  @UseGuards(ThrottlerGuard, JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Purchase monthly subscription (USDT/USDC)' })
+  @ApiResponse({ status: 201, description: 'Subscription activated' })
+  async purchaseSubscription(
+    @Body() dto: PurchaseSubscriptionDto,
+    @Req() req: Request,
+  ) {
+    return this.receiptsService.purchaseSubscription(dto, req.user?.walletAddress, req.user?.id)
   }
 
   @Get('my')

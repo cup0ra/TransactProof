@@ -70,6 +70,8 @@ async verify(
     return {
       ok: true,
       walletAddress: result.user.walletAddress,
+      freeGenerationsRemaining: (result.user as any).freeGenerationsRemaining,
+      freeUntil: (result.user as any).freeUntil,
       expiresAt: result.expiresAt,
       refreshExpiresAt: result.refreshExpiresAt,
       ...(isProd ? {} : { accessToken: result.accessToken, refreshToken: result.refreshToken }),
@@ -135,6 +137,8 @@ async refresh(
     return {
       ok: true,
       walletAddress: result.user.walletAddress,
+      freeGenerationsRemaining: (result.user as any).freeGenerationsRemaining,
+      freeUntil: (result.user as any).freeUntil,
       expiresAt: result.expiresAt,
       refreshExpiresAt: result.refreshExpiresAt,
       ...(isProd ? {} : { accessToken: result.accessToken, refreshToken: result.refreshToken }),
@@ -170,7 +174,9 @@ async refresh(
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getProfile(@Req() req: Request) {
     return {
-      walletAddress: req.user.walletAddress,
+      walletAddress: (req.user as any).walletAddress,
+      freeGenerationsRemaining: (req.user as any).freeGenerationsRemaining,
+      freeUntil: (req.user as any).freeUntil,
     }
   }
 

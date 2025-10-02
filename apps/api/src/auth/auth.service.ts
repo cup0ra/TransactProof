@@ -107,7 +107,11 @@ export class AuthService {
       const accessToken = this.jwtService.sign(payload)
 
       return {
-        user,
+        user: {
+          ...user,
+          freeGenerationsRemaining: (user as any).freeGenerationsRemaining,
+          freeUntil: (user as any).freeUntil,
+        },
         accessToken,
         refreshToken,
         expiresAt: expiresAt.toISOString(),
@@ -138,6 +142,8 @@ export class AuthService {
         id: session.user.id,
         walletAddress: session.user.walletAddress,
         jwtId: payload.jti,
+        freeGenerationsRemaining: (session.user as any).freeGenerationsRemaining,
+        freeUntil: (session.user as any).freeUntil,
       }
     } catch (error) {
       this.logger.error(`JWT validation failed: ${error.message}`, error.stack)
@@ -196,7 +202,11 @@ export class AuthService {
       const accessToken = this.jwtService.sign(payload)
 
       return {
-        user: session.user,
+        user: {
+          ...session.user,
+          freeGenerationsRemaining: (session.user as any).freeGenerationsRemaining,
+          freeUntil: (session.user as any).freeUntil,
+        },
         accessToken,
         refreshToken: newRefreshToken,
         expiresAt: newExpiresAt.toISOString(),

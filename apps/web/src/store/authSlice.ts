@@ -6,12 +6,16 @@ import { globalAuthManager } from '@/utils/global-auth-manager'
 
 export interface User {
   walletAddress: string
+  freeGenerationsRemaining?: number
+  freeUntil?: string | null
 }
 
 export interface AuthResponse {
   walletAddress: string
   expiresAt: string
   refreshExpiresAt?: string
+  freeGenerationsRemaining?: number
+  freeUntil?: string | null
 }
 
 export interface AuthState {
@@ -111,8 +115,8 @@ export const signInWithEthereum = createAsyncThunk(
         throw new Error(error.message || 'Authentication failed')
       }
 
-      const authData: AuthResponse = await verifyResponse.json()
-      return authData
+  const authData: AuthResponse = await verifyResponse.json()
+  return authData
     })
   }
 )
@@ -126,8 +130,8 @@ export const refreshAuth = createAsyncThunk(
     })
 
     if (response.ok) {
-      const data = await response.json()
-      return data
+  const data: AuthResponse = await response.json()
+  return data
     } else {
       throw new Error('Failed to refresh authentication')
     }
@@ -160,7 +164,11 @@ const authSlice = createSlice({
     builder
       // Initialize Auth
       .addCase(initializeAuth.fulfilled, (state, action) => {
-        state.user = action.payload
+        state.user = {
+          walletAddress: action.payload.walletAddress,
+          freeGenerationsRemaining: action.payload.freeGenerationsRemaining,
+          freeUntil: action.payload.freeUntil,
+        }
         state.isAuthenticated = true
         state.initialCheckDone = true
         state.error = null
@@ -178,7 +186,11 @@ const authSlice = createSlice({
         state.error = null
       })
       .addCase(signInWithEthereum.fulfilled, (state, action) => {
-        state.user = { walletAddress: action.payload.walletAddress }
+        state.user = {
+          walletAddress: action.payload.walletAddress,
+          freeGenerationsRemaining: action.payload.freeGenerationsRemaining,
+          freeUntil: action.payload.freeUntil,
+        }
         state.isAuthenticated = true
         state.initialCheckDone = true
         state.isLoading = false
@@ -193,7 +205,11 @@ const authSlice = createSlice({
       
       // Refresh Auth
       .addCase(refreshAuth.fulfilled, (state, action) => {
-        state.user = { walletAddress: action.payload.walletAddress }
+        state.user = {
+          walletAddress: action.payload.walletAddress,
+          freeGenerationsRemaining: action.payload.freeGenerationsRemaining,
+          freeUntil: action.payload.freeUntil,
+        }
         state.isAuthenticated = true
         state.error = null
       })
