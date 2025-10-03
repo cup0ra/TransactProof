@@ -1,6 +1,6 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
-import { headers } from 'next/headers'
+import { headers, cookies } from 'next/headers'
 import { Providers } from './providers'
 import { MemoizedHeader as Header } from '@/components/header'
 import { Footer } from '@/components/footer'
@@ -69,45 +69,26 @@ export const metadata = {
 };
 
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const headersObj = await headers()
-  const cookies = headersObj.get('cookie')
+  const cookieStore = cookies()
+  const rawTheme = cookieStore.get('theme')?.value as string | undefined
+  const normalizedTheme = (rawTheme === 'dark' || rawTheme === 'light' || rawTheme === 'system') ? rawTheme : 'system'
+  // Server can't know user system preference reliably; assume dark as safer for your branding when system is chosen.
+  const initialIsDark = normalizedTheme === 'dark' || (normalizedTheme === 'system')
 
   return (
-    <html lang="en" className={inter.className} suppressHydrationWarning>
+    <html lang="en" className={`${inter.className} ${initialIsDark ? 'dark' : ''}`} suppressHydrationWarning>
       <head>
+        {/* Fallback script: adjusts if user stored light but server assumed dark, or vice versa */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  const savedTheme = localStorage.getItem('transactproof-theme');
-                  const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                  const theme = savedTheme || 'system';
-                  const isDark = theme === 'system' ? systemDark : theme === 'dark';
-                  
-                  if (isDark) {
-                    document.documentElement.classList.add('dark');
-                    document.documentElement.style.colorScheme = 'dark';
-                  } else {
-                    document.documentElement.classList.remove('dark');
-                    document.documentElement.style.colorScheme = 'light';
-                  }
-                } catch (e) {
-                  document.documentElement.classList.add('dark');
-                  document.documentElement.style.colorScheme = 'dark';
-                }
-              })()
-            `
+            __html: `!function(){try{var t=localStorage.getItem('transactproof-theme')||'system',m=window.matchMedia('(prefers-color-scheme: dark)').matches,d=t==='system'?m:(t==='dark');var de=document.documentElement;if(d){de.classList.add('dark');de.style.colorScheme='dark'}else{de.classList.remove('dark');de.style.colorScheme='light'}}catch(e){}}();`
           }}
         />
       </head>
       <body suppressHydrationWarning>
-        <ReownProvider cookies={cookies}>
+        <ReownProvider cookies={headersObj.get('cookie')}>
           <Providers>
             <div className="min-h-screen flex flex-col bg-white dark:bg-black">
               <Header />

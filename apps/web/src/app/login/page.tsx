@@ -11,7 +11,7 @@ import { ParallaxBackground } from '@/components/parallax-background'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { isAuthenticated, initialCheckDone } = useAuth()
+  const { isAuthenticated } = useAuth()
   const { isConnected } = useAccount()
   const [mounted, setMounted] = useState(false)
 
@@ -20,10 +20,10 @@ export default function LoginPage() {
   }, [])
 
   useEffect(() => {
-    if (mounted && initialCheckDone && isAuthenticated && isConnected) {
+    if (mounted && isAuthenticated && isConnected) {
       router.push('/dashboard')
     }
-  }, [isAuthenticated, isConnected, initialCheckDone, router, mounted])
+  }, [isAuthenticated, isConnected, router, mounted])
 
   return (
     <section className="relative min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 overflow-hidden">

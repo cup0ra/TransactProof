@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useLayoutEffect, useState, ReactNode } from 'react'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -14,11 +14,29 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 const THEME_STORAGE_KEY = 'transactproof-theme'
+const THEME_COOKIE_KEY = 'theme'
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('system')
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark')
-  const [mounted, setMounted] = useState(false)
+  // Lazy init: executed once on first render (client side only logic guarded)
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return 'system'
+    try {
+      const saved = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null
+      if (saved === 'light' || saved === 'dark' || saved === 'system') return saved
+    } catch {}
+    return 'system'
+  })
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'dark'
+    try {
+      const saved = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null
+      const mode = (saved && (saved === 'light' || saved === 'dark')) ? saved : 'system'
+      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      return mode === 'system' ? (systemDark ? 'dark' : 'light') : mode
+    } catch {
+      return 'dark'
+    }
+  })
 
   const getSystemTheme = (): 'light' | 'dark' => {
     if (typeof window !== 'undefined') {
@@ -37,52 +55,69 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       } else {
         document.documentElement.classList.remove('dark')
       }
+      document.documentElement.style.colorScheme = resolved
     }
+  }
+
+  const persist = (key: string, value: string | null) => {
+    try {
+      if (value === null) {
+        localStorage.removeItem(key)
+      } else {
+        localStorage.setItem(key, value)
+      }
+    } catch {}
+    try {
+      if (typeof document !== 'undefined') {
+        if (value === null) {
+          document.cookie = `${THEME_COOKIE_KEY}=; Max-Age=0; Path=/`;
+        } else {
+          // 1 year
+          document.cookie = `${THEME_COOKIE_KEY}=${value}; Max-Age=31536000; Path=/; SameSite=Lax`;
+        }
+      }
+    } catch {}
   }
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme)
     updateResolvedTheme(newTheme)
-    
     if (typeof window !== 'undefined') {
       if (newTheme === 'system') {
-        localStorage.removeItem(THEME_STORAGE_KEY)
+        persist(THEME_STORAGE_KEY, null)
+        persist(THEME_COOKIE_KEY, null)
       } else {
-        localStorage.setItem(THEME_STORAGE_KEY, newTheme)
+        persist(THEME_STORAGE_KEY, newTheme)
+        persist(THEME_COOKIE_KEY, newTheme)
       }
     }
   }
 
-  useEffect(() => {
-    const isDarkFromDOM = document.documentElement.classList.contains('dark')
-    const savedTheme = typeof window !== 'undefined' 
-      ? localStorage.getItem(THEME_STORAGE_KEY) as Theme
-      : null
-    
-    const initialTheme = savedTheme || 'system'
-    const initialResolvedTheme = initialTheme === 'system' ? getSystemTheme() : initialTheme
-    
-    setThemeState(initialTheme)
-    setResolvedTheme(initialResolvedTheme)
-    setMounted(true)
-
+  // Apply theme before paint/hydration flash
+  useLayoutEffect(() => {
+    updateResolvedTheme(theme)
+    // Listen system changes if user selected system
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
     const handleSystemThemeChange = () => {
-      if (theme === 'system') {
-        updateResolvedTheme('system')
+      if (theme === 'system') updateResolvedTheme('system')
+    }
+    // Modern + fallback
+    // Some older browsers only support addListener/removeListener
+    const mqAny = mediaQuery as unknown as { addListener?: (cb: () => void) => void; removeListener?: (cb: () => void) => void }
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleSystemThemeChange)
+    } else if (mqAny.addListener) {
+      mqAny.addListener(handleSystemThemeChange)
+    }
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleSystemThemeChange)
+      } else if (mqAny.removeListener) {
+        mqAny.removeListener(handleSystemThemeChange)
       }
     }
-
-    mediaQuery.addEventListener('change', handleSystemThemeChange)
-    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange)
-  }, [])
-
-
-  useEffect(() => {
-    if (mounted) {
-      updateResolvedTheme(theme)
-    }
-  }, [theme, mounted])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme])
 
 
   const toggleTheme = () => {
@@ -95,10 +130,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }
 
-
-  if (!mounted) {
-    return <div className="contents">{children}</div>
-  }
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme, resolvedTheme }}>

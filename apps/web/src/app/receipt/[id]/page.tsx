@@ -50,21 +50,16 @@ interface ExtendedTransactionDetails {
 export default function ReceiptDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { user, isAuthenticated, initialCheckDone } = useAuth()
+  const { isAuthenticated } = useAuth()
   const [receipt, setReceipt] = useState<Receipt | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!initialCheckDone) return
-
-    if (!isAuthenticated) {
-      router.push('/login')
-      return
+    if (isAuthenticated) {
+        fetchReceipt()
     }
-
-    fetchReceipt()
-  }, [isAuthenticated, initialCheckDone, params.id, router])
+  }, [isAuthenticated, params.id, router])
 
   const fetchReceipt = async () => {
     try {
@@ -105,17 +100,8 @@ export default function ReceiptDetailPage() {
     return `${address.slice(0, 6)}...${address.slice(-4)}`
   }
 
-  const formatHash = (hash: string) => {
-    return `${hash.slice(0, 10)}...${hash.slice(-8)}`
-  }
-
   const formatGas = (gas: string) => {
     return new Intl.NumberFormat().format(parseInt(gas))
-  }
-
-  const formatValue = (value: string, decimals: number = 18) => {
-    const num = BigInt(value) / BigInt(10 ** decimals)
-    return num.toString()
   }
 
   const copyToClipboard = async (text: string) => {

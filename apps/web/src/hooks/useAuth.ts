@@ -5,7 +5,8 @@ import {
   signOut, 
   initializeAuth, 
   refreshAuth,
-  clearError 
+  clearError, 
+  resetAuth
 } from '@/store/authSlice'
 
 // Typed hooks for Redux
@@ -24,8 +25,9 @@ export const useAuth = () => {
     const result = await dispatch(signInWithEthereum({ address, customSigner }))
     if (signInWithEthereum.fulfilled.match(result)) {
       return result.payload
+    } else {
+      throw new Error(result.error?.message || 'Authentication failed')
     }
-    throw new Error(result.error?.message || 'Authentication failed')
   }
 
   const handleSignOut = async () => {
@@ -45,16 +47,20 @@ export const useAuth = () => {
     dispatch(clearError())
   }
 
+  const handleResetAuth = () => {
+    dispatch(resetAuth())
+  }
+
   return {
     isAuthenticated: auth.isAuthenticated,
     user: auth.user,
     isLoading: auth.isLoading,
-    initialCheckDone: auth.initialCheckDone,
     error: auth.error,
     signInWithEthereum: handleSignInWithEthereum,
     signOut: handleSignOut,
     checkAuth: handleCheckAuth,
     refreshAuth: handleRefreshAuth,
     clearError: clearAuthError,
+    resetAuth: handleResetAuth,
   }
 }

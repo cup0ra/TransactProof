@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ReceiptCard } from '@/components/receipt-card'
 import { EmptyState } from '@/components/empty-state'
@@ -38,14 +37,12 @@ interface ReceiptsResponse {
 }
 
 export default function DashboardPage() {
-  const router = useRouter()
-  const { isAuthenticated, user, initialCheckDone } = useAuth()
+  const { isAuthenticated, user } = useAuth()
   const { isConnected } = useAccount()
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [totalReceipts, setTotalReceipts] = useState(0)
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
-  const [redirecting, setRedirecting] = useState(false)
   const [selectedChainId, setSelectedChainId] = useState<number | null>(null)
 
   useEffect(() => {
@@ -53,14 +50,12 @@ export default function DashboardPage() {
   }, [])
 
   const fetchReceipts = useCallback(async () => {
-    if (!isAuthenticated || redirecting || !isConnected) {
+    if (!isAuthenticated || !isConnected) {
       return
     }
 
     try {
       setLoading(true)
-      
-      // Build query parameters
       const params = new URLSearchParams()
       if (selectedChainId !== null) {
         params.append('chainId', selectedChainId.toString())
@@ -80,46 +75,16 @@ export default function DashboardPage() {
         error.message === 'Unauthorized' ||
         error.message.includes('401')
       )) {
-        // Force redirect on authentication error
-        if (!redirecting) {
-          setRedirecting(true)
-          router.push('/login')
-        }
         return
-      }
-      if (!redirecting) {
-        toast.error('Failed to load receipts')
-        console.error('Error fetching receipts:', error)
       }
     } finally {
       setLoading(false)
     }
-  }, [isAuthenticated, redirecting, isConnected, selectedChainId, router])
-
-  // Simplified redirect logic
-  useEffect(() => {    
-    if (!mounted || !initialCheckDone) {
-      return
-    }
-
-    // Check if user should be redirected to login
-    const shouldRedirect = !isAuthenticated || !isConnected
-    
-    if (shouldRedirect && !redirecting) {
-      setRedirecting(true)
-      router.push('/login')
-      return
-    }
-    
-    // Reset redirecting state if user is authenticated and connected
-    if (!shouldRedirect && redirecting) {
-      setRedirecting(false)
-    }
-  }, [mounted, initialCheckDone, isAuthenticated, isConnected, redirecting, router])
+  }, [isAuthenticated, isConnected, selectedChainId])
 
   // Separate effect for fetching receipts
   useEffect(() => {
-    if (!mounted || !initialCheckDone || redirecting || !isAuthenticated || !isConnected) {
+    if (!mounted || !isAuthenticated || !isConnected) {
       return
     }
 
@@ -147,9 +112,6 @@ export default function DashboardPage() {
           error.message === 'Unauthorized' ||
           error.message.includes('401')
         )) {
-          // Force redirect on authentication error
-          setRedirecting(true)
-          router.push('/login')
           return
         }
         toast.error('Failed to load receipts')
@@ -158,18 +120,13 @@ export default function DashboardPage() {
         setLoading(false)
       }
     }
-    
     doFetch()
-  }, [mounted, initialCheckDone, isAuthenticated, isConnected, redirecting, selectedChainId, router])
+  }, [mounted, isAuthenticated, isConnected, selectedChainId])
 
   // Handle network filter change
   const handleChainIdChange = useCallback((chainId: number | null) => {
     setSelectedChainId(chainId)
   }, [])
-
-
-
-
 
   const getNetworkName = (chainId: number) => {
     switch(chainId) {
@@ -216,51 +173,6 @@ export default function DashboardPage() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center transition-colors duration-300">
-        <div className="text-center">
-          <div className="w-6 h-6 border border-orange-400 border-t-transparent animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400 text-xs font-light">
-            Loading...
-          </p>
-        </div>
-      </div>
-    )
-  }
-  
-  if (!initialCheckDone) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center transition-colors duration-300">
-        <div className="text-center">
-          <div className="w-6 h-6 border border-orange-400 border-t-transparent animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400 text-xs font-light">
-            Checking authentication...
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  if (redirecting) {
-    console.log('Dashboard: Showing redirecting loader')
-    return (
-      <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center transition-colors duration-300">
-        <div className="text-center">
-          <div className="w-6 h-6 border border-orange-400 border-t-transparent animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400 text-xs font-light">
-            Redirecting to login...
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  // Force redirect if not authenticated or not connected after initial check
-  if (!isAuthenticated || !isConnected) {
-    return null // Component will unmount and redirect will happen in useEffect
-  }
-
   return (
     <section className="relative min-h-screen overflow-hidden">
       {/* Background */}
@@ -271,8 +183,8 @@ export default function DashboardPage() {
         opacityFadeRate={0.0008}
         className="z-0"
       />
-      
-      {/* Content */}
+      {isAuthenticated ? (
+        <>
       <div className="relative  z-10 py-12 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           {/* Header Section */}
@@ -327,7 +239,7 @@ export default function DashboardPage() {
                 <motion.button 
                   onClick={() => fetchReceipts()}
                   className="btn-secondary-minimal text-xs py-2 px-4"
-                  disabled={loading || redirecting || !isConnected || !isAuthenticated}
+                  disabled={loading || !isConnected || !isAuthenticated}
         
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
                 >
@@ -607,6 +519,8 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+        </>
+      ) : (<></>)}
     </section>
   )
 }

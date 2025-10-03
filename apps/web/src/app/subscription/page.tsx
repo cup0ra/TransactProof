@@ -411,7 +411,7 @@ export default function SubscriptionPage() {
   } as const
 
   return (
-     <section ref={ref} className="relative h-screen flex items-center justify-center overflow-hidden">
+     <section ref={ref} className="relative min-h-screen flex items-center justify-center overflow-hidden py-16 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8">
           <motion.div 
             className="absolute inset-0"
             style={{ y, opacity }}
@@ -422,7 +422,7 @@ export default function SubscriptionPage() {
           </motion.div>
       {/* Overlay to improve contrast */}
 
-      <div className="relative max-w-6xl mx-auto z-10">
+      <div className="relative max-w-6xl mx-auto z-10 ">
         <motion.div
           initial="hidden"
           whileInView="visible"
