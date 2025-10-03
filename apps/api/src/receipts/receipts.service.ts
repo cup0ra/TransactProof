@@ -73,8 +73,9 @@ export class ReceiptsService {
       }
     }
 
-    // Optional propagation delay so transaction/payment appears on chain
-    await this.delayForNetwork()
+    if (!usingFreeGeneration || !decrementFreeCounter) {
+      await this.delayForNetwork()
+    }
 
     // 1. Verify transaction exists in supported networks before processing payment
     this.logger.log(`Verifying transaction ${txHash} exists in supported networks...`)
@@ -345,7 +346,7 @@ export class ReceiptsService {
       where: { id: userId },
       data: {
         freeUntil: newUntil,
-        freeGenerationsRemaining: { set: 500 },
+        freeGenerationsRemaining: { increment: 500 },
       } as any,
     })
 

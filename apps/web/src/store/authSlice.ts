@@ -22,15 +22,13 @@ export interface AuthState {
   isAuthenticated: boolean
   user: User | null
   isLoading: boolean
-  initialCheckDone: boolean
   error: string | null
 }
 
 const initialState: AuthState = {
   isAuthenticated: false,
   user: null,
-  isLoading: false,
-  initialCheckDone: false,
+  isLoading: true,
   error: null,
 }
 
@@ -39,18 +37,33 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 // Async thunks
 export const initializeAuth = createAsyncThunk(
   'auth/initialize',
-  async () => {
-    const response = await fetch(`${apiUrl}/api/auth/me`, {
-      credentials: 'include',
-    })
-    
-    if (response.ok) {
-      const userData = await response.json()
-      return userData
-    } else if (response.status === 401) {
-      throw new Error('Unauthorized')
-    } else {
-      throw new Error('Failed to initialize auth')
+  async (_, { dispatch, rejectWithValue }) => {
+    const attemptMe = async () => {
+      const res = await fetch(`${apiUrl}/api/auth/me`, { credentials: 'include' })
+      return res
+    }
+
+    try {
+      let response = await attemptMe()
+
+      if (response.ok) {
+        return await response.json()
+      }
+
+      if (response.status === 401) {
+        const refreshResult = await dispatch(refreshAuth())
+        if (refreshAuth.fulfilled.match(refreshResult)) {
+          response = await attemptMe()
+          if (response.ok) {
+            return await response.json()
+          }
+        }
+        return rejectWithValue('Unauthorized')
+      }
+
+      return rejectWithValue('Failed to initialize auth')
+    } catch (e) {
+      return rejectWithValue('Failed to initialize auth')
     }
   }
 )
@@ -159,10 +172,14 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null
     },
+    resetAuth: () => initialState,
   },
   extraReducers: (builder) => {
     builder
       // Initialize Auth
+      .addCase(initializeAuth.pending, (state) => {
+        state.isLoading = true
+      })
       .addCase(initializeAuth.fulfilled, (state, action) => {
         state.user = {
           walletAddress: action.payload.walletAddress,
@@ -170,13 +187,13 @@ const authSlice = createSlice({
           freeUntil: action.payload.freeUntil,
         }
         state.isAuthenticated = true
-        state.initialCheckDone = true
+        state.isLoading = false
         state.error = null
       })
       .addCase(initializeAuth.rejected, (state) => {
         state.isAuthenticated = false
         state.user = null
-        state.initialCheckDone = true
+        state.isLoading = false
         state.error = null // Don't show error for initial auth check
       })
       
@@ -192,7 +209,6 @@ const authSlice = createSlice({
           freeUntil: action.payload.freeUntil,
         }
         state.isAuthenticated = true
-        state.initialCheckDone = true
         state.isLoading = false
         state.error = null
         toast.success('Successfully signed in!')
@@ -204,6 +220,9 @@ const authSlice = createSlice({
       })
       
       // Refresh Auth
+      .addCase(refreshAuth.pending, (state) => {
+        state.isLoading = true
+      })
       .addCase(refreshAuth.fulfilled, (state, action) => {
         state.user = {
           walletAddress: action.payload.walletAddress,
@@ -211,11 +230,13 @@ const authSlice = createSlice({
           freeUntil: action.payload.freeUntil,
         }
         state.isAuthenticated = true
+        state.isLoading = false
         state.error = null
       })
       .addCase(refreshAuth.rejected, (state) => {
         state.isAuthenticated = false
         state.user = null
+        state.isLoading = false
         state.error = null
       })
       
@@ -229,5 +250,5 @@ const authSlice = createSlice({
   },
 })
 
-export const { clearError } = authSlice.actions
+export const { clearError, resetAuth } = authSlice.actions
 export default authSlice.reducer

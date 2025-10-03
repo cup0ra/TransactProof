@@ -4,13 +4,19 @@ import { Toaster } from 'react-hot-toast'
 import { ThemeProvider } from '@/contexts/theme-context'
 import { ReduxProvider } from '@/store/ReduxProvider'
 import { WalletAuthProvider } from '@/contexts/wallet-auth-context'
+import GuardProvider, { getProperAuthGuardType } from '@/contexts/guard'
+import { usePathname } from 'next/navigation'
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const pathName = usePathname();
+  const authGuard = getProperAuthGuardType(pathName);
   return (
     <ReduxProvider>
       <ThemeProvider>
         <WalletAuthProvider>
-          {children}
+          <GuardProvider authGuard={authGuard}>
+            {children}
+          </GuardProvider>
         </WalletAuthProvider>
         <Toaster 
           position="top-right"
@@ -61,6 +67,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             },
           }}
         />
+         
       </ThemeProvider>
     </ReduxProvider>
   )

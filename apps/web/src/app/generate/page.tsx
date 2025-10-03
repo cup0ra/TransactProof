@@ -11,7 +11,7 @@ import { ParallaxBackground } from '@/components/parallax-background'
 
 export default function GeneratePage() {
   const router = useRouter()
-  const { isAuthenticated, initialCheckDone } = useAuth()
+  const { isAuthenticated } = useAuth()
   const { isConnected } = useAccount()
   const [mounted, setMounted] = useState(false)
 
@@ -20,14 +20,14 @@ export default function GeneratePage() {
   }, [])
 
   useEffect(() => {
-    if (!mounted || !initialCheckDone) {
+    if (!mounted) {
       return
     }
 
     if (!isAuthenticated || !isConnected) {
       return
     }
-  }, [mounted, isAuthenticated, isConnected, initialCheckDone, router])
+  }, [mounted, isAuthenticated, isConnected, router])
 
   if (!mounted) {
     return (

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Image from 'next/image'
+import { useTheme } from '@/contexts/theme-context'
 
 interface ParallaxBackgroundProps {
   /** Enable parallax scroll effect */
@@ -38,37 +39,19 @@ export function ParallaxBackground({
   const [scrollY, setScrollY] = useState(0)
   const [isDark, setIsDark] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [image, setImage] = useState('')
   const backgroundRef = useRef<HTMLDivElement>(null)
+  const themeContext = useTheme()
 
   useEffect(() => {
-    // Check initial theme
-    const checkTheme = () => {
-      setIsDark(document.documentElement.classList.contains('dark'))
-    }
-    
-    // Check initial screen size
+    setIsDark(themeContext.resolvedTheme === 'dark')
+    setImage(getBackgroundImage(themeContext.resolvedTheme === 'dark', isMobile))
+  }, [themeContext, isMobile])
+
+  useEffect(() => {
     const checkScreenSize = () => {
       setIsMobile(window.innerWidth < 768)
     }
-    
-    checkTheme()
-    checkScreenSize()
-
-    // Listen for theme changes
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-          checkTheme()
-        }
-      })
-    })
-    
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class']
-    })
-
-    // Listen for screen size changes
     const handleResize = () => {
       checkScreenSize()
     }
@@ -76,7 +59,6 @@ export function ParallaxBackground({
     window.addEventListener('resize', handleResize)
 
     return () => {
-      observer.disconnect()
       window.removeEventListener('resize', handleResize)
     }
   }, [])
@@ -98,7 +80,7 @@ export function ParallaxBackground({
   } : {}
 
   // Choose the right image based on theme and screen size
-  const getBackgroundImage = () => {
+  const getBackgroundImage = (isDark: boolean, isMobile: boolean) => {
     if (isMobile) {
       return isDark ? mobileDarkThemeImage : mobileLightThemeImage
     } else {
@@ -107,29 +89,33 @@ export function ParallaxBackground({
   }
 
   return (
-    <div 
-      ref={backgroundRef}
-      className={`absolute inset-0 ${className}`}
-      style={parallaxStyle}
-    >
-      {/* Single dynamic background image */}
-      <Image
-        src={getBackgroundImage()}
-        alt="Digital receipts background"
-        fill
-        className="object-cover"
-        priority
-        quality={90}
-      />
-      
-      {/* Top overlay with 0.2 opacity - white for light theme, black for dark theme */}
-      <div className="absolute inset-0 bg-white dark:bg-black opacity-20 z-1"></div>
-      
-      {/* Dark overlay for better text readability */}
-      <div className="absolute inset-0 bg-black/20 dark:bg-black/40 transition-colors duration-300 z-2"></div>
-      
-      {/* Gradient overlay for smooth text integration */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/15 z-3"></div>
-    </div>
+    <>
+      {image && (
+        <div 
+          ref={backgroundRef}
+          className={`absolute inset-0 ${className}`}
+          style={parallaxStyle}
+        >
+          {/* Single dynamic background image */}
+          <Image
+            src={image}
+            alt="Digital receipts background"
+            fill
+            className="object-cover"
+            priority
+            quality={90}
+          />
+          
+          {/* Top overlay with 0.2 opacity - white for light theme, black for dark theme */}
+          <div className="absolute inset-0 bg-white dark:bg-black opacity-20 z-1"></div>
+          
+          {/* Dark overlay for better text readability */}
+          <div className="absolute inset-0 bg-black/20 dark:bg-black/40 transition-colors duration-300 z-2"></div>
+          
+          {/* Gradient overlay for smooth text integration */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/15 z-3"></div>
+        </div>
+      )}
+    </>
   )
 }
