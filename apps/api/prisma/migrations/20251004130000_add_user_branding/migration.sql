@@ -1,7 +1,7 @@
 -- CreateTable
 CREATE TABLE "user_branding" (
-  "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "user_id" UUID NOT NULL UNIQUE REFERENCES "users"("id") ON DELETE CASCADE,
+  "id" TEXT PRIMARY KEY,
+  "user_id" TEXT NOT NULL UNIQUE REFERENCES "users"("id") ON DELETE CASCADE,
   "company_name" VARCHAR(80),
   "website" VARCHAR(120),
   "logo_data_url" TEXT,
