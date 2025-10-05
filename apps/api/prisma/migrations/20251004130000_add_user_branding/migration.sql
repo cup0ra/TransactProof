@@ -1,7 +1,7 @@
 -- CreateTable
 CREATE TABLE "user_branding" (
   "id" TEXT PRIMARY KEY,
-  "user_id" TEXT NOT NULL UNIQUE REFERENCES "users"("id") ON DELETE CASCADE,
+  "user_id" TEXT NOT NULL,
   "company_name" VARCHAR(80),
   "website" VARCHAR(120),
   "logo_data_url" TEXT,
