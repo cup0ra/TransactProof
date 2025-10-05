@@ -22,6 +22,7 @@ model User {
   // Relations
   receipts      Receipt[]
   sessions      Session[]
+  branding      UserBranding?
 
   @@map("users")
 }
