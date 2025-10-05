@@ -1,7 +1,17 @@
--- Original migration (kept for history) – creates user_branding with UUID foreign key (fails in prod due to users.id TEXT)
+-- Clean migration: add user_branding table (FK user_id TEXT -> users.id TEXT)
+-- Assumes baseline users.id TEXT (no UUID conversion).
+-- Idempotent guards included.
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='user_branding') THEN
+    RETURN; -- already present
+  END IF;
+END$$;
+
 CREATE TABLE "user_branding" (
   "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "user_id" UUID NOT NULL UNIQUE REFERENCES "users"("id") ON DELETE CASCADE,
+  "user_id" TEXT NOT NULL UNIQUE REFERENCES "users"("id") ON DELETE CASCADE,
   "company_name" VARCHAR(80),
   "website" VARCHAR(120),
   "logo_data_url" TEXT,
@@ -9,7 +19,6 @@ CREATE TABLE "user_branding" (
   "updated_at" TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- Trigger to auto update updated_at (Postgres specific)
 CREATE OR REPLACE FUNCTION set_timestamp()
 RETURNS TRIGGER AS $$
 BEGIN
