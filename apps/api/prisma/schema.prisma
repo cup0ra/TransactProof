@@ -76,7 +76,7 @@ model Receipt {
 // Stores persistent branding preferences for a user (used as fallback when request omits branding)
 model UserBranding {
   id          String   @id @default(uuid())
-  userId      String?   @map("user_id")
+  userId      String   @unique @map("user_id")
   companyName String?  @map("company_name") @db.VarChar(80)
   website     String?  @db.VarChar(120)
   // Stored as data URL (base64). Consider moving to file storage later if size becomes large.
