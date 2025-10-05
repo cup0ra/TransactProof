@@ -5,12 +5,18 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import * as cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import { AppModule } from './app.module'
+import * as bodyParser from 'body-parser'
 import './auth/types/user.type'
 import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
   const configService = app.get(ConfigService)
+
+  // Body size limits (branding includes base64 image ~ <= 700KB after base64). Default Express limit (100kb) caused 413.
+  const bodyLimit = configService.get('BODY_LIMIT') || '1mb'
+  app.use(bodyParser.json({ limit: bodyLimit }))
+  app.use(bodyParser.urlencoded({ limit: bodyLimit, extended: true }))
 
   // Security
   app.use(helmet())

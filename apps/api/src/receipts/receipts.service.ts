@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../database/prisma.service'
 import { BlockchainService } from './blockchain.service'
 import { PdfService } from './pdf.service'
+import { BrandingService } from './services/branding.service'
 import { PayAndGenerateDto } from './dto/pay-and-generate.dto'
 import { PaymentRequiredException } from '../common/exceptions/payment-required.exception'
 import { PurchasePackDto } from './dto/purchase-pack.dto'
@@ -23,6 +24,7 @@ export class ReceiptsService {
     private readonly blockchainService: BlockchainService,
     private readonly pdfService: PdfService,
     private readonly configService: ConfigService,
+    private readonly brandingService: BrandingService,
   ) {}
 
   /**
@@ -50,7 +52,7 @@ export class ReceiptsService {
     userAddress?: string,
     userId?: string,
   ) {
-    const { txHash, description, paymentTxHash, paymentAmount, paymentType, paymentContractAddress } = payAndGenerateDto
+  const { txHash, description, paymentTxHash, paymentAmount, paymentType, paymentContractAddress, companyName, website, logoDataUrl } = payAndGenerateDto
 
     // If user is authenticated, fetch free generation status
   let usingFreeGeneration = false
@@ -202,7 +204,29 @@ export class ReceiptsService {
       nativeTokenSymbol: txDetails.nativeTokenSymbol,
     }
     
-    const pdfBuffer = await this.pdfService.generateReceiptPdf(pdfData)
+    const branding = (companyName || website || logoDataUrl) ? {
+      companyName: companyName?.trim() || undefined,
+      website: website?.trim() || undefined,
+      logoDataUrl: logoDataUrl, // Already validated in DTO
+    } : undefined
+
+    let effectiveBranding = branding
+    if (!effectiveBranding && userId) {
+      try {
+        const stored = await this.brandingService.getUserBranding(userId)
+        if (stored) {
+          effectiveBranding = {
+            companyName: stored.companyName || undefined,
+            website: stored.website || undefined,
+            logoDataUrl: stored.logoDataUrl || undefined,
+          }
+        }
+      } catch (e) {
+        this.logger.warn('Failed to load stored branding', { userId, error: (e as Error).message })
+      }
+    }
+
+    const pdfBuffer = await this.pdfService.generateReceiptPdf(pdfData, effectiveBranding)
 
     // 5. Upload PDF to storage
     const pdfUrl = await this.pdfService.uploadPdf(pdfBuffer, txHash)

@@ -236,6 +236,13 @@ export default function DashboardPage() {
                     Generate New Receipt
                   </Link>
                 </motion.div>
+                <motion.div
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                >
+                  <Link href="/dashboard/customize-pdf" className="btn-secondary-minimal text-xs py-2 px-4 text-center block">
+                    Customize PDF
+                  </Link>
+                </motion.div>
                 <motion.button 
                   onClick={() => fetchReceipts()}
                   className="btn-secondary-minimal text-xs py-2 px-4"

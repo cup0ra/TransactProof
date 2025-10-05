@@ -50,7 +50,7 @@ async verify(
     host.endsWith(topLevelDomain) &&
     origin.includes(topLevelDomain);
 
-  const sameSite: 'lax' | 'none' = isSameSite ? 'lax' : 'none';
+  const sameSite: 'lax' | 'none' = 'lax';
 
   try {
     const result = await this.authService.verifySiweMessage(verifyDto);
@@ -108,7 +108,7 @@ async refresh(
     host.endsWith(topLevelDomain) &&
     origin.includes(topLevelDomain);
 
-  const sameSite: 'lax' | 'none' = isSameSite ? 'lax' : 'none';
+  const sameSite: 'lax' | 'none' = 'lax' : 'none';
 
   const clearOpts = { path: '/', httpOnly: true, secure: isProd, sameSite } as const;
 

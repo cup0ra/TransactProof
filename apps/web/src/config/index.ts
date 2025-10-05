@@ -1,6 +1,7 @@
 import { cookieStorage, createStorage } from '@wagmi/core'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { mainnet, arbitrum, base, baseSepolia, polygon, optimism, zkSync, bsc, avalanche } from '@reown/appkit/networks'
+import { formatDiscount } from '@/utils/format-numbers'
 
 // Get projectId from https://dashboard.reown.com
 export const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'demo-project-id'
@@ -8,6 +9,10 @@ export const isDev = process.env.NODE_ENV === 'development'
 export const PAYMENT_AMOUNT = process.env.NEXT_PUBLIC_PAYMENT_AMOUNT ? parseFloat(process.env.NEXT_PUBLIC_PAYMENT_AMOUNT) : 0.1
 export const PAYMENT_AMOUNT_PACK = process.env.NEXT_PUBLIC_PAYMENT_PACK_AMOUNT ? parseFloat(process.env.NEXT_PUBLIC_PAYMENT_PACK_AMOUNT) : 9.99
 export const PAYMENT_AMOUNT_SUBSCRIPTION = process.env.NEXT_PUBLIC_PAYMENT_SUBSCRIPTION_AMOUNT ? parseFloat(process.env.NEXT_PUBLIC_PAYMENT_SUBSCRIPTION_AMOUNT) : 29.99
+export const PAYMENT_AMOUNT_DISCOUNT = process.env.NEXT_PUBLIC_PAYMENT_DISCOUNT_AMOUNT ? parseFloat(process.env.NEXT_PUBLIC_PAYMENT_DISCOUNT_AMOUNT) : 0
+export const PAYMENT_AMOUNT_WITHDISCOUNT = PAYMENT_AMOUNT_DISCOUNT ? formatDiscount(PAYMENT_AMOUNT, PAYMENT_AMOUNT_DISCOUNT) : PAYMENT_AMOUNT
+export const PAYMENT_PACK_AMOUNT_WITHDISCOUNT = PAYMENT_AMOUNT_DISCOUNT ? formatDiscount(PAYMENT_AMOUNT_PACK, PAYMENT_AMOUNT_DISCOUNT) : PAYMENT_AMOUNT_PACK
+export const PAYMENT_SUBSCRIPTION_AMOUNT_WITHDISCOUNT = PAYMENT_AMOUNT_DISCOUNT ? formatDiscount(PAYMENT_AMOUNT_SUBSCRIPTION, PAYMENT_AMOUNT_DISCOUNT) : PAYMENT_AMOUNT_SUBSCRIPTION
 
 const devNentwork = [
   mainnet,
@@ -48,7 +53,7 @@ export const APP_CONFIG = {
     }] : []),
     {
       type: 'USDT',
-      amount: PAYMENT_AMOUNT,
+      amount: PAYMENT_AMOUNT_WITHDISCOUNT || PAYMENT_AMOUNT,
       symbol: 'USDT',
       name: 'Tether USD',
       contractAddresses: {
@@ -77,7 +82,7 @@ export const APP_CONFIG = {
     },
     {
       type: 'USDC',
-      amount: PAYMENT_AMOUNT,
+      amount: PAYMENT_AMOUNT_WITHDISCOUNT || PAYMENT_AMOUNT,
       symbol: 'USDC',
       name: 'USD Coin',
       contractAddresses: {

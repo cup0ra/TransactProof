@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useCallback } from 'react'
 import { Button } from '@transactproof/ui'
-import { PAYMENT_AMOUNT, getTokenContractAddress, getAvailablePaymentOptions, PAYMENT_AMOUNT_PACK, PAYMENT_AMOUNT_SUBSCRIPTION } from '@/config'
+import { PAYMENT_AMOUNT, getTokenContractAddress, getAvailablePaymentOptions, PAYMENT_AMOUNT_PACK, PAYMENT_AMOUNT_SUBSCRIPTION, PAYMENT_AMOUNT_DISCOUNT, PAYMENT_PACK_AMOUNT_WITHDISCOUNT, PAYMENT_SUBSCRIPTION_AMOUNT_WITHDISCOUNT } from '@/config'
 import { useRouter } from 'next/navigation'
 import { ParallaxBackground } from '@/components/parallax-background'
 import { motion, useScroll, useTransform } from 'framer-motion'
@@ -13,6 +13,8 @@ import { useMultiTokenBalance } from '@/hooks/use-multi-token-balance'
 import { toast } from 'react-hot-toast'
 import { ApiClient } from '@/lib/api-client'
 import { useAuth } from '@/hooks/use-auth'
+import { formatDiscount } from '@/utils/format-numbers'
+
 
 // Subscription actions with callback when pack purchase is initiated
 function useSubscriptionActions(onShowPackTokens: () => void, onShowSubTokens: () => void) {
@@ -37,20 +39,24 @@ function useSubscriptionActions(onShowPackTokens: () => void, onShowSubTokens: (
 interface PlanCardProps {
   title: string
   price: string
+  discountedPrice: string
   description: string
   features: string[]
   cta: string
   onSelect: () => void
   highlight?: boolean
 }
-const PlanCard: React.FC<PlanCardProps & { footerContent?: React.ReactNode; subtitleOverride?: React.ReactNode; hideAction?: boolean }> = ({ title, price, description, features, cta, onSelect, highlight, footerContent, subtitleOverride, hideAction }) => (
+const PlanCard: React.FC<PlanCardProps & { footerContent?: React.ReactNode; subtitleOverride?: React.ReactNode; hideAction?: boolean }> = ({ title, price, description, features, cta, onSelect, highlight, footerContent, discountedPrice, subtitleOverride, hideAction }) => (
   <div className={`relative flex flex-col h-full border  p-6 backdrop-blur-sm transition-all duration-300 ${highlight ? 'border-orange-400/80 bg-white/70 dark:bg-black/60 shadow-[0_0_0_1px_rgba(249,115,22,0.4),0_8px_30px_-10px_rgba(249,115,22,0.25)]' : 'border-gray-300/40 dark:border-gray-800/60 bg-white/30 dark:bg-black/40'} hover:border-orange-400/80`}> 
     {highlight && (
   <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-orange-400 text-white dark:text-black text-xs tracking-wide font-medium px-3 py-1  shadow">POPULAR</span>
     )}
     <div className="mb-4">
       <h3 className="text-xl font-light tracking-wide text-black dark:text-white mb-2">{title}</h3>
-  <p className="text-3xl font-thin text-black dark:text-white mb-2"><span className="font-medium">{price}</span></p>
+  <p className="text-3xl flex font-thin text-black dark:text-white mb-2 items-baseline gap-2">
+    <span className={`font-medium ${PAYMENT_AMOUNT_DISCOUNT ? 'line-through text-gray-500' : ''}`}>{price}</span>
+    {PAYMENT_AMOUNT_DISCOUNT ? <span className="font-medium text-orange-400">{discountedPrice}</span> : ''}
+    </p>
   {subtitleOverride}
       <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed min-h-[40px]">{description}</p>
     </div>
@@ -121,7 +127,7 @@ export default function SubscriptionPage() {
   const insufficientPackBalance = React.useMemo(() => {
     const raw = hasInsufficientMulti ?? hasInsufficientDirectTokenBalance
     if (typeof raw === 'function') {
-      try { return raw(PAYMENT_AMOUNT_PACK) } catch { return true }
+      try { return raw(PAYMENT_PACK_AMOUNT_WITHDISCOUNT) } catch { return true }
     }
     return !!raw
   }, [hasInsufficientMulti, hasInsufficientDirectTokenBalance])
@@ -129,35 +135,40 @@ export default function SubscriptionPage() {
   const purchasePack = useCallback(async () => {
     const symbol = selectedPackToken?.type as 'USDT' | 'USDC'
     if (!isConnected || !address) {
+      toast.dismiss('pack')
       toast.error('Connect wallet')
       return
     }
     if (!isAuthenticated) {
+      toast.dismiss('pack')
       toast.error('Authenticate first')
       return
     }
     if (!symbol) {
+      toast.dismiss('pack')
       toast.error('Select token')
       return
     }
   const contract = detectedPackAddress || getTokenContractAddress(symbol, chainId)
     if (!contract) {
+      toast.dismiss('pack')
       toast.error(`${symbol} not supported on this network`)
       return
     }
     try {
       setIsProcessingPack(true)
       const toastId = 'pack'
-  toast.loading(`Paying ${PAYMENT_AMOUNT_PACK} ${symbol}...`, { id: toastId, duration: Infinity })
-  const txHash = await payToken(contract, PAYMENT_AMOUNT_PACK, symbol, 6)
+  toast.loading(`Paying ${PAYMENT_PACK_AMOUNT_WITHDISCOUNT} ${symbol}...`, { id: toastId, duration: 60000 })
+      const txHash = await payToken(contract, PAYMENT_PACK_AMOUNT_WITHDISCOUNT, symbol, 6)
       if (!txHash) {
-        toast.error('Transaction rejected', { id: toastId })
+        toast.dismiss(toastId)
+        toast.error('Transaction rejected')
         return
       }
-  toast.loading('Verifying payment...', { id: toastId, duration: Infinity })
+      toast.loading('Verifying payment...', { id: toastId, duration: 30000 })
       const resp = await ApiClient.post('/api/receipts/purchase-pack', {
         paymentTxHash: txHash,
-        paymentAmount: PAYMENT_AMOUNT_PACK,
+        paymentAmount: PAYMENT_PACK_AMOUNT_WITHDISCOUNT,
         paymentType: symbol,
         paymentContractAddress: contract,
       })
@@ -188,28 +199,28 @@ export default function SubscriptionPage() {
   const insufficientSubBalance = React.useMemo(() => {
     const raw = hasInsufficientSubMulti ?? hasInsufficientSubDirect
     if (typeof raw === 'function') {
-      try { return raw(PAYMENT_AMOUNT_SUBSCRIPTION) } catch { return true }
+      try { return raw(PAYMENT_SUBSCRIPTION_AMOUNT_WITHDISCOUNT) } catch { return true }
     }
     return !!raw
   }, [hasInsufficientSubMulti, hasInsufficientSubDirect])
 
   const purchaseSubscription = useCallback(async () => {
     const symbol = selectedSubToken?.type as 'USDT' | 'USDC'
-    if (!isConnected || !address) { toast.error('Connect wallet'); return }
-    if (!isAuthenticated) { toast.error('Authenticate first'); return }
-    if (!symbol) { toast.error('Select token'); return }
+  if (!isConnected || !address) { toast.dismiss('sub'); toast.error('Connect wallet'); return }
+  if (!isAuthenticated) { toast.dismiss('sub'); toast.error('Authenticate first'); return }
+  if (!symbol) { toast.dismiss('sub'); toast.error('Select token'); return }
     const contract = detectedSubAddress || getTokenContractAddress(symbol, chainId)
-    if (!contract) { toast.error(`${symbol} not supported`); return }
+  if (!contract) { toast.dismiss('sub'); toast.error(`${symbol} not supported`); return }
     try {
       setIsProcessingSub(true)
       const toastId = 'sub'
-  toast.loading(`Paying ${PAYMENT_AMOUNT_SUBSCRIPTION} ${symbol}...`, { id: toastId, duration: Infinity })
-      const txHash = await payToken(contract, PAYMENT_AMOUNT_SUBSCRIPTION, symbol, 6)
-      if (!txHash) { toast.error('Transaction rejected', { id: toastId }); return }
-  toast.loading('Verifying subscription...', { id: toastId, duration: Infinity })
+  toast.loading(`Paying ${PAYMENT_SUBSCRIPTION_AMOUNT_WITHDISCOUNT} ${symbol}...`, { id: toastId, duration: 60000 })
+      const txHash = await payToken(contract, PAYMENT_SUBSCRIPTION_AMOUNT_WITHDISCOUNT, symbol, 6)
+  if (!txHash) { toast.dismiss(toastId); toast.error('Transaction rejected'); return }
+  toast.loading('Verifying subscription...', { id: toastId, duration: 30000 })
       const resp = await ApiClient.post('/api/receipts/purchase-subscription', {
         paymentTxHash: txHash,
-        paymentAmount: PAYMENT_AMOUNT_SUBSCRIPTION,
+        paymentAmount: PAYMENT_SUBSCRIPTION_AMOUNT_WITHDISCOUNT,
         paymentType: symbol,
         paymentContractAddress: contract,
       })
@@ -254,6 +265,7 @@ export default function SubscriptionPage() {
     {
   title: 'Single Generation',
   price: `$${PAYMENT_AMOUNT}`,
+  discountedPrice: `$${formatDiscount(PAYMENT_AMOUNT, PAYMENT_AMOUNT_DISCOUNT)}`,
   description: 'Pay for a single generation and immediately proceed to create a PDF receipt.',
       features: [
         'Instant access',
@@ -267,6 +279,7 @@ export default function SubscriptionPage() {
     {
       title: '20 Generations Pack',
       price: `$${PAYMENT_AMOUNT_PACK}`,
+      discountedPrice: `$${PAYMENT_PACK_AMOUNT_WITHDISCOUNT}`,
       description: 'Save with a bundle — 20 generations for a fixed price.',
       features: [
         '20 prepaid generations',
@@ -316,7 +329,7 @@ export default function SubscriptionPage() {
                 }`}
               >{insufficientPackBalance
                   ? `Insufficient ${selectedPackToken?.symbol}`
-                  : `Pay ${PAYMENT_AMOUNT_PACK} ${selectedPackToken?.symbol || ''}`}
+                  : `Pay ${PAYMENT_PACK_AMOUNT_WITHDISCOUNT} ${selectedPackToken?.symbol || ''}`}
               </button>
             </div>
             <div className="text-[10px] text-gray-500 text-center">Payment adds 20 free generations</div>
@@ -327,6 +340,7 @@ export default function SubscriptionPage() {
     {
       title: 'Monthly Subscription',
       price: `$${PAYMENT_AMOUNT_SUBSCRIPTION}`,
+      discountedPrice: `$${PAYMENT_SUBSCRIPTION_AMOUNT_WITHDISCOUNT}`,
       description: 'High-volume usage for 30 days (fair use policy applies).',
       features: [
         'Up to 500 generations / month',
@@ -380,7 +394,7 @@ export default function SubscriptionPage() {
                 }`}
               >{insufficientSubBalance
                   ? `Insufficient ${selectedSubToken?.symbol}`
-                  : `Pay ${PAYMENT_AMOUNT_SUBSCRIPTION} ${selectedSubToken?.symbol || ''}`}
+                  : `Pay ${PAYMENT_SUBSCRIPTION_AMOUNT_WITHDISCOUNT} ${selectedSubToken?.symbol || ''}`}
               </button>
             </div>
             <div className="text-[10px] text-gray-500 text-center">30 days access • counter set to 500</div>

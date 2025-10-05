@@ -14,6 +14,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { ThrottlerGuard } from '@nestjs/throttler'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { ReceiptsService } from './receipts.service'
+import { BrandingService } from './services/branding.service'
 import { PayAndGenerateDto } from './dto/pay-and-generate.dto'
 import { ReceiptResponseDto } from './dto/receipt-response.dto'
 import { PurchasePackDto } from './dto/purchase-pack.dto'
@@ -24,7 +25,10 @@ import { resolveUploadsDir, buildUploadFilePath } from '../common/utils/uploads-
 @ApiTags('receipts')
 @Controller('receipts')
 export class ReceiptsController {
-  constructor(private readonly receiptsService: ReceiptsService) {}
+  constructor(
+    private readonly receiptsService: ReceiptsService,
+    private readonly brandingService: BrandingService,
+  ) {}
 
   @Post('pay-and-generate')
   @UseGuards(ThrottlerGuard, JwtAuthGuard)
@@ -205,5 +209,42 @@ export class ReceiptsController {
       console.error('[serveFile] Internal error', { filename, error: (error as Error).message })
       return res.status(500).json({ message: 'Internal server error' })
     }
+  }
+
+  // Branding: get current user's stored branding
+  @Get('my/branding')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get stored branding preferences for current user' })
+  async getBranding(@Req() req: Request) {
+    const userId = req.user?.id
+    if (!userId) return { branding: null }
+    const branding = await this.brandingService.getUserBranding(userId)
+    return { branding }
+  }
+
+  // Branding: upsert current user's branding
+  @Post('my/branding')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Save (upsert) branding preferences for current user' })
+  async upsertBranding(
+    @Req() req: Request,
+    @Body() body: { companyName?: string; website?: string; logoDataUrl?: string },
+  ) {
+    const userId = req.user?.id
+    if (!userId) return { ok: false, message: 'Unauthorized' }
+    // Basic server-side size/type guard (mirrors DTO logic but simpler since endpoint is dedicated)
+    if (body.logoDataUrl) {
+      const ok = /^data:image\/(png|jpe?g|svg\+xml);base64,[A-Za-z0-9+/=]+$/.test(body.logoDataUrl)
+      if (!ok) return { ok: false, message: 'Invalid logoDataUrl format' }
+      const b64 = body.logoDataUrl.split(',')[1]
+      if (b64) {
+        const bytes = (b64.length * 3) / 4 - (b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0)
+        if (bytes > 500 * 1024) return { ok: false, message: 'Logo exceeds 500KB limit' }
+      }
+    }
+    const branding = await this.brandingService.upsertUserBranding(userId, body)
+    return { ok: true, branding }
   }
 }
