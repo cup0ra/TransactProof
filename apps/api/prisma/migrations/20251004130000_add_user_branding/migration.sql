@@ -1,7 +1,7 @@
--- CreateTable
+-- Original migration (kept for history) – creates user_branding with UUID foreign key (fails in prod due to users.id TEXT)
 CREATE TABLE "user_branding" (
-  "id" TEXT PRIMARY KEY,
-  "user_id" TEXT NOT NULL UNIQUE REFERENCES "users"("id") ON DELETE CASCADE,
+  "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "user_id" UUID NOT NULL UNIQUE REFERENCES "users"("id") ON DELETE CASCADE,
   "company_name" VARCHAR(80),
   "website" VARCHAR(120),
   "logo_data_url" TEXT,
