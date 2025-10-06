@@ -5,6 +5,7 @@ import { SiweMessage } from 'siwe'
 import { PrismaService } from '../database/prisma.service'
 import { VerifyDto } from './dto/verify.dto'
 import { randomBytes } from 'crypto'
+import { logoBase64 } from '@/common/utils/uploads-path.util'
 
 @Injectable()
 export class AuthService {
@@ -76,6 +77,29 @@ export class AuthService {
         update: {},
         create: { walletAddress: siweMessage.address },
       })
+
+      // Ensure default branding exists for newly created user.
+      // We only want to create branding if it does not exist yet.
+      // Using findUnique + create instead of upsert on relation to avoid race condition overhead here (rare path).
+  const existingBranding = await (this.prisma as any).userBranding?.findUnique({
+        where: { userId: user.id },
+      }).catch(() => null)
+
+      if (!existingBranding) {
+        try {
+          await (this.prisma as any).userBranding?.create({
+            data: {
+              userId: user.id,
+              companyName: 'TRANSACTPROOF', // Можно задать дефолт, например 'My Company'
+              website: null,
+              logoDataUrl: logoBase64,
+            },
+          })
+        } catch (e) {
+          // Ignore unique constraint race (in case of concurrent requests) but log other errors
+          this.logger.debug(`User branding creation skipped or failed: ${e.message}`)
+        }
+      }
 
       // Create session with refresh token
       const jwtId = randomBytes(16).toString('hex')

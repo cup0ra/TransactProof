@@ -50,7 +50,7 @@ async verify(
     host.endsWith(topLevelDomain) &&
     origin.includes(topLevelDomain);
 
-  const sameSite: 'lax' | 'none' = isSameSite ? 'lax' : 'none';
+    const sameSite: 'lax' | 'none' = isSameSite ? 'lax' : 'none';
 
   try {
     const result = await this.authService.verifySiweMessage(verifyDto);

@@ -25,6 +25,9 @@
     "clean": "turbo run clean",
     "db:migrate": "cd apps/api && npm run db:migrate",
     "db:seed": "cd apps/api && npm run db:seed",
+  "db:sqlite:push": "cd apps/api && npm run db:sqlite:push",
+  "db:sqlite:studio": "cd apps/api && npm run db:sqlite:studio",
+  "dev:api:sqlite": "cd apps/api && npm run start:dev:sqlite",
     "docker:up": "docker-compose -f infra/docker-compose.yml up -d",
     "docker:down": "docker-compose -f infra/docker-compose.yml down"
   },
