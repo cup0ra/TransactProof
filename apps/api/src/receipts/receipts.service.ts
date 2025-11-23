@@ -8,7 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../database/prisma.service'
 import { BlockchainService } from './blockchain.service'
-import { PdfService } from './pdf.service'
+import { PdfService, BrandingOptions } from './pdf.service'
 import { BrandingService } from './services/branding.service'
 import { PayAndGenerateDto } from './dto/pay-and-generate.dto'
 import { PaymentRequiredException } from '../common/exceptions/payment-required.exception'
@@ -166,51 +166,60 @@ export class ReceiptsService {
       this.logger.log(`Using date-based free generation for user ${userId}. Counter not decremented.`)
     }
 
-    // 3. Get real transaction details from blockchain
-    const txDetails = await this.blockchainService.getTransactionDetails(txHash)
-    
-    if (!txDetails) {
-      throw new BadRequestException('Transaction not found or invalid')
-    }
-
-    this.logger.log(`Retrieved transaction details for ${txHash}:`, {
-      sender: txDetails.sender,
-      receiver: txDetails.receiver,
-      amount: txDetails.amount,
-      token: txDetails.token,
-      status: txDetails.status,
-      usdtValue: txDetails.usdtValue
+    // 3. Use ONLY universal details (getUniversalTxDetails) for PDF generation
+    this.logger.log(`Fetching universal transaction details (single source) for ${txHash}`)
+    const networkForTx = await this.blockchainService.findTransactionNetwork(txHash)
+    const universalDetails = await this.blockchainService.getUniversalTxDetails({
+      hash: txHash,
+      chainId: networkForTx?.chainId,
+      traceRpcUrl: this.configService.get<string>('TRACE_RPC_URL') || undefined,
+      loadTokenMeta: true,
     })
-
-    // 4. Generate PDF with real blockchain data
-    const pdfData = {
-      txHash,
-      sender: txDetails.sender,
-      receiver: txDetails.receiver,
-      amount: txDetails.amount,
-      token: txDetails.token,
-      timestamp: txDetails.timestamp,
-      description,
-      chainId: txDetails.chainId,
-      explorerUrl: txDetails.explorerUrl,
-      usdtValue: txDetails.usdtValue,
-      pricePerToken: txDetails.pricePerToken,
-      status: txDetails.status,
-      // Transaction fee data
-      gasUsed: txDetails.gasUsed,
-      gasPrice: txDetails.gasPrice,
-      transactionFeeEth: txDetails.transactionFeeEth,
-      transactionFeeUsd: txDetails.transactionFeeUsd,
-      nativeTokenSymbol: txDetails.nativeTokenSymbol,
+    if (!universalDetails) {
+      throw new BadRequestException('Universal transaction details not found or invalid')
     }
+
+    // 4. Generate PDF using universalDetails summary fields
+    const pdfData: any = {
+      txHash,
+      sender: universalDetails.sender,
+      receiver: universalDetails.receiver,
+      amount: universalDetails.amountFrom || universalDetails.amount,
+      token: universalDetails.tokenFrom || universalDetails.token,
+      // extended universal swap fields
+      tokenFrom: universalDetails.tokenFrom,
+      tokenTo: universalDetails.tokenTo,
+      amountFrom: universalDetails.amountFrom || universalDetails.amount,
+      amountTo: universalDetails.amountTo || universalDetails.amount,
+      timestamp: universalDetails.timestamp || new Date(),
+      description,
+      chainId: universalDetails.chainId,
+      explorerUrl: universalDetails.explorerUrl,
+      // Historical pricing (now provided by universalDetails best-effort)
+      usdtValue: universalDetails.usdtValueFrom, // backward compatibility (input side)
+      pricePerToken: universalDetails.pricePerTokenFrom,
+      usdtValueFrom: universalDetails.usdtValueFrom,
+      usdtValueTo: universalDetails.usdtValueTo,
+      pricePerTokenFrom: universalDetails.pricePerTokenFrom,
+      pricePerTokenTo: universalDetails.pricePerTokenTo,
+      status: universalDetails.status,
+      gasUsed: universalDetails.gasUsed,
+      gasPrice: universalDetails.gasPrice,
+      transactionFeeEth: universalDetails.transactionFeeEth,
+      transactionFeeUsd: universalDetails.transactionFeeUsd,
+      nativeTokenSymbol: universalDetails.nativeTokenSymbol,
+      internalNativeTransfers: universalDetails.internalNativeTransfers,
+      erc20Transfers: universalDetails.erc20Transfers,
+    }
+    // Swap leg extraction removed — using only universal details per requirement.
     
-    const branding = (companyName || website || logoDataUrl) ? {
+    const branding: BrandingOptions | undefined = (companyName || website || logoDataUrl) ? {
       companyName: companyName?.trim() || undefined,
       website: website?.trim() || undefined,
       logoDataUrl: logoDataUrl, // Already validated in DTO
     } : undefined
 
-    let effectiveBranding = branding
+    let effectiveBranding: BrandingOptions | undefined = branding
     if (!effectiveBranding && userId) {
       try {
         const stored = await this.brandingService.getUserBranding(userId)
@@ -219,6 +228,7 @@ export class ReceiptsService {
             companyName: stored.companyName || undefined,
             website: stored.website || undefined,
             logoDataUrl: stored.logoDataUrl || undefined,
+            showErc20Transfers: stored.showErc20Transfers === true,
           }
         }
       } catch (e) {

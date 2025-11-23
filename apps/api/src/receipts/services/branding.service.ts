@@ -5,6 +5,7 @@ export interface UserBrandingDTO {
   companyName?: string
   website?: string
   logoDataUrl?: string
+  showErc20Transfers?: boolean
 }
 
 @Injectable()
@@ -21,12 +22,13 @@ export class BrandingService {
     const companyName = data.companyName?.trim() || null
     const website = data.website?.trim() || null
     const logoDataUrl = data.logoDataUrl || null
+    const showErc20Transfers = data.showErc20Transfers === true
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call
   return (this.prisma as any).userBranding.upsert({
       where: { userId },
-      create: { userId, companyName, website, logoDataUrl },
-      update: { companyName, website, logoDataUrl },
+      create: { userId, companyName, website, logoDataUrl, showErc20Transfers },
+      update: { companyName, website, logoDataUrl, showErc20Transfers },
     })
   }
 

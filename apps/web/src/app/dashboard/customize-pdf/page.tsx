@@ -14,6 +14,8 @@ export default function CustomizePdfPage() {
   const [dragActive, setDragActive] = useState(false)
   const [logoError, setLogoError] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  // Deprecated local showDetails; use persisted branding preference instead
+  const showDetails = branding.showErc20Transfers === true
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -120,6 +122,17 @@ export default function CustomizePdfPage() {
                     onChange={e => update({ website: e.target.value })}
                     placeholder='https://example.com'
                   />
+                </div>
+                <div className='mt-2'>
+                  <label className='flex items-center gap-2 text-[11px] cursor-pointer select-none'>
+                    <input
+                      type='checkbox'
+                      checked={showDetails}
+                      onChange={e => update({ showErc20Transfers: e.target.checked })}
+                      className='h-4 w-4 cursor-pointer rounded-sm border border-gray-400 dark:border-gray-600 text-orange-500 appearance-none outline-none focus:outline-none focus-visible:outline-none transition-colors checked:bg-orange-500 checked:border-orange-500 checked:hover:bg-orange-600'
+                    />
+                    <span className='text-gray-700 dark:text-gray-300'>Show transaction details</span>
+                  </label>
                 </div>
               </div>
 
@@ -242,6 +255,56 @@ export default function CustomizePdfPage() {
                   <div style="font-size:10px;color:#666;margin-top:4px;">${esc(branding.website)}</div>
                 </div>`
 
+              // Build static details; only ERC20 section is toggled
+              const erc20Section = showDetails ? `
+              <div class='divider'></div>
+              <div class='section'>
+                <div class='section-header'>ERC20 TRANSFERS (LOGS):</div>
+                <table class='table'>
+                  <thead>
+                    <tr>
+                      <th class='number'>#</th>
+                      <th>FROM</th>
+                      <th>TO</th>
+                      <th class='amount'>AMOUNT</th>
+                      <th class='amount'>CONTRACT</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class='number'>0</td>
+                      <td class='address'>${data.sender}</td>
+                      <td class='address'>${data.receiver}</td>
+                      <td class='amount'>${data.amount} ${data.token}</td>
+                      <td class='amount'>0xTOKENCONTRACT...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>` : ''
+
+              const detailsHtml = `
+              <div class='divider'></div>
+              <div class='section-status'><div class='section-header'>TRANSACTION IDENTIFIER:</div><div class='hash-value'>${data.txHash}</div></div>
+              <div class='divider'></div>
+              <div class='section-status'><div class='section-header'>STATUS:</div><div class='hash-value' style='color:${data.status==='success' ? '#00a186' : data.status==='reverted' ? '#f56565' : '#f6ad55'};font-weight:bold;'>${data.status.toUpperCase()}</div></div>
+              <div class='divider'></div>
+              <div class='info-row'><div class='info-label'>TRANSACTION TIMESTAMP:</div><div class='info-value'><div><strong>CONFIRMED TRANSACTION:</strong></div><div>${formattedDate} ${formattedTime} (UTC)</div><div>Included in block: <strong>#${Math.floor(Math.random()*800000)+700000}</strong> on the <strong>${getNetworkName(data.chainId)}</strong> blockchain</div></div></div>
+              <div class='divider'></div>
+              <div class='section'><div class='section-header'>SENDERS (INPUTS):</div><table class='table'><thead><tr><th class='number'>#</th><th>SENDER</th><th class='amount'>VALUE (${data.token})</th><th class='amount'>VALUE (USD)</th></tr></thead><tbody>
+              <tr><td class='number'>0</td><td class='address'>${data.sender}</td><td class='amount'>${data.amount}</td><td class='amount'>${usdtValue}</td></tr>
+              <tr><td class='number'>1</td><td><strong>Network Fee</strong></td><td class='amount'>${transactionFeeEth}</td><td class='amount'>${transactionFeeUsd}</td></tr>
+              <tr class='total-row'><td></td><td><strong>TOTAL:</strong></td><td class='amount'><strong>${totalWithFeeTokens} ${data.token}</strong></td><td class='amount'><strong>${totalWithFeeUsd} USDT</strong></td></tr>
+              </tbody></table></div>
+              <div class='divider'></div>
+              <div class='section'><div class='section-header'>RECIPIENTS (OUTPUTS):</div><table class='table'><thead><tr><th class='number'>#</th><th>RECIPIENT</th><th class='amount'>VALUE (${data.token})</th><th class='amount'>VALUE (USD)</th></tr></thead><tbody>
+              <tr><td class='number'>1</td><td class='address'>${data.receiver}</td><td class='amount'>${data.amount}</td><td class='amount'>${usdtValue}</td></tr>
+              <tr><td style='border-top:1px solid #000;'>→</td><td style='border-top:1px solid #000;'><strong>TOTAL:</strong></td><td class='amount' style='border-top:1px solid #000;'><strong>${data.amount} ${data.token}</strong></td><td class='amount' style='border-top:1px solid #000;'><strong>${usdtValue} USDT</strong></td></tr>
+              </tbody></table></div>
+              ${erc20Section}
+              <div class='divider'></div>
+              <div class='qr-section'><div class='qr-left'><div class='section-header'>NOTE</div><div class='note'>${data.token}-USD RATE AT THE TIME OF TRANSACTION.<br>ONLY LAYER BALANCES ARE NOT INCLUDED IN THIS REPORT.</div><div class='section-header' style='margin-top:20px;'>DISCLAIMER</div><div class='disclaimer'>THIS RECEIPT WAS GENERATED AUTOMATICALLY ON <strong>${currentDate} (UTC)</strong> AND IS BASED ON PUBLIC DATA FROM THE <strong>${getNetworkName(data.chainId)}</strong> BLOCKCHAIN. TRANSACTPROOF MAKES NEITHER WARRANTY THAT THIS RECEIPT IS FREE OF ERRORS, NOR WARRANTY THAT ITS CONTENT IS ACCURATE. TRANSACTPROOF WILL NOT BE RESPONSIBLE OR LIABLE TO YOU FOR ANY LOSS OF ANY KIND, FOR ACTION TAKEN, OR TAKEN IN RELIANCE ON INFORMATION CONTAINED IN THIS RECEIPT. TRANSACTPROOF IS NEITHER A BANK, NOR A PAYMENT PROCESSOR FOR THIS PAYMENT. TRANSACTPROOF DOES NOT PROVIDE SUPPORT IN CASE OF PROBLEMS ASSOCIATED WITH THIS RECEIPT.</div></div><div class='qr-right'>${qrCodeDataUrl ? `<img src='${qrCodeDataUrl}' alt='Verification QR Code' width='120' height='120' class='qr-code'/>` : ''}<div style='margin-top:10px;font-size:9px;max-width:120px;'><strong>Scan to check the validity of the transaction at</strong><br><span class='verification-url'>${explorerUrl.replace('https://','')}</span></div></div></div>
+              `
+
               // Construct full HTML (mirrors server template; trimmed branding injection & dynamic bits)
               const fullTemplateHtml = `<!DOCTYPE html><html><head><meta charset='utf-8'/><style>
                 *{margin:0;padding:0;box-sizing:border-box;} body{font-family:'Courier New',monospace;line-height:1.4;color:#000;background:#fff;font-size:12px;} .container{max-width:800px;margin:0 auto;padding:20px;}
@@ -261,25 +324,7 @@ export default function CustomizePdfPage() {
               <div class='title'>TRANSACTION RECEIPT</div>
               <div class='divider'></div>
               <div class='section-status'><div class='section-header'>CHAIN:</div><div class='hash-value'>${getNetworkName(data.chainId)}</div></div>
-              <div class='divider'></div>
-              <div class='section-status'><div class='section-header'>TRANSACTION IDENTIFIER:</div><div class='hash-value'>${data.txHash}</div></div>
-              <div class='divider'></div>
-              <div class='section-status'><div class='section-header'>STATUS:</div><div class='hash-value' style='color:${data.status==='success' ? '#00a186' : data.status==='reverted' ? '#f56565' : '#f6ad55'};font-weight:bold;'>${data.status.toUpperCase()}</div></div>
-              <div class='divider'></div>
-              <div class='info-row'><div class='info-label'>TRANSACTION TIMESTAMP:</div><div class='info-value'><div><strong>CONFIRMED TRANSACTION:</strong></div><div>${formattedDate} ${formattedTime} (UTC)</div><div>Included in block: <strong>#${Math.floor(Math.random()*800000)+700000}</strong> on the <strong>${getNetworkName(data.chainId)}</strong> blockchain</div></div></div>
-              <div class='divider'></div>
-              <div class='section'><div class='section-header'>SENDERS (INPUTS):</div><table class='table'><thead><tr><th class='number'>#</th><th>SENDER</th><th class='amount'>VALUE (${data.token})</th><th class='amount'>VALUE (USD)</th></tr></thead><tbody>
-              <tr><td class='number'>0</td><td class='address'>${data.sender}</td><td class='amount'>${data.amount}</td><td class='amount'>${usdtValue}</td></tr>
-              <tr><td class='number'>1</td><td><strong>Network Fee</strong></td><td class='amount'>${transactionFeeEth}</td><td class='amount'>${transactionFeeUsd}</td></tr>
-              <tr class='total-row'><td></td><td><strong>TOTAL:</strong></td><td class='amount'><strong>${totalWithFeeTokens} ${data.token}</strong></td><td class='amount'><strong>${totalWithFeeUsd} USDT</strong></td></tr>
-              </tbody></table></div>
-              <div class='divider'></div>
-              <div class='section'><div class='section-header'>RECIPIENTS (OUTPUTS):</div><table class='table'><thead><tr><th class='number'>#</th><th>RECIPIENT</th><th class='amount'>VALUE (${data.token})</th><th class='amount'>VALUE (USD)</th></tr></thead><tbody>
-              <tr><td class='number'>1</td><td class='address'>${data.receiver}</td><td class='amount'>${data.amount}</td><td class='amount'>${usdtValue}</td></tr>
-              <tr><td style='border-top:1px solid #000;'>→</td><td style='border-top:1px solid #000;'><strong>TOTAL:</strong></td><td class='amount' style='border-top:1px solid #000;'><strong>${data.amount} ${data.token}</strong></td><td class='amount' style='border-top:1px solid #000;'><strong>${usdtValue} USDT</strong></td></tr>
-              </tbody></table></div>
-              <div class='divider'></div>
-              <div class='qr-section'><div class='qr-left'><div class='section-header'>NOTE</div><div class='note'>${data.token}-USD RATE AT THE TIME OF TRANSACTION.<br>ONLY LAYER BALANCES ARE NOT INCLUDED IN THIS REPORT.</div><div class='section-header' style='margin-top:20px;'>DISCLAIMER</div><div class='disclaimer'>THIS RECEIPT WAS GENERATED AUTOMATICALLY ON <strong>${currentDate} (UTC)</strong> AND IS BASED ON PUBLIC DATA FROM THE <strong>${getNetworkName(data.chainId)}</strong> BLOCKCHAIN. TRANSACTPROOF MAKES NEITHER WARRANTY THAT THIS RECEIPT IS FREE OF ERRORS, NOR WARRANTY THAT ITS CONTENT IS ACCURATE. TRANSACTPROOF WILL NOT BE RESPONSIBLE OR LIABLE TO YOU FOR ANY LOSS OF ANY KIND, FOR ACTION TAKEN, OR TAKEN IN RELIANCE ON INFORMATION CONTAINED IN THIS RECEIPT. TRANSACTPROOF IS NEITHER A BANK, NOR A PAYMENT PROCESSOR FOR THIS PAYMENT. TRANSACTPROOF DOES NOT PROVIDE SUPPORT IN CASE OF PROBLEMS ASSOCIATED WITH THIS RECEIPT.</div></div><div class='qr-right'>${qrCodeDataUrl ? `<img src='${qrCodeDataUrl}' alt='Verification QR Code' width='120' height='120' class='qr-code'/>` : ''}<div style='margin-top:10px;font-size:9px;max-width:120px;'><strong>Scan to check the validity of the transaction at</strong><br><span class='verification-url'>${explorerUrl.replace('https://','')}</span></div></div></div>
+              ${detailsHtml}
               <div class='footer'><div><strong>TransactProof Receipt Generation System</strong></div><div>Blockchain Transaction Verification Service</div><div>https://transactproof.com</div></div>
               </div></body></html>`
 

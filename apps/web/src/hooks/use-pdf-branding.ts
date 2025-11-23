@@ -6,12 +6,13 @@ export interface PdfBranding {
   companyName: string;
   website: string;
   logoDataUrl?: string; // base64 image string
+  showErc20Transfers?: boolean; // preference for showing ERC20 transfer logs
 }
 
 // Local storage persistence removed per request; rely only on server + in-memory state
 
 export function usePdfBranding() {
-  const [branding, setBranding] = useState<PdfBranding>({ companyName: "", website: "" });
+  const [branding, setBranding] = useState<PdfBranding>({ companyName: "", website: "", showErc20Transfers: false });
   const [loaded, setLoaded] = useState(false); // true after initial server fetch attempt completes
   const [savedSnapshot, setSavedSnapshot] = useState<PdfBranding | null>(null);
 
@@ -28,12 +29,14 @@ export function usePdfBranding() {
               companyName: srv.companyName || "",
               website: srv.website || "",
               logoDataUrl: srv.logoDataUrl || '',
+              showErc20Transfers: (srv as any).showErc20Transfers === true,
             });
           }
             setSavedSnapshot({
               companyName: srv.companyName || "",
               website: srv.website || "",
               logoDataUrl: srv.logoDataUrl || '',
+              showErc20Transfers: (srv as any).showErc20Transfers === true,
             });
         }
       } catch {/* ignore unauthenticated or network errors */}
@@ -68,7 +71,7 @@ export function usePdfBranding() {
           return;
         }
       } catch {/* ignore */}
-      setBranding({ companyName: 'TRANSACTPROOF', website: '', logoDataUrl: '' });
+      setBranding({ companyName: 'TRANSACTPROOF', website: '', logoDataUrl: '', showErc20Transfers: false });
     })();
   }, [savedSnapshot]);
 
