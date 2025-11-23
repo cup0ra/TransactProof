@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { createPublicClient, http, parseAbi, parseAbiItem, formatUnits, PublicClient, decodeEventLog } from 'viem'
+import { createPublicClient, http, parseAbi, parseAbiItem, formatUnits, PublicClient, decodeEventLog, Chain } from 'viem'
 import { mainnet, base, baseSepolia, polygon, arbitrum, optimism, zkSync, bsc, avalanche } from 'viem/chains'
 import { PriceService } from './price.service'
 
@@ -57,6 +57,14 @@ export interface ExtendedTransactionDetails {
   contractAddress?: string
   usdtValue?: number
   pricePerToken?: number
+}
+
+export interface SwapLeg {
+  from: string
+  to: string
+  amount: string
+  token: string
+  usdValue?: number
 }
 
 @Injectable()
@@ -546,32 +554,23 @@ export class BlockchainService {
         return null
       }
 
-
-
       const receipt = await network.client.getTransactionReceipt({
         hash: txHash as `0x${string}`,
       })
-
-
 
       const block = await network.client.getBlock({
         blockNumber: transaction.blockNumber,
       })
 
-
-
       const currentBlock = await network.client.getBlockNumber()
       const confirmations = Number(currentBlock - transaction.blockNumber)
       
-
-
       // Get basic transaction details using the same network
       const basicDetails = await this.getTransactionDetailsFromNetwork(txHash, network)
       if (!basicDetails) {
         return null
       }
-this.logger.warn('receipt', receipt)
-this.logger.warn("basicDetails", basicDetails)
+
       return {
         hash: txHash,
         sender: basicDetails.sender,
@@ -607,6 +606,91 @@ this.logger.warn("basicDetails", basicDetails)
     } catch (error) {
       this.logger.error(`Error getting extended transaction details for ${txHash}:`, error)
       return null
+    }
+  }
+
+  /**
+   * Extract potential swap legs by decoding ERC20 Transfer events in a transaction.
+   * If more than 2 distinct transfers across different token contracts are found,
+   * we consider it a swap/multi-hop sequence.
+   */
+  async extractSwapLegs(txHash: string, transactionDate?: Date): Promise<SwapLeg[]> {
+    try {
+      const details = await this.getExtendedTransactionDetails(txHash)
+      if (!details) return []
+
+      const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+      const legs: SwapLeg[] = []
+      const uniqueTokens = new Set<string>()
+
+      for (const log of details.logs) {
+        if (!log.topics || log.topics.length < 3) continue
+        const topic0 = log.topics[0]?.toLowerCase()
+        if (topic0 !== transferTopic) continue
+
+        const contractAddress: string = log.address
+        // Decode indexed parameters (from, to) are topics[1], topics[2]
+        const fromRaw = '0x' + log.topics[1].slice(26)
+        const toRaw = '0x' + log.topics[2].slice(26)
+
+        // Value is in data (uint256)
+        let valueBig: bigint
+        try {
+          valueBig = BigInt(log.data)
+        } catch {
+          continue
+        }
+
+        // Fetch token symbol & decimals (best-effort)
+        let symbol = contractAddress
+        let decimals = 18
+        try {
+          const clientNetwork = await this.findTransactionNetwork(txHash)
+          if (clientNetwork?.client) {
+            const erc20Abi = parseAbi([
+              'function symbol() view returns (string)',
+              'function decimals() view returns (uint8)'
+            ])
+            const [sym, dec] = await Promise.all([
+              clientNetwork.client.readContract({
+                abi: erc20Abi,
+                address: contractAddress as `0x${string}`,
+                functionName: 'symbol'
+              }).catch(() => contractAddress),
+              clientNetwork.client.readContract({
+                abi: erc20Abi,
+                address: contractAddress as `0x${string}`,
+                functionName: 'decimals'
+              }).catch(() => 18)
+            ])
+            if (typeof sym === 'string') symbol = sym
+            if (typeof dec === 'number') decimals = dec
+          }
+        } catch {
+          // ignore failures
+        }
+
+        const amount = (Number(valueBig) / 10 ** decimals).toString()
+        uniqueTokens.add(symbol)
+
+        let usdValue: number | undefined
+        if (transactionDate) {
+          try {
+            const priceData = await this.priceService.getHistoricalTokenPriceInUSDT(symbol, amount, transactionDate)
+            if (priceData) usdValue = priceData.usdtValue
+          } catch {
+                 // ignore failures
+          }
+        }
+
+        legs.push({ from: fromRaw, to: toRaw, amount, token: symbol, usdValue })
+      }
+
+      // New behavior: return all decoded transfer legs (even single token or few events)
+      return legs
+    } catch (e) {
+      this.logger.warn('Failed to extract swap legs', { txHash, error: (e as Error).message })
+      return []
     }
   }
 
@@ -1010,6 +1094,280 @@ this.logger.warn("basicDetails", basicDetails)
     } catch (error) {
       this.logger.warn(`Transaction verification failed for ${txHash}:`, error)
       return false
+    }
+  }
+
+  /**
+   * Wrapper around universal getTxDetails utility.
+   * Attempts to resolve the network automatically if chainId not provided.
+   * Returns detailed receipt, internal native transfers (trace) and ERC20 transfers.
+   */
+  async getUniversalTxDetails(params: {
+    hash: string
+    chainId?: number
+    traceRpcUrl?: string
+    loadTokenMeta?: boolean
+  }): Promise<{
+    networkName: string
+    chainId: number
+    explorerUrl: string
+    receipt: any
+    internalNativeTransfers: any[]
+    erc20Transfers: any[]
+    // Added summary fields derived solely from receipt + decoded transfers
+    sender: string
+    receiver: string
+    amount: string
+    token: string // backward compatibility (same as tokenFrom)
+    tokenFrom: string
+    tokenTo: string
+    amountFrom: string
+    amountTo: string
+    timestamp: Date | null
+    status: string | undefined
+    gasUsed?: string
+    gasPrice?: string
+    transactionFeeEth?: number
+    nativeTokenSymbol?: string
+    // Pricing fields (historical, per token & fee)
+    usdtValueFrom?: number
+    usdtValueTo?: number
+    pricePerTokenFrom?: number
+    pricePerTokenTo?: number
+    transactionFeeUsd?: number
+  } | null> {
+    const { hash, chainId, traceRpcUrl, loadTokenMeta } = params
+    try {
+      // Dynamically import to avoid circular issues
+      const { getTxDetails } = await import('./txDetails')
+
+      let network: NetworkConfig | null = null
+      if (chainId) {
+        network = this.networks.get(chainId.toString()) || null
+      }
+      if (!network) {
+        network = await this.findTransactionNetwork(hash)
+      }
+      if (!network || !network.client) {
+        this.logger.warn(`Unable to resolve network for tx ${hash}`)
+        return null
+      }
+
+      const result = await getTxDetails({
+        hash: hash as `0x${string}`,
+        chain: network.chain as Chain,
+        publicRpcUrl: network.rpcUrl,
+        traceRpcUrl: network.rpcUrl,
+        loadTokenMeta,
+      })
+
+      // Derive summary fields
+      const receipt = result.receipt
+      const tx = result.tx
+      const nativeTokenInfo = this.getNativeTokenInfo(network.chainId)
+      const userAddress = (receipt.from as string)?.toLowerCase()
+
+      let primaryAmount = '0' // amountFrom
+      let primaryOutputAmount = '0' // amountTo
+      let primarySenderToken = nativeTokenInfo.symbol
+      let primaryReceiverToken = nativeTokenInfo.symbol
+      const primarySender: string = receipt.from as string
+      let primaryReceiver: string = (receipt.to as string) || ''
+
+      // Normalize helper
+      const norm = (v: any) => (typeof v === 'string' ? v.toLowerCase() : '')
+
+      // Identify input (user sends) and output (user receives) transfers for swaps
+      let inputTransfer: any | undefined
+      let outputTransfer: any | undefined
+
+      if (Array.isArray(result.erc20Transfers) && result.erc20Transfers.length) {
+        for (const t of result.erc20Transfers) {
+          if (!inputTransfer && norm(t.from) === userAddress) {
+            inputTransfer = t
+          }
+          if (norm(t.to) === userAddress) {
+            // Keep latest transfer to user as output
+            outputTransfer = t
+          }
+        }
+      }
+
+      // If user receives native token internally (e.g. last leg of swap), capture it
+      if (!outputTransfer && Array.isArray(result.internalNativeTransfers)) {
+        for (const t of result.internalNativeTransfers) {
+          if (norm(t.to) === userAddress) {
+            outputTransfer = t
+          }
+        }
+      }
+
+      // Helper to select first matching transfer where from == receipt.from for amount fallback
+      const pickMatching = (arr: any[]) => arr.find(t => norm(t.from) === userAddress) || arr[0]
+
+      if (result.erc20Transfers.length > 0) {
+        const reference = inputTransfer || pickMatching(result.erc20Transfers)
+        primaryAmount = reference.valueFormatted
+        primarySenderToken = (reference.symbol || nativeTokenInfo.symbol) as string
+        // Determine output side
+        if (outputTransfer && norm(outputTransfer.to) === userAddress) {
+          primaryOutputAmount = outputTransfer.valueFormatted
+          primaryReceiverToken = outputTransfer.symbol || primarySenderToken
+          primaryReceiver = outputTransfer.to
+        } else {
+          primaryOutputAmount = reference.valueFormatted
+          primaryReceiverToken = reference.symbol || primarySenderToken
+          primaryReceiver = (reference.to as string) || (receipt.to as string) || ''
+        }
+      } else if (result.internalNativeTransfers.length > 0) {
+        const reference = pickMatching(result.internalNativeTransfers)
+        primaryAmount = reference.valueFormatted
+        primaryOutputAmount = reference.valueFormatted
+        primarySenderToken = nativeTokenInfo.symbol
+        primaryReceiverToken = nativeTokenInfo.symbol
+        primaryReceiver = (reference.to as string) || (receipt.to as string) || ''
+      } else if (result.erc20Transfers.length === 0 && result.internalNativeTransfers.length === 0) {
+        // Fallback: прямой перевод без внутренних/native/erc20 трансферов — берем из самого tx
+        try {
+          const txValue = (tx?.value as bigint) || 0n
+          primaryAmount = formatUnits(txValue, nativeTokenInfo.decimals)
+          primaryOutputAmount = primaryAmount
+          primarySenderToken = nativeTokenInfo.symbol
+          primaryReceiverToken = nativeTokenInfo.symbol
+          primaryReceiver = (tx?.to as string) || (receipt.to as string) || ''
+        } catch (e) {
+          this.logger.warn(`Fallback assignment failed for tx ${hash}: ${(e as Error).message}`)
+        }
+      }
+
+      // Ensure tokens are set
+      if (!primarySenderToken) primarySenderToken = nativeTokenInfo.symbol
+      if (!primaryReceiverToken) primaryReceiverToken = primarySenderToken
+      if (primaryOutputAmount === '0') primaryOutputAmount = primaryAmount
+      // Fetch block timestamp (best-effort)
+      let timestamp: Date | null = null
+      try {
+        if (network.client && receipt.blockNumber) {
+          const block = await network.client.getBlock({ blockNumber: receipt.blockNumber })
+          timestamp = new Date(Number(block.timestamp) * 1000)
+        }
+      } catch (e) {
+        this.logger.warn(`Failed to fetch block timestamp for ${hash}: ${(e as Error).message}`)
+      }
+      // Gas / fee metrics
+      let gasUsedStr: string | undefined
+      let gasPriceStr: string | undefined
+      let txFeeEth: number | undefined
+      let txFeeUsd: number | undefined
+      try {
+        const gasUsed: bigint | undefined = receipt.gasUsed
+        const effGasPrice: bigint | undefined = (receipt as any).effectiveGasPrice
+        if (gasUsed && effGasPrice) {
+          gasUsedStr = gasUsed.toString()
+          gasPriceStr = formatUnits(effGasPrice, 9) // gwei
+          txFeeEth = parseFloat(formatUnits(gasUsed * effGasPrice, 18))
+        }
+      } catch (e) {
+        this.logger.warn(`Failed fee calc for ${hash}: ${(e as Error).message}`)
+      }
+
+      // Historical pricing for input/output tokens & fee (best-effort)
+      let usdtValueFrom: number | undefined
+      let usdtValueTo: number | undefined
+      let pricePerTokenFrom: number | undefined
+      let pricePerTokenTo: number | undefined
+
+      if (timestamp) {
+        // Input side pricing
+        try {
+          const priceDataFrom = await this.priceService.getHistoricalTokenPriceInUSDT(
+            primarySenderToken,
+            primaryAmount,
+            timestamp
+          )
+          if (priceDataFrom) {
+            usdtValueFrom = priceDataFrom.usdtValue
+            pricePerTokenFrom = priceDataFrom.pricePerToken
+          }
+        } catch (e) {
+          this.logger.warn(`Pricing (from) failed for ${primarySenderToken}: ${(e as Error).message}`)
+        }
+
+        // Output side pricing (always attempt; if same token can proportionally adjust)
+        try {
+          if (primaryReceiverToken === primarySenderToken && usdtValueFrom != null) {
+            // Adjust proportionally if amount differs
+            const amtFromNum = parseFloat(primaryAmount)
+            const amtToNum = parseFloat(primaryOutputAmount)
+            if (amtFromNum > 0) {
+              usdtValueTo = usdtValueFrom * (amtToNum / amtFromNum)
+              pricePerTokenTo = pricePerTokenFrom
+            } else {
+              usdtValueTo = usdtValueFrom
+              pricePerTokenTo = pricePerTokenFrom
+            }
+          } else {
+            const priceDataTo = await this.priceService.getHistoricalTokenPriceInUSDT(
+              primaryReceiverToken,
+              primaryOutputAmount,
+              timestamp
+            )
+            if (priceDataTo) {
+              usdtValueTo = priceDataTo.usdtValue
+              pricePerTokenTo = priceDataTo.pricePerToken
+            }
+          }
+        } catch (e) {
+          this.logger.warn(`Pricing (to) failed for ${primaryReceiverToken}: ${(e as Error).message}`)
+        }
+
+        // Fee pricing (native token)
+        if (txFeeEth != null) {
+          try {
+            const feePriceData = await this.priceService.getHistoricalTokenPriceInUSDT(
+              nativeTokenInfo.symbol,
+              txFeeEth.toString(),
+              timestamp
+            )
+            if (feePriceData) {
+              txFeeUsd = feePriceData.usdtValue
+            }
+          } catch (e) {
+            this.logger.warn(`Fee pricing failed for ${nativeTokenInfo.symbol}: ${(e as Error).message}`)
+          }
+        }
+      }
+
+      return {
+        networkName: network.name,
+        chainId: network.chainId,
+        explorerUrl: `${network.explorerBaseUrl}/tx/${hash}`,
+        receipt: result.receipt,
+        internalNativeTransfers: result.internalNativeTransfers,
+        erc20Transfers: result.erc20Transfers,
+        sender: primarySender,
+        receiver: primaryReceiver,
+        amount: primaryAmount,
+        token: primarySenderToken,
+        tokenFrom: primarySenderToken,
+        tokenTo: primaryReceiverToken,
+        amountFrom: primaryAmount,
+        amountTo: primaryOutputAmount,
+        timestamp,
+        status: receipt.status,
+        gasUsed: gasUsedStr,
+        gasPrice: gasPriceStr,
+        transactionFeeEth: txFeeEth,
+        nativeTokenSymbol: nativeTokenInfo.symbol,
+        usdtValueFrom,
+        usdtValueTo,
+        pricePerTokenFrom,
+        pricePerTokenTo,
+        transactionFeeUsd: txFeeUsd,
+      }
+    } catch (e) {
+      this.logger.error('getUniversalTxDetails error', e)
+      return null
     }
   }
 }

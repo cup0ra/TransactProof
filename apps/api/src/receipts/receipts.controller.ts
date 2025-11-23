@@ -230,7 +230,7 @@ export class ReceiptsController {
   @ApiOperation({ summary: 'Save (upsert) branding preferences for current user' })
   async upsertBranding(
     @Req() req: Request,
-    @Body() body: { companyName?: string; website?: string; logoDataUrl?: string },
+    @Body() body: { companyName?: string; website?: string; logoDataUrl?: string; showErc20Transfers?: boolean },
   ) {
     const userId = req.user?.id
     if (!userId) return { ok: false, message: 'Unauthorized' }

@@ -5,18 +5,36 @@ import * as QRCode from 'qrcode'
 import * as fs from 'fs'
 import { resolveUploadsDir, buildUploadFilePath } from '../common/utils/uploads-path.util'
 
+interface SwapLeg {
+  from: string
+  to: string
+  amount: string
+  token: string
+  usdValue?: number
+}
+
 interface ReceiptData {
   txHash: string
   sender: string
   receiver: string
   amount: string
   token: string
+  // Extended universal fields
+  tokenFrom?: string
+  tokenTo?: string
+  amountFrom?: string
+  amountTo?: string
   timestamp: Date
   description?: string
   chainId: number
   explorerUrl: string
   usdtValue?: number
   pricePerToken?: number
+  // New dual pricing fields
+  usdtValueFrom?: number
+  usdtValueTo?: number
+  pricePerTokenFrom?: number
+  pricePerTokenTo?: number
   status?: string
   // Transaction fee data
   gasUsed?: string
@@ -24,6 +42,25 @@ interface ReceiptData {
   transactionFeeEth?: number  // Fee in ETH (or native token)
   transactionFeeUsd?: number  // Fee in USD
   nativeTokenSymbol?: string  // ETH, BNB, MATIC, etc.
+  // Optional transfer legs (multi-step movements)
+  swapLegs?: SwapLeg[]
+  // Universal details additions
+  internalNativeTransfers?: {
+    from: string
+    to: string
+    valueWei: bigint
+    valueFormatted: string
+    callType?: string
+  }[]
+  erc20Transfers?: {
+    tokenAddress: string
+    from: string
+    to: string
+    valueRaw: bigint
+    valueFormatted: string
+    symbol?: string
+    decimals?: number
+  }[]
 }
 
 // Per-request branding options (ephemeral – not stored yet)
@@ -31,6 +68,7 @@ export interface BrandingOptions {
   companyName?: string
   website?: string
   logoDataUrl?: string // data:image/<type>;base64,<data>
+  showErc20Transfers?: boolean
 }
 
 @Injectable()
@@ -40,9 +78,8 @@ export class PdfService {
   constructor(private readonly configService: ConfigService) {}
 
   async generateReceiptPdf(data: ReceiptData, branding?: BrandingOptions): Promise<Buffer> {
-    this.logger.log('🚀 Starting PDF generation process...')
-    
-    // Browser configuration for Railway deployment
+
+      // Browser configuration for Railway deployment
     const browserConfig: puppeteer.LaunchOptions = {
     headless: true, // Or 'new' for new headless mode
      args: [
@@ -57,7 +94,6 @@ export class PdfService {
     const puppeteerExecutablePath = this.configService.get('PUPPETEER_EXECUTABLE_PATH')
     if (puppeteerExecutablePath) {
       browserConfig.executablePath = puppeteerExecutablePath
-      this.logger.log(`Using system browser: ${puppeteerExecutablePath}`)
       
       // Check if executable exists
       // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -73,7 +109,6 @@ export class PdfService {
     let browser: puppeteer.Browser
     try {
       browser = await puppeteer.launch(browserConfig)
-      this.logger.log('✅ Browser launched successfully')
     } catch (error) {
       this.logger.error('❌ Failed to launch browser with Puppeteer:', error)
       this.logger.error('🛠️ Browser config used:', JSON.stringify(browserConfig, null, 2))
@@ -124,7 +159,8 @@ export class PdfService {
 
     const brandCompany = escapeHtml(branding?.companyName) || null
     const brandWebsite = escapeHtml(branding?.website) || null
-    const dataUrl = branding.logoDataUrl?.trim()
+    const showDetails = branding?.showErc20Transfers === true
+    const dataUrl = branding?.logoDataUrl?.trim()
 
     const isShowingBranding = !!(dataUrl || brandCompany || brandWebsite)
 
@@ -158,8 +194,14 @@ export class PdfService {
       timeZone: 'UTC',
     })
 
-    // Calculate USDT equivalent if available
-    const usdtValue = data.usdtValue?.toFixed(6) || null
+    // Determine input/output USD values (best-effort)
+    const inputUsdRaw = data.usdtValueFrom ?? data.usdtValue ?? undefined
+    const outputUsdRaw = data.usdtValueTo ?? (data.usdtValueTo === 0 ? 0 : undefined)
+    // Fallback: if output not provided and not a swap, reuse input
+    const isSwap = !!(data.tokenFrom && data.tokenTo && data.tokenFrom !== data.tokenTo)
+    const effectiveOutputUsdRaw = outputUsdRaw != null ? outputUsdRaw : (!isSwap ? inputUsdRaw : undefined)
+    const usdtValueInput = inputUsdRaw != null ? inputUsdRaw.toFixed(6) : null
+    const usdtValueOutput = effectiveOutputUsdRaw != null ? effectiveOutputUsdRaw.toFixed(6) : null
     
     // Format transaction fee data
     const transactionFeeEth = data.transactionFeeEth?.toFixed(8) || null
@@ -193,6 +235,114 @@ export class PdfService {
         case 43114: return 'AVALANCHE'
         default: return `CHAIN ${chainId}`
       }
+    }
+
+    // Universal swap detection now via tokenFrom/tokenTo & amountFrom/amountTo
+    // isSwap already computed above
+    const finalReceiver = data.receiver
+    const finalOutputToken = data.tokenTo || data.token || data.tokenFrom || data.token
+    const finalOutputAmount = data.amountTo || data.amount || data.amountFrom || data.amount
+    const finalOutputUsd: string | null = null
+
+    // Legacy swap leg details retained only if swapLegs supplied (backwards compatibility)
+    const buildLegDetailsSection = () => {
+      if (!data.swapLegs || !data.swapLegs.length) return ''
+      const rows = data.swapLegs.map((leg, idx) => {
+        const usd = leg.usdValue != null ? leg.usdValue.toFixed(2) : null
+        return `
+          <tr>
+            <td class="number">${idx}</td>
+            <td class="address">${leg.from}</td>
+            <td class="address">${leg.to}</td>
+            <td class="amount">${leg.amount} ${leg.token}</td>
+            <td class="amount">${usd ? usd : '-'}</td>
+          </tr>
+        `
+      }).join('')
+      return `
+        <div class="section">
+          <div class="section-header">TRANSFER DETAILS (ALL LEGS):</div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="number">#</th>
+                <th>FROM</th>
+                <th>TO</th>
+                <th class="amount">AMOUNT</th>
+                <th class="amount">USD</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
+        <div class="divider"></div>
+      `
+    }
+
+    const buildInternalTransfersSection = () => {
+      const list = data.internalNativeTransfers
+      if (!list || !list.length) return ''
+      const rows = list.map((t, i) => `
+        <tr>
+          <td class="number">${i}</td>
+          <td class="address">${t.from}</td>
+          <td class="address">${t.to}</td>
+          <td class="amount">${t.valueFormatted} ${data.nativeTokenSymbol || data.token}</td>
+          <td class="amount">${t.callType || '-'}</td>
+        </tr>
+      `).join('')
+      return `
+        <div class="section">
+          <div class="section-header">INTERNAL NATIVE TRANSFERS:</div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="number">#</th>
+                <th>FROM</th>
+                <th>TO</th>
+                <th class="amount">AMOUNT</th>
+                <th class="amount">CALL TYPE</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div class="divider"></div>
+      `
+    }
+
+    const buildErc20TransfersSection = () => {
+      const list = data.erc20Transfers
+      if (!list || !list.length) return ''
+      const rows = list.map((t, i) => `
+        <tr>
+          <td class="number">${i}</td>
+          <td class="address">${t.from}</td>
+          <td class="address">${t.to}</td>
+          <td class="amount">${t.valueFormatted} ${t.symbol || 'TOKEN'}</td>
+          <td class="address">${t.tokenAddress}</td>
+        </tr>
+      `).join('')
+      return `
+        <div class="section">
+          <div class="section-header">ERC20 TRANSFERS (LOGS):</div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="number">#</th>
+                <th>FROM</th>
+                <th>TO</th>
+                <th class="amount">AMOUNT</th>
+                <th>CONTRACT</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div class="divider"></div>
+      `
     }
 
     return `
@@ -438,7 +588,7 @@ export class PdfService {
 
           <div class="divider"></div>
 
-          <!-- Senders Table -->
+          <!-- Always show high-level sender -> final receiver summary -->
           <div class="section">
             <div class="section-header">SENDERS (INPUTS):</div>
             <table class="table">
@@ -446,7 +596,7 @@ export class PdfService {
                 <tr>
                   <th class="number">#</th>
                   <th>SENDER</th>
-                  <th class="amount">VALUE (${data.token})</th>
+                  <th class="amount">VALUE (${data.tokenFrom || data.token})</th>
                   <th class="amount">VALUE (USD)</th>
                 </tr>
               </thead>
@@ -454,8 +604,8 @@ export class PdfService {
                 <tr>
                   <td class="number">0</td>
                   <td class="address">${data.sender}</td>
-                  <td class="amount">${data.amount}</td>
-                  <td class="amount">${usdtValue ? usdtValue : '-'}</td>
+                  <td class="amount">${data.amountFrom || data.amount}</td>
+                  <td class="amount">${usdtValueInput ? usdtValueInput : '-'}</td>
                 </tr>
                 <tr>
                   <td class="number">1</td>
@@ -466,8 +616,8 @@ export class PdfService {
                 <tr class="total-row">
                   <td></td>
                   <td><strong>TOTAL:</strong></td>
-                  <td class="amount"><strong>${totalWithFeeTokens ? totalWithFeeTokens + ' ' + data.token : data.amount + ' ' + data.token}</strong></td>
-                  <td class="amount"><strong>${totalWithFeeUsd ? totalWithFeeUsd + ' USDT' : (usdtValue ? usdtValue + ' USDT' : '-')}</strong></td>
+                  <td class="amount"><strong>${totalWithFeeTokens ? totalWithFeeTokens + ' ' + (data.tokenFrom || data.token) : (data.amountFrom || data.amount) + ' ' + (data.tokenFrom || data.token)}</strong></td>
+                  <td class="amount"><strong>${totalWithFeeUsd ? totalWithFeeUsd + ' USDT' : (usdtValueInput ? usdtValueInput + ' USDT' : '-')}</strong></td>
                 </tr>
               </tbody>
             </table>
@@ -475,7 +625,6 @@ export class PdfService {
 
           <div class="divider"></div>
 
-          <!-- Recipients Table -->
           <div class="section">
             <div class="section-header">RECIPIENTS (OUTPUTS):</div>
             <table class="table">
@@ -483,22 +632,22 @@ export class PdfService {
                 <tr>
                   <th class="number">#</th>
                   <th>RECIPIENT</th>
-                  <th class="amount">VALUE (${data.token})</th>
+                  <th class="amount">VALUE (${finalOutputToken})</th>
                   <th class="amount">VALUE (USD)</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td class="number">1</td>
-                  <td class="address">${data.receiver}</td>
-                  <td class="amount">${data.amount}</td>
-                  <td class="amount">${usdtValue ? usdtValue : '-'}</td>
+                  <td class="address">${finalReceiver}</td>
+                  <td class="amount">${finalOutputAmount}</td>
+                  <td class="amount">${usdtValueOutput ? usdtValueOutput : '-'}</td>
                 </tr>
                 <tr>
                   <td style="border-top: 1px solid #000;">→</td>
                   <td style="border-top: 1px solid #000;"><strong>TOTAL:</strong></td>
-                  <td class="amount" style="border-top: 1px solid #000;"><strong>${data.amount} ${data.token}</strong></td>
-                  <td class="amount" style="border-top: 1px solid #000;"><strong>${usdtValue ? usdtValue + ' USDT' : '-'}</strong></td>
+                  <td class="amount" style="border-top: 1px solid #000;"><strong>${finalOutputAmount} ${finalOutputToken}</strong></td>
+                  <td class="amount" style="border-top: 1px solid #000;"><strong>${usdtValueOutput ? usdtValueOutput + ' USDT' : '-'}</strong></td>
                 </tr>
               </tbody>
             </table>
@@ -506,12 +655,18 @@ export class PdfService {
 
           <div class="divider"></div>
 
+          ${showDetails ? `
+            ${buildLegDetailsSection()}
+            ${buildInternalTransfersSection()}
+            ${buildErc20TransfersSection()}
+          ` : ''}
+
           <!-- QR Code and Note Section -->
           <div class="qr-section">
             <div class="qr-left">
               <div class="section-header">NOTE</div>
               <div class="note">
-                ${data.token}-USD RATE AT THE TIME OF TRANSACTION.<br>
+                ${(data.tokenFrom || data.token)}-USD RATE AT THE TIME OF TRANSACTION (INPUT).${isSwap ? '<br>' + (data.tokenTo || data.token) + '-USD RATE AT THE TIME OF TRANSACTION (OUTPUT).' : ''}<br>
                 ONLY LAYER BALANCES ARE NOT INCLUDED IN THIS REPORT.
               </div>
               
@@ -545,7 +700,6 @@ export class PdfService {
   async uploadPdf(pdfBuffer: Buffer, txHash: string): Promise<string> {
     try {
       const uploadsDir = resolveUploadsDir()
-      this.logger.debug(`[PDF] uploadsDir resolved to: ${uploadsDir}`)
 
       const fileName = `receipt-${txHash}-${Date.now()}.pdf`
       const filePath = buildUploadFilePath(fileName)

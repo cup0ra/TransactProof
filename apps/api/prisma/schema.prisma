@@ -81,6 +81,7 @@ model UserBranding {
   website     String?  @db.VarChar(120)
   // Stored as data URL (base64). Consider moving to file storage later if size becomes large.
   logoDataUrl String?  @map("logo_data_url") @db.Text
+  showErc20Transfers Boolean @map("show_erc20_transfers") @default(false)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

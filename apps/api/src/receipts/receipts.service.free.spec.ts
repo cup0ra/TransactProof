@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { ReceiptsService } from './receipts.service'
+import { BrandingService } from './services/branding.service'
 import { PrismaService } from '../database/prisma.service'
 import { BlockchainService } from './blockchain.service'
 import { PdfService } from './pdf.service'
@@ -19,10 +20,30 @@ class PrismaMock {
 }
 class BlockchainMock {
   verifyTransactionExists = jest.fn().mockResolvedValue(true)
-  getTransactionDetails = jest.fn().mockResolvedValue({
-    sender: '0xS', receiver: '0xR', amount: '1', token: 'ETH', timestamp: new Date().toISOString(), chainId: 1, explorerUrl: 'http://explorer', usdtValue: '3', pricePerToken: '3', status: 'success', gasUsed: '21000', gasPrice: '1', transactionFeeEth: '0.000021', transactionFeeUsd: '0.01', nativeTokenSymbol: 'ETH'
+  getUniversalTxDetails = jest.fn().mockResolvedValue({
+    networkName: 'Ethereum Mainnet',
+    chainId: 1,
+    explorerUrl: 'http://explorer/tx/0xhash',
+    receipt: { from: '0xS', to: '0xR', status: 'success', gasUsed: 21000n },
+    internalNativeTransfers: [],
+    erc20Transfers: [],
+    sender: '0xS',
+    receiver: '0xR',
+    amount: '1',
+    token: 'ETH',
+    tokenFrom: 'ETH',
+    tokenTo: 'ETH',
+    amountFrom: '1',
+    amountTo: '1',
+    timestamp: new Date(),
+    status: 'success',
+    gasUsed: '21000',
+    gasPrice: '1',
+    transactionFeeEth: 0.000021,
+    nativeTokenSymbol: 'ETH'
   })
 }
+class BrandingMock { getUserBranding = jest.fn().mockResolvedValue(null) }
 class PdfMock { 
   generateReceiptPdf = jest.fn().mockResolvedValue(Buffer.from('PDF'))
   uploadPdf = jest.fn().mockResolvedValue('http://pdf')
@@ -43,6 +64,7 @@ describe('ReceiptsService free generation', () => {
         { provide: BlockchainService, useClass: BlockchainMock },
         { provide: PdfService, useClass: PdfMock },
         { provide: ConfigService, useValue: { get: () => '0' } }, // disable delay
+        { provide: BrandingService, useClass: BrandingMock },
       ],
     }).compile()
 

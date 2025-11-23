@@ -93,6 +93,7 @@ export class AuthService {
               companyName: 'TRANSACTPROOF', // Можно задать дефолт, например 'My Company'
               website: null,
               logoDataUrl: logoBase64,
+              showErc20Transfers: false,
             },
           })
         } catch (e) {
