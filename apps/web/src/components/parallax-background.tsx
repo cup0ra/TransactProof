@@ -30,10 +30,10 @@ export function ParallaxBackground({
   parallaxSpeed = 0.5,
   minOpacity = 0.3,
   opacityFadeRate = 0.001,
-  darkThemeImage = '/bg-dark.png',
-  lightThemeImage = '/bg-white.png',
-  mobileDarkThemeImage = '/bg-mb-dark.png',
-  mobileLightThemeImage = '/bg-mb-white.png',
+  darkThemeImage = '/bg-dark.webp',
+  lightThemeImage = '/bg-white.webp',
+  mobileDarkThemeImage = '/bg-mb-dark.webp',
+  mobileLightThemeImage = '/bg-mb-white.webp',
   className = ''
 }: ParallaxBackgroundProps) {
   const [scrollY, setScrollY] = useState(0)
