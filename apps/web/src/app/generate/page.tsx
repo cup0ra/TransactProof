@@ -2,12 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { ReceiptGenerator } from '@/components/receipt-generator'
-import { APP_CONFIG, formatPaymentAmount, PAYMENT_AMOUNT } from '@/config'
+import { PAYMENT_AMOUNT } from '@/config'
 import { useAuth } from '@/hooks/use-auth'
 import { useAccount } from 'wagmi'
-import { motion } from 'framer-motion'
 import { ParallaxBackground } from '@/components/parallax-background'
+
+// Dynamic import for motion to reduce initial bundle size
+const MotionDiv = dynamic(
+  () => import('framer-motion').then((mod) => mod.motion.div),
+  { ssr: false }
+)
 
 export default function GeneratePage() {
   const router = useRouter()
@@ -53,7 +59,7 @@ export default function GeneratePage() {
             opacityFadeRate={0.001}
           />
           
-          <motion.div 
+          <MotionDiv 
             className="relative z-40 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center"
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
@@ -61,7 +67,7 @@ export default function GeneratePage() {
           >
             
             {/* Receipt Generator Card */}
-            <motion.div 
+            <MotionDiv 
               className="relative max-w-2xl mx-auto"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -76,9 +82,9 @@ export default function GeneratePage() {
               <div className="absolute -top-2 sm:-top-3 -right-2 sm:-right-3 w-4 h-4 sm:w-6 sm:h-6 border-r-2 border-t-2 border-orange-400"></div>
               <div className="absolute -bottom-2 sm:-bottom-3 -left-2 sm:-left-3 w-4 h-4 sm:w-6 sm:h-6 border-l-2 border-b-2 border-orange-400"></div>
               <div className="absolute -bottom-2 sm:-bottom-3 -right-2 sm:-right-3 w-4 h-4 sm:w-6 sm:h-6 border-r-2 border-b-2 border-orange-400"></div>
-            </motion.div>
+            </MotionDiv>
           
-          </motion.div>
+          </MotionDiv>
         </section>
 
         {/* Process Steps */}

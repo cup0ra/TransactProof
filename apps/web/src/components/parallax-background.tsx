@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { useTheme } from '@/contexts/theme-context'
 
@@ -37,16 +37,23 @@ export function ParallaxBackground({
   className = ''
 }: ParallaxBackgroundProps) {
   const [scrollY, setScrollY] = useState(0)
-  const [isDark, setIsDark] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [image, setImage] = useState('')
   const backgroundRef = useRef<HTMLDivElement>(null)
   const themeContext = useTheme()
 
+  // Choose the right image based on theme and screen size
+  const getBackgroundImage = useCallback((isDark: boolean, isMobile: boolean) => {
+    if (isMobile) {
+      return isDark ? mobileDarkThemeImage : mobileLightThemeImage
+    } else {
+      return isDark ? darkThemeImage : lightThemeImage
+    }
+  }, [darkThemeImage, lightThemeImage, mobileDarkThemeImage, mobileLightThemeImage])
+
   useEffect(() => {
-    setIsDark(themeContext.resolvedTheme === 'dark')
     setImage(getBackgroundImage(themeContext.resolvedTheme === 'dark', isMobile))
-  }, [themeContext, isMobile])
+  }, [themeContext.resolvedTheme, isMobile, getBackgroundImage])
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -78,15 +85,6 @@ export function ParallaxBackground({
     transform: `translateY(${scrollY * parallaxSpeed}px)`,
     opacity: Math.max(minOpacity, 1 - scrollY * opacityFadeRate)
   } : {}
-
-  // Choose the right image based on theme and screen size
-  const getBackgroundImage = (isDark: boolean, isMobile: boolean) => {
-    if (isMobile) {
-      return isDark ? mobileDarkThemeImage : mobileLightThemeImage
-    } else {
-      return isDark ? darkThemeImage : lightThemeImage
-    }
-  }
 
   return (
     <>

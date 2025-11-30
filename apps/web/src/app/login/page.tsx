@@ -2,12 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { ConnectButton } from '@/components/connect-button'
 import { useAuth } from '@/hooks/use-auth'
 import { useAccount } from 'wagmi'
 import { Logo } from '@/components/logo'
-import { motion } from 'framer-motion'
 import { ParallaxBackground } from '@/components/parallax-background'
+
+// Dynamic import for motion to reduce initial bundle size
+const MotionDiv = dynamic(
+  () => import('framer-motion').then((mod) => mod.motion.div),
+  { ssr: false }
+)
 
 export default function LoginPage() {
   const router = useRouter()
@@ -35,33 +41,33 @@ export default function LoginPage() {
         opacityFadeRate={0.001}
       />
       
-      <motion.div 
+      <MotionDiv 
         className="relative z-40 max-w-md w-full text-center"
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1, ease: "easeOut" }}
       >
         {/* Logo */}
-        <motion.div 
+        <MotionDiv 
           className="mb-12 sm:mb-16"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.1, delay: 0.2 }}
         >
-          <motion.div 
+          <MotionDiv 
             className="flex justify-center space-x-1 mb-4 sm:mb-6"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.1, delay: 0.3 }}
           >
             <Logo width={48} height={48} />
-          </motion.div>
+          </MotionDiv>
           <h1 className="text-lg sm:text-xl font-light text-black dark:text-white mb-3 sm:mb-4 tracking-wide transition-colors duration-300">TransactProof</h1>
           <p className="text-gray-700 dark:text-gray-200 text-xs sm:text-sm font-light transition-colors duration-300">Sign in to access your receipts</p>
-        </motion.div>
+        </MotionDiv>
 
         {/* Welcome Text */}
-        <motion.div 
+        <MotionDiv 
           className="mb-8 sm:mb-12"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -71,18 +77,18 @@ export default function LoginPage() {
           <p className="text-gray-700 dark:text-gray-200 text-xs sm:text-sm font-light leading-relaxed mb-6 sm:mb-8 transition-colors duration-300">Connect your wallet to sign in with Ethereum</p>
           
           {/* Centered Connect Wallet Button */}
-          <motion.div 
+          <MotionDiv 
             className="flex justify-center"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.1, delay: 0.7 }}
           >
             <ConnectButton />
-          </motion.div>
-        </motion.div>
+          </MotionDiv>
+        </MotionDiv>
 
         {/* Benefits */}
-        <motion.div 
+        <MotionDiv 
           className="border border-gray-300/50 dark:border-gray-800/50 p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 bg-white/50 backdrop-blur-md dark:bg-black/50 transition-colors duration-300"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -103,7 +109,7 @@ export default function LoginPage() {
               <span className="leading-relaxed">Professional receipts with QR codes</span>
             </li>
           </ul>
-        </motion.div>
+        </MotionDiv>
 
         {/* Terms */}
         <div className="mb-6 sm:mb-8">
@@ -126,7 +132,7 @@ export default function LoginPage() {
             </a>
           </p>
         </div>
-      </motion.div>
+      </MotionDiv>
     </section>
   )
 }
