@@ -1,11 +1,17 @@
 "use client"
 
-import React, { useRef, useState, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import { Button } from '@transactproof/ui'
 import { PAYMENT_AMOUNT, getTokenContractAddress, getAvailablePaymentOptions, PAYMENT_AMOUNT_PACK, PAYMENT_AMOUNT_SUBSCRIPTION, PAYMENT_AMOUNT_DISCOUNT, PAYMENT_PACK_AMOUNT_WITHDISCOUNT, PAYMENT_SUBSCRIPTION_AMOUNT_WITHDISCOUNT } from '@/config'
 import { useRouter } from 'next/navigation'
 import { ParallaxBackground } from '@/components/parallax-background'
-import { motion, useScroll, useTransform } from 'framer-motion'
+
+// Dynamic imports for framer-motion to reduce bundle size
+const MotionDiv = dynamic(
+  () => import('framer-motion').then((mod) => mod.motion.div),
+  { ssr: false }
+)
 import { useChainId, useAccount } from 'wagmi'
 import { usePayToken } from '@/hooks/use-pay-token'
 import { useTokenBalance } from '@/hooks/use-token-balance'
@@ -237,15 +243,6 @@ export default function SubscriptionPage() {
     }
   }, [isConnected, address, isAuthenticated, chainId, payToken, checkAuth, selectedSubToken, detectedSubAddress])
 
-    const ref = useRef(null)
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start start", "end start"]
-  })
-  
-  const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"])
-  const opacity = useTransform(scrollYProgress, [0, 1], [1, 0.3])
-
   const auth = useAuth()
   const now = new Date()
   let activeUntil: Date | null = null
@@ -425,19 +422,18 @@ export default function SubscriptionPage() {
   } as const
 
   return (
-     <section ref={ref} className="relative min-h-screen flex items-center justify-center overflow-hidden py-16 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            className="absolute inset-0"
-            style={{ y, opacity }}
-          >
+     <section className="relative min-h-screen flex items-center justify-center overflow-hidden py-16 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8">
+          <div className="absolute inset-0">
             <ParallaxBackground 
-              enableParallax={false} // motion.div handles parallax
+              enableParallax={true}
+              parallaxSpeed={0.5}
+              minOpacity={0.3}
             />
-          </motion.div>
+          </div>
       {/* Overlay to improve contrast */}
 
       <div className="relative max-w-6xl mx-auto z-10 ">
-        <motion.div
+        <MotionDiv
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.4 }}
@@ -446,18 +442,18 @@ export default function SubscriptionPage() {
         >
           <h1 className="text-3xl sm:text-5xl font-thin tracking-wide text-black dark:text-white mb-6">Subscriptions & Plans</h1>
           <p className="text-black dark:text-white max-w-2xl mx-auto text-sm sm:text-base font-light">Choose what fits your usage — single payment, bundle, or full subscription. Start small and upgrade anytime.</p>
-        </motion.div>
+        </MotionDiv>
         {!isConnected && (
-          <motion.div
+          <MotionDiv
             initial="hidden"
             animate="visible"
             variants={connectVariants}
             className="mb-10 -mt-6 text-center text-xs sm:text-sm text-orange-600 dark:text-orange-400 tracking-wide"
           >
             Connect your wallet to buy a generation pack or start a subscription.
-          </motion.div>
+          </MotionDiv>
         )}
-        <motion.div
+        <MotionDiv
           className="relative grid md:grid-cols-3 gap-8 justify-center mx-auto max-w-6xl"
           variants={cardsContainer}
           initial="hidden"
@@ -465,15 +461,15 @@ export default function SubscriptionPage() {
           viewport={{ once: true, amount: 0.2 }}
         >
           {plans.map(plan => (
-            <motion.div
+            <MotionDiv
               key={plan.title}
               variants={cardItem}
               className="max-w-sm mx-auto w-full"
             >
               <PlanCard {...plan} />
-            </motion.div>
+            </MotionDiv>
           ))}
-        </motion.div>
+        </MotionDiv>
       </div>
     </section>
   )

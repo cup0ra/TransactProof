@@ -2,10 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { usePdfBranding } from '@/hooks/use-pdf-branding'
-import { motion } from 'framer-motion'
 import { ApiClient } from '@/lib/api-client'
 import { ParallaxBackground } from '@/components/parallax-background'
+
+// Dynamic import for motion to reduce bundle size
+const MotionDiv = dynamic(
+  () => import('framer-motion').then((mod) => mod.motion.div),
+  { ssr: false }
+)
 
 export default function CustomizePdfPage() {
   const { branding, update, reset, loaded, dirty, markSaved } = usePdfBranding()
@@ -57,7 +63,7 @@ export default function CustomizePdfPage() {
                 className="z-0"
               />
       <div className='relative max-w-3xl mx-auto  py-16 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8'>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+        <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <div className='mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between'>
             <div >
                 <h1 className='text-xl font-light tracking-wide mb-2'>Customize PDF Receipt</h1>
@@ -67,7 +73,7 @@ export default function CustomizePdfPage() {
             <Link href='/dashboard' className='btn-secondary-minimal text-xs py-2 px-4 text-center'>Back to Dashboard</Link>
           </div>
             </div>
-        </motion.div>
+        </MotionDiv>
 
         {!loaded && (
           <div className='text-xs text-gray-500 animate-pulse mb-8'>Loading saved branding...</div>
@@ -75,7 +81,7 @@ export default function CustomizePdfPage() {
 
         <div className='space-y-8'>
           {/* Company Info + Logo (combined) */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className='border border-gray-200 dark:border-gray-800 p-6 bg-white/50 dark:bg-black/40 backdrop-blur-sm'>
+          <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className='border border-gray-200 dark:border-gray-800 p-6 bg-white/50 dark:bg-black/40 backdrop-blur-sm'>
             <div className='flex items-start justify-between mb-4 gap-4'>
               <h2 className='text-sm uppercase tracking-wider font-medium text-orange-500'>Company Information</h2>
               <div className='flex items-center gap-2'>
@@ -197,10 +203,10 @@ export default function CustomizePdfPage() {
                 {logoError && <p className='mt-2 text-[10px] text-red-500 text-center'>{logoError}</p>}
               </div>
             </div>
-          </motion.div>
+          </MotionDiv>
 
           {/* Full Template Preview (Server HTML Approximation) */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className='border border-gray-200 dark:border-gray-800 p-6 bg-white/60 dark:bg-black/40 backdrop-blur-sm'>
+          <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className='border border-gray-200 dark:border-gray-800 p-6 bg-white/60 dark:bg-black/40 backdrop-blur-sm'>
             <h2 className='text-sm uppercase tracking-wider font-medium text-orange-500 mb-4'>Preview (PDF Template)</h2>
             {mounted && (() => {
               // Helper mimicking server-side network name resolution
@@ -349,7 +355,7 @@ export default function CustomizePdfPage() {
                 Preparing preview...
               </div>
             )}
-          </motion.div>
+          </MotionDiv>
         </div>
       </div>
     </section>
