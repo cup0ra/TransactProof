@@ -101,7 +101,7 @@ export function ParallaxBackground({
             fill
             className="object-cover"
             priority
-            quality={90}
+            quality={85}
           />
           
           {/* Top overlay with 0.2 opacity - white for light theme, black for dark theme */}

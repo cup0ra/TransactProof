@@ -3,11 +3,23 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { ConnectButton } from '@/components/connect-button'
 import { useAuth } from '@/hooks/use-auth'
 import { useAccount } from 'wagmi'
 import { Logo } from '@/components/logo'
 import { ParallaxBackground } from '@/components/parallax-background'
+
+// Dynamic import for ConnectButton - heavy wallet libraries
+const ConnectButton = dynamic(
+  () => import('@/components/connect-button').then((mod) => ({ default: mod.ConnectButton })),
+  { 
+    ssr: false,
+    loading: () => (
+      <button className="inline-flex items-center justify-center px-8 py-3 text-base font-light text-white bg-orange-400 rounded-none">
+        Loading...
+      </button>
+    )
+  }
+)
 
 // Dynamic import for motion to reduce initial bundle size
 const MotionDiv = dynamic(
