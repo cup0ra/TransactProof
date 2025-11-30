@@ -66,6 +66,7 @@ export const metadata = {
     shortcut: '/logo.ico',
     apple: '/logo.png',
   },
+  metadataBase: new URL('https://transactproof.com'),
 };
 
 

@@ -59,11 +59,33 @@ async function bootstrap() {
     SwaggerModule.setup('api/docs', app, document)
   }
 
-  const port = configService.get('PORT', 3001)
-  await app.listen(port)
-  
-  console.log(`🚀 TransactProof API running on port ${port}`)
-  console.log(`📚 API documentation: http://localhost:${port}/api/docs`)
+  const desiredPort = Number(configService.get('PORT')) || 3001
+  const maxShift = 5
+  let started = false
+  for (let i = 0; i <= maxShift; i++) {
+    const port = desiredPort + i
+    try {
+      await app.listen(port)
+      console.log(`🚀 TransactProof API running on port ${port}`)
+      console.log(`📚 API documentation: http://localhost:${port}/api/docs`)
+      if (i > 0) {
+        console.warn(`⚠ Port ${desiredPort} busy. Started on fallback port ${port}. Set PORT to override.`)
+      }
+      started = true
+      break
+    } catch (err: any) {
+      if (err?.code === 'EADDRINUSE') {
+        console.warn(`Port ${port} in use, trying ${port + 1}...`)
+        continue
+      }
+      console.error('Unexpected server start error:', err)
+      break
+    }
+  }
+  if (!started) {
+    console.error(`❌ Failed to bind any port from ${desiredPort} to ${desiredPort + maxShift}. Exiting.`)
+    process.exit(1)
+  }
 }
 
 bootstrap()

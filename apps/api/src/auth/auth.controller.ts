@@ -114,8 +114,8 @@ async refresh(
 
   const refreshToken = req.cookies?.[refreshCookieName];
   if (!refreshToken) {
+    // Silent 401 without clearing refresh cookie repeatedly (already absent)
     res.clearCookie(cookieName, clearOpts);
-    res.clearCookie(refreshCookieName, clearOpts);
     throw new UnauthorizedException('Refresh token not found');
   }
 

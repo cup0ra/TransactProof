@@ -2,6 +2,10 @@
 const nextConfig = {
   output: 'standalone',
   transpilePackages: ['@transactproof/ui', '@transactproof/core'],
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'framer-motion']
+  },
+  poweredByHeader: false,
   images: {
     domains: ['avatars.githubusercontent.com'],
   },
@@ -29,10 +33,13 @@ const nextConfig = {
             key: 'X-XSS-Protection',
             value: '1; mode=block',
           },
+          // Basic caching for static assets (tuned later as needed)
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
         ],
       },
     ];
   },
 }
-
-module.exports = nextConfig
