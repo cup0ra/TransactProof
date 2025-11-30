@@ -84,6 +84,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Preconnect to improve performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://pulse.walletconnect.org" />
+        <link rel="preconnect" href="https://api.transactproof.com" />
+        <link rel="preconnect" href="https://api.web3modal.org" />
         {/* Fallback script: adjusts if user stored light but server assumed dark, or vice versa */}
         <script
           dangerouslySetInnerHTML={{
