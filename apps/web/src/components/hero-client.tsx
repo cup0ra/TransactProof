@@ -5,9 +5,10 @@ import { motion, useScroll, useTransform } from 'framer-motion'
 import { useRef } from 'react'
 import dynamic from 'next/dynamic'
 
-// Lazy load ParallaxBackground separately (avoids bundling if hero cached SSR shell)
+// Lazy load ParallaxBackground separately with loading state
 const ParallaxBackground = dynamic(() => import('./parallax-background').then(m => m.ParallaxBackground), {
-  ssr: false
+  ssr: false,
+  loading: () => <div className="absolute inset-0 bg-black" />
 })
 
 export default function HeroClient() {

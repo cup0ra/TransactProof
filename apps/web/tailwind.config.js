@@ -7,6 +7,9 @@ module.exports = {
     '../../packages/ui/src/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   darkMode: 'class',
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
   theme: {
     extend: {
       colors: {
