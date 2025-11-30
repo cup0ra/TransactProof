@@ -17,6 +17,12 @@ const nextConfig = {
       exclude: ['error', 'warn'],
     } : false,
   },
+    experimental: {
+    legacyBrowsers: false,
+  },
+  browserslist: {
+    production: ['last 2 versions', 'not IE 11'],
+  },
   webpack: (config, { isServer }) => {
     config.externals.push("pino-pretty", "lokijs", "encoding");
     

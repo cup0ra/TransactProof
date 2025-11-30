@@ -1,4 +1,3 @@
-'use client'
 import Link from 'next/link'
 import { APP_CONFIG, formatPaymentAmount } from '@/config'
 
