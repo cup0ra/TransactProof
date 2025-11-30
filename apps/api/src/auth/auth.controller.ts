@@ -50,7 +50,7 @@ async verify(
     host.endsWith(topLevelDomain) &&
     origin.includes(topLevelDomain);
 
-  const sameSite: 'lax' | 'none' = isSameSite ? 'lax' : 'none';
+  const sameSite: 'lax' | 'none' ='lax' ;
 
   try {
     const result = await this.authService.verifySiweMessage(verifyDto);
@@ -108,14 +108,14 @@ async refresh(
     host.endsWith(topLevelDomain) &&
     origin.includes(topLevelDomain);
 
-  const sameSite: 'lax' | 'none' = isSameSite ? 'lax' : 'none';
+  const sameSite: 'lax' | 'none' = 'lax';
 
   const clearOpts = { path: '/', httpOnly: true, secure: isProd, sameSite } as const;
 
   const refreshToken = req.cookies?.[refreshCookieName];
   if (!refreshToken) {
+    // Silent 401 without clearing refresh cookie repeatedly (already absent)
     res.clearCookie(cookieName, clearOpts);
-    res.clearCookie(refreshCookieName, clearOpts);
     throw new UnauthorizedException('Refresh token not found');
   }
 

@@ -58,7 +58,7 @@ export class ReceiptsService {
   let usingFreeGeneration = false
   let decrementFreeCounter = false
     if (userId) {
-      const user: any = await this.prisma.user.findUnique({
+      const user: any = await this.prisma.client.user.findUnique({
         where: { id: userId },
       })
       if (user) {
@@ -157,7 +157,7 @@ export class ReceiptsService {
     
     // Decrement free generation if used
     if (usingFreeGeneration && decrementFreeCounter && userId) {
-      await this.prisma.user.update({
+      await this.prisma.client.user.update({
         where: { id: userId },
         data: { freeGenerationsRemaining: { decrement: 1 } } as any,
       })
@@ -242,7 +242,7 @@ export class ReceiptsService {
     const pdfUrl = await this.pdfService.uploadPdf(pdfBuffer, txHash)
 
     // 6. Save receipt to database
-    const receipt = await this.prisma.receipt.create({
+    const receipt = await this.prisma.client.receipt.create({
       data: {
         userId,
         txHash,
@@ -321,7 +321,7 @@ export class ReceiptsService {
     }
 
     // Increment user's free generations
-    const updatedUser = await this.prisma.user.update({
+    const updatedUser = await this.prisma.client.user.update({
       where: { id: userId },
       data: { freeGenerationsRemaining: { increment: PACK_GENERATIONS } } as any,
     })
@@ -376,7 +376,7 @@ export class ReceiptsService {
     const now = new Date()
     const newUntil = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
 
-    const updated = await this.prisma.user.update({
+    const updated = await this.prisma.client.user.update({
       where: { id: userId },
       data: {
         freeUntil: newUntil,
@@ -415,8 +415,8 @@ export class ReceiptsService {
       queryOptions.take = limit
     }
     
-    const receipts = await this.prisma.receipt.findMany(queryOptions)
-    const total = await this.prisma.receipt.count({ where: whereClause })
+    const receipts = await this.prisma.client.receipt.findMany(queryOptions)
+    const total = await this.prisma.client.receipt.count({ where: whereClause })
 
     const response: any = {
       receipts: receipts.map(receipt => ({
@@ -449,7 +449,7 @@ export class ReceiptsService {
   }
 
   async getReceipt(id: string, userId?: string) {
-    const receipt = await this.prisma.receipt.findUnique({
+    const receipt = await this.prisma.client.receipt.findUnique({
       where: { id },
     })
 

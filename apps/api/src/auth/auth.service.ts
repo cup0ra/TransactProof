@@ -21,7 +21,7 @@ export class AuthService {
     const nonce = randomBytes(16).toString('hex')
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
 
-    await this.prisma.nonce.create({
+    await this.prisma.client.nonce.create({
       data: {
         walletAddress: walletAddress || '',
         nonce,
@@ -57,7 +57,7 @@ export class AuthService {
       }
 
       // Verify nonce
-      const nonceRecord = await this.prisma.nonce.findUnique({
+      const nonceRecord = await this.prisma.client.nonce.findUnique({
         where: { nonce: siweMessage.nonce },
       })
 
@@ -66,13 +66,13 @@ export class AuthService {
       }
 
       // Mark nonce as used
-      await this.prisma.nonce.update({
+      await this.prisma.client.nonce.update({
         where: { nonce: siweMessage.nonce },
         data: { used: true },
       })
 
       // Upsert user
-      const user = await this.prisma.user.upsert({
+      const user = await this.prisma.client.user.upsert({
         where: { walletAddress: siweMessage.address },
         update: {},
         create: { walletAddress: siweMessage.address },
@@ -112,7 +112,7 @@ export class AuthService {
         Date.now() + parseInt(this.configService.get('REFRESH_TTL_DAYS', '7')) * 24 * 60 * 60 * 1000
       )
 
-      await this.prisma.session.create({
+      await this.prisma.client.session.create({
         data: {
           userId: user.id,
           jwtId,
@@ -153,7 +153,7 @@ export class AuthService {
   async validateJwtPayload(payload: any) {
     try {
       // Check if session exists and is valid
-      const session = await this.prisma.session.findUnique({
+      const session = await this.prisma.client.session.findUnique({
         where: { jwtId: payload.jti },
         include: { user: true },
       })
@@ -181,8 +181,12 @@ export class AuthService {
 
   async refreshAccessToken(refreshToken: string) {
     try {
+      if (!refreshToken || refreshToken.length < 32) {
+        // Fast reject without hitting DB if obviously invalid
+        throw new UnauthorizedException('Invalid or expired refresh token')
+      }
       // Find session with valid refresh token
-      const session = await this.prisma.session.findFirst({
+      const session = await this.prisma.client.session.findFirst({
         where: {
           refreshToken,
           refreshExpiresAt: {
@@ -207,7 +211,7 @@ export class AuthService {
       )
 
       // Update session with new tokens
-      await this.prisma.session.update({
+      await this.prisma.client.session.update({
         where: { id: session.id },
         data: {
           jwtId: newJwtId,
@@ -238,16 +242,18 @@ export class AuthService {
         refreshExpiresAt: newRefreshExpiresAt.toISOString(),
       }
     } catch (error) {
-      this.logger.error(`Token refresh failed: ${error.message}`, error.stack)
       if (error instanceof UnauthorizedException) {
+        // Downgrade to warn to reduce log spam
+        this.logger.warn(`Token refresh unauthorized: ${error.message}`)
         throw error
       }
-      throw new UnauthorizedException('Token refresh failed')
+      this.logger.error(`Token refresh unexpected failure: ${error.message}`, error.stack)
+      throw new UnauthorizedException('Invalid or expired refresh token')
     }
   }
 
   async invalidateSession(jwtId: string) {
-    await this.prisma.session.delete({
+    await this.prisma.client.session.delete({
       where: { jwtId },
     })
   }
