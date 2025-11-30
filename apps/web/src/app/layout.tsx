@@ -81,6 +81,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`${inter.className} ${initialIsDark ? 'dark' : ''}`} suppressHydrationWarning>
       <head>
+        {/* Preconnect to improve performance */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Fallback script: adjusts if user stored light but server assumed dark, or vice versa */}
         <script
           dangerouslySetInnerHTML={{

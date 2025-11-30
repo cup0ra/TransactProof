@@ -3,50 +3,31 @@
 @tailwind utilities;
 
 @layer base {
-  /* Предотвращение flash of unstyled content */
+  /* Critical CSS only - prevent FOUC */
   html {
-    background-color: #000000; /* Темный фон по умолчанию */
+    background-color: #000000;
     color-scheme: dark light;
+    font-family: 'Inter', system-ui, sans-serif;
+    scroll-behavior: smooth;
+    overflow-y: scroll;
   }
   
-  /* CSS переменные для цветов тем */
+  /* CSS variables for themes */
   :root {
-    --color-background: 255 255 255; /* белый для светлой темы */
-    --color-foreground: 0 0 0; /* черный для светлой темы */
-    --color-primary: 249 115 22; /* оранжевый остается тем же */
-    --color-secondary: 100 116 139; /* серый для светлой темы */
-    --color-muted: 248 250 252; /* очень светлый серый */
-    --color-border: 226 232 240; /* светлый серый для границ */
-    --color-accent: 249 115 22; /* оранжевый акцент */
-    
-    /* Toast переменные */
+    --color-background: 255 255 255;
+    --color-foreground: 0 0 0;
+    --color-primary: 249 115 22;
     --toast-bg: #ffffff;
     --toast-text: #000000;
     --toast-border: 1px solid #e5e7eb;
   }
 
   .dark {
-    --color-background: 0 0 0; /* черный для темной темы */
-    --color-foreground: 255 255 255; /* белый для темной темы */
-    --color-primary: 249 115 22; /* оранжевый остается тем же */
-    --color-secondary: 100 116 139; /* серый остается тем же */
-    --color-muted: 15 23 42; /* темный серый */
-    --color-border: 30 41 59; /* темный серый для границ */
-    --color-accent: 249 115 22; /* оранжевый акцент */
-    
-    /* Toast переменные для темной темы */
+    --color-background: 0 0 0;
+    --color-foreground: 255 255 255;
     --toast-bg: #000000;
     --toast-text: #ffffff;
     --toast-border: 1px solid #374151;
-  }
-
-  html {
-    font-family: 'Inter', system-ui, sans-serif;
-    scroll-behavior: smooth;
-    background-color: white;
-    color: black;
-    /* Всегда резервируем место для скроллбара */
-    overflow-y: scroll;
   }
   
   html.dark {
@@ -58,11 +39,6 @@
     @apply bg-white dark:bg-black text-black dark:text-white;
     font-weight: 300;
     letter-spacing: 0.025em;
-  }
-  
-  /* Добавляем transition только к компонентам, а не к body */
-  .theme-transition {
-    @apply transition-colors duration-300;
   }
   
   * {
