@@ -13,8 +13,7 @@ export class BrandingService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getUserBranding(userId: string) {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call
-  return (this.prisma as any).userBranding.findUnique({ where: { userId } })
+    return this.prisma.client.userBranding.findUnique({ where: { userId } })
   }
 
   async upsertUserBranding(userId: string, data: UserBrandingDTO) {
@@ -24,8 +23,7 @@ export class BrandingService {
     const logoDataUrl = data.logoDataUrl || null
     const showErc20Transfers = data.showErc20Transfers === true
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call
-  return (this.prisma as any).userBranding.upsert({
+    return this.prisma.client.userBranding.upsert({
       where: { userId },
       create: { userId, companyName, website, logoDataUrl, showErc20Transfers },
       update: { companyName, website, logoDataUrl, showErc20Transfers },
