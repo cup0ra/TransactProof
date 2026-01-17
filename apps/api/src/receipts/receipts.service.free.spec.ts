@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { ReceiptsService } from './receipts.service'
+import { ReceiptsService } from './services/receipts.service'
 import { BrandingService } from './services/branding.service'
 import { PrismaService } from '../database/prisma.service'
 import { BlockchainService } from './blockchain.service'

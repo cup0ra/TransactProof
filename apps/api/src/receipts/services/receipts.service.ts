@@ -32,17 +32,13 @@ export class ReceiptsService {
    * to propagate before we attempt to verify them. Default 10s, configurable
    * via env VERIFICATION_DELAY_MS.
    */
-  private async delayForNetwork() {
+  private async delayForNetwork(): Promise<void> {
     const configured = this.configService.get<string>('VERIFICATION_DELAY_MS')
-    let delayMs = 10000 // default 10 seconds
-    if (configured) {
-      const parsed = parseInt(configured, 10)
-      if (!isNaN(parsed) && parsed >= 0 && parsed <= 60000) { // clamp to 60s max safety
-        delayMs = parsed
-      }
-    }
+    const delayMs = configured ? 
+      Math.min(Math.max(parseInt(configured, 10) || 10000, 0), 60000) : 
+      10000
+    
     if (delayMs > 0) {
-      this.logger.log(`Waiting ${delayMs}ms before verification to allow transaction propagation...`)
       await new Promise(resolve => setTimeout(resolve, delayMs))
     }
   }
@@ -52,122 +48,38 @@ export class ReceiptsService {
     userAddress?: string,
     userId?: string,
   ) {
-  const { txHash, description, paymentTxHash, paymentAmount, paymentType, paymentContractAddress, companyName, website, logoDataUrl } = payAndGenerateDto
+    const { txHash, description, paymentTxHash, paymentAmount, paymentType, paymentContractAddress, companyName, website, logoDataUrl } = payAndGenerateDto
 
-    // If user is authenticated, fetch free generation status
-  let usingFreeGeneration = false
-  let decrementFreeCounter = false
-    if (userId) {
-      const user: any = await this.prisma.client.user.findUnique({
-        where: { id: userId },
-      })
-      if (user) {
-        const now = new Date()
-        const dateValid = user.freeUntil && user.freeUntil > now
-        const hasCounter = user.freeGenerationsRemaining && user.freeGenerationsRemaining > 0
-        if (hasCounter || dateValid) {
-          usingFreeGeneration = true
-          // Only decrement if we actually consumed from counter
-            if (hasCounter) {
-              decrementFreeCounter = true
-            }
-        }
-      }
-    }
+    // Check free generation eligibility for authenticated users
+    const { usingFreeGeneration, decrementFreeCounter } = await this.checkFreeGenerationEligibility(userId)
 
+    // Add network delay only if payment verification is needed
     if (!usingFreeGeneration || !decrementFreeCounter) {
       await this.delayForNetwork()
     }
 
-    // 1. Verify transaction exists in supported networks before processing payment
-    this.logger.log(`Verifying transaction ${txHash} exists in supported networks...`)
+    // 1. Verify transaction exists in supported networks
     const transactionExists = await this.blockchainService.verifyTransactionExists(txHash)
-    
     if (!transactionExists) {
       throw new BadRequestException(
         'Transaction hash not found in any supported network (Ethereum, Base, Base Sepolia, Polygon, Arbitrum, Optimism). Please verify your transaction hash.'
       )
     }
 
-    this.logger.log(`Transaction ${txHash} verified - found in supported networks`)
-
     // 2. Verify payment unless using free generation
     if (userAddress && !usingFreeGeneration) {
-      const expectedPaymentAmount = paymentAmount || 0.0000001 // Default fallback
-      const paymentTokenType = paymentType || 'ETH' // Default to ETH
-      let paymentVerified = false
-      
-      if (paymentTxHash) {
-        // Use efficient hash-based verification if payment hash is provided
-        this.logger.log(`Verifying ${paymentTokenType} payment using transaction hash: ${paymentTxHash} for amount: ${expectedPaymentAmount}`)
-        
-        if (paymentTokenType === 'ETH') {
-          paymentVerified = await this.blockchainService.verifyETHPaymentByHash(
-            paymentTxHash,
-            userAddress,
-            expectedPaymentAmount
-          )
-        } else if ((paymentTokenType === 'USDT' || paymentTokenType === 'USDC') && paymentContractAddress) {
-          // For token payments, use the new token verification method
-          paymentVerified = await this.blockchainService.verifyTokenPaymentByHash(
-            paymentTxHash,
-            userAddress,
-            paymentContractAddress,
-            expectedPaymentAmount,
-            paymentTokenType,
-            6 // USDT/USDC typically have 6 decimals
-          )
-        } else {
-          this.logger.error(`Unsupported payment type: ${paymentTokenType} or missing contract address`)
-          throw new BadRequestException(`Unsupported payment type: ${paymentTokenType}`)
-        }
-      } else {
-        // Fallback to old method if no payment hash provided (for backward compatibility)
-        this.logger.log(`Using fallback payment verification method for ${paymentTokenType}: ${expectedPaymentAmount}`)
-        
-        if (paymentTokenType === 'ETH') {
-          paymentVerified = await this.blockchainService.verifyETHPayment(
-            userAddress,
-            expectedPaymentAmount,
-          )
-        } else if (paymentTokenType === 'USDT') {
-          paymentVerified = await this.blockchainService.verifyUSDTPayment(
-            userAddress,
-            expectedPaymentAmount,
-          )
-        } else {
-          this.logger.error(`Fallback verification not supported for payment type: ${paymentTokenType}`)
-          throw new BadRequestException(`Please provide paymentTxHash for ${paymentTokenType} payments`)
-        }
-      }
-      
-      if (!paymentVerified) {
-        this.logger.error(`Payment verification failed:`, {
-          paymentTxHash,
-          paymentTokenType,
-          expectedPaymentAmount,
-          userAddress,
-          paymentContractAddress
-        })
-        throw new PaymentRequiredException(
-          `Payment of ${expectedPaymentAmount} ${paymentTokenType} to service address not found. Please complete payment first.`
-        )
-      }
+      await this.verifyPayment(userAddress, paymentTxHash, paymentAmount, paymentType, paymentContractAddress)
     }
     
-    // Decrement free generation if used
+    // 3. Decrement free generation counter if applicable
     if (usingFreeGeneration && decrementFreeCounter && userId) {
       await this.prisma.client.user.update({
         where: { id: userId },
         data: { freeGenerationsRemaining: { decrement: 1 } } as any,
       })
-      this.logger.log(`Using free generation (counter) for user ${userId}. Remaining decremented.`)
-    } else if (usingFreeGeneration) {
-      this.logger.log(`Using date-based free generation for user ${userId}. Counter not decremented.`)
     }
 
-    // 3. Use ONLY universal details (getUniversalTxDetails) for PDF generation
-    this.logger.log(`Fetching universal transaction details (single source) for ${txHash}`)
+    // 4. Fetch transaction details
     const networkForTx = await this.blockchainService.findTransactionNetwork(txHash)
     const universalDetails = await this.blockchainService.getUniversalTxDetails({
       hash: txHash,
@@ -175,73 +87,22 @@ export class ReceiptsService {
       traceRpcUrl: this.configService.get<string>('TRACE_RPC_URL') || undefined,
       loadTokenMeta: true,
     })
+    
     if (!universalDetails) {
       throw new BadRequestException('Universal transaction details not found or invalid')
     }
 
-    // 4. Generate PDF using universalDetails summary fields
-    const pdfData: any = {
-      txHash,
-      sender: universalDetails.sender,
-      receiver: universalDetails.receiver,
-      amount: universalDetails.amountFrom || universalDetails.amount,
-      token: universalDetails.tokenFrom || universalDetails.token,
-      // extended universal swap fields
-      tokenFrom: universalDetails.tokenFrom,
-      tokenTo: universalDetails.tokenTo,
-      amountFrom: universalDetails.amountFrom || universalDetails.amount,
-      amountTo: universalDetails.amountTo || universalDetails.amount,
-      timestamp: universalDetails.timestamp || new Date(),
-      description,
-      chainId: universalDetails.chainId,
-      explorerUrl: universalDetails.explorerUrl,
-      // Historical pricing (now provided by universalDetails best-effort)
-      usdtValue: universalDetails.usdtValueFrom, // backward compatibility (input side)
-      pricePerToken: universalDetails.pricePerTokenFrom,
-      usdtValueFrom: universalDetails.usdtValueFrom,
-      usdtValueTo: universalDetails.usdtValueTo,
-      pricePerTokenFrom: universalDetails.pricePerTokenFrom,
-      pricePerTokenTo: universalDetails.pricePerTokenTo,
-      status: universalDetails.status,
-      gasUsed: universalDetails.gasUsed,
-      gasPrice: universalDetails.gasPrice,
-      transactionFeeEth: universalDetails.transactionFeeEth,
-      transactionFeeUsd: universalDetails.transactionFeeUsd,
-      nativeTokenSymbol: universalDetails.nativeTokenSymbol,
-      internalNativeTransfers: universalDetails.internalNativeTransfers,
-      erc20Transfers: universalDetails.erc20Transfers,
-    }
-    // Swap leg extraction removed — using only universal details per requirement.
+    // 5. Prepare PDF data
+    const pdfData = this.preparePdfData(universalDetails, txHash, description)
     
-    const branding: BrandingOptions | undefined = (companyName || website || logoDataUrl) ? {
-      companyName: companyName?.trim() || undefined,
-      website: website?.trim() || undefined,
-      logoDataUrl: logoDataUrl, // Already validated in DTO
-    } : undefined
+    // 6. Get branding options
+    const effectiveBranding = await this.getEffectiveBranding(userId, companyName, website, logoDataUrl)
 
-    let effectiveBranding: BrandingOptions | undefined = branding
-    if (!effectiveBranding && userId) {
-      try {
-        const stored = await this.brandingService.getUserBranding(userId)
-        if (stored) {
-          effectiveBranding = {
-            companyName: stored.companyName || undefined,
-            website: stored.website || undefined,
-            logoDataUrl: stored.logoDataUrl || undefined,
-            showErc20Transfers: stored.showErc20Transfers === true,
-          }
-        }
-      } catch (e) {
-        this.logger.warn('Failed to load stored branding', { userId, error: (e as Error).message })
-      }
-    }
-
+    // 7. Generate and upload PDF
     const pdfBuffer = await this.pdfService.generateReceiptPdf(pdfData, effectiveBranding)
-
-    // 5. Upload PDF to storage
     const pdfUrl = await this.pdfService.uploadPdf(pdfBuffer, txHash)
 
-    // 6. Save receipt to database
+    // 8. Save receipt to database
     const receipt = await this.prisma.client.receipt.create({
       data: {
         userId,
@@ -271,6 +132,168 @@ export class ReceiptsService {
   }
 
   /**
+   * Check if user is eligible for free generation
+   */
+  private async checkFreeGenerationEligibility(userId?: string): Promise<{ usingFreeGeneration: boolean; decrementFreeCounter: boolean }> {
+    if (!userId) {
+      return { usingFreeGeneration: false, decrementFreeCounter: false }
+    }
+
+    const user: any = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+    })
+
+    if (!user) {
+      return { usingFreeGeneration: false, decrementFreeCounter: false }
+    }
+
+    const now = new Date()
+    const hasValidDate = user.freeUntil && user.freeUntil > now
+    const hasCounter = user.freeGenerationsRemaining && user.freeGenerationsRemaining > 0
+
+    if (hasCounter || hasValidDate) {
+      return { 
+        usingFreeGeneration: true, 
+        decrementFreeCounter: hasCounter 
+      }
+    }
+
+    return { usingFreeGeneration: false, decrementFreeCounter: false }
+  }
+
+  /**
+   * Verify payment transaction
+   */
+  private async verifyPayment(
+    userAddress: string,
+    paymentTxHash: string | undefined,
+    paymentAmount: number | undefined,
+    paymentType: string | undefined,
+    paymentContractAddress: string | undefined
+  ): Promise<void> {
+    const expectedPaymentAmount = paymentAmount || 0.0000001
+    const paymentTokenType = paymentType || 'ETH'
+    let paymentVerified = false
+    
+    if (paymentTxHash) {
+      // Hash-based verification (more efficient)
+      if (paymentTokenType === 'ETH') {
+        paymentVerified = await this.blockchainService.verifyETHPaymentByHash(
+          paymentTxHash,
+          userAddress,
+          expectedPaymentAmount
+        )
+      } else if ((paymentTokenType === 'USDT' || paymentTokenType === 'USDC') && paymentContractAddress) {
+        paymentVerified = await this.blockchainService.verifyTokenPaymentByHash(
+          paymentTxHash,
+          userAddress,
+          paymentContractAddress,
+          expectedPaymentAmount,
+          paymentTokenType,
+          6
+        )
+      } else {
+        throw new BadRequestException(`Unsupported payment type: ${paymentTokenType}`)
+      }
+    } else {
+      // Fallback to block scanning (less efficient, for backward compatibility)
+      if (paymentTokenType === 'ETH') {
+        paymentVerified = await this.blockchainService.verifyETHPayment(
+          userAddress,
+          expectedPaymentAmount,
+        )
+      } else if (paymentTokenType === 'USDT') {
+        paymentVerified = await this.blockchainService.verifyUSDTPayment(
+          userAddress,
+          expectedPaymentAmount,
+        )
+      } else {
+        throw new BadRequestException(`Please provide paymentTxHash for ${paymentTokenType} payments`)
+      }
+    }
+    
+    if (!paymentVerified) {
+      this.logger.error(`Payment verification failed for ${paymentTokenType}`)
+      throw new PaymentRequiredException(
+        `Payment of ${expectedPaymentAmount} ${paymentTokenType} to service address not found. Please complete payment first.`
+      )
+    }
+  }
+
+  /**
+   * Prepare PDF data from universal transaction details
+   */
+  private preparePdfData(universalDetails: any, txHash: string, description?: string): any {
+    return {
+      txHash,
+      sender: universalDetails.sender,
+      receiver: universalDetails.receiver,
+      amount: universalDetails.amountFrom || universalDetails.amount,
+      token: universalDetails.tokenFrom || universalDetails.token,
+      tokenFrom: universalDetails.tokenFrom,
+      tokenTo: universalDetails.tokenTo,
+      amountFrom: universalDetails.amountFrom || universalDetails.amount,
+      amountTo: universalDetails.amountTo || universalDetails.amount,
+      timestamp: universalDetails.timestamp || new Date(),
+      description,
+      chainId: universalDetails.chainId,
+      explorerUrl: universalDetails.explorerUrl,
+      usdtValue: universalDetails.usdtValueFrom,
+      pricePerToken: universalDetails.pricePerTokenFrom,
+      usdtValueFrom: universalDetails.usdtValueFrom,
+      usdtValueTo: universalDetails.usdtValueTo,
+      pricePerTokenFrom: universalDetails.pricePerTokenFrom,
+      pricePerTokenTo: universalDetails.pricePerTokenTo,
+      status: universalDetails.status,
+      gasUsed: universalDetails.gasUsed,
+      gasPrice: universalDetails.gasPrice,
+      transactionFeeEth: universalDetails.transactionFeeEth,
+      transactionFeeUsd: universalDetails.transactionFeeUsd,
+      nativeTokenSymbol: universalDetails.nativeTokenSymbol,
+      internalNativeTransfers: universalDetails.internalNativeTransfers,
+      erc20Transfers: universalDetails.erc20Transfers,
+    }
+  }
+
+  /**
+   * Get effective branding (from request or stored user branding)
+   */
+  private async getEffectiveBranding(
+    userId: string | undefined,
+    companyName: string | undefined,
+    website: string | undefined,
+    logoDataUrl: string | undefined
+  ): Promise<BrandingOptions | undefined> {
+    // Use provided branding if available
+    if (companyName || website || logoDataUrl) {
+      return {
+        companyName: companyName?.trim() || undefined,
+        website: website?.trim() || undefined,
+        logoDataUrl: logoDataUrl,
+      }
+    }
+
+    // Load stored branding for authenticated users
+    if (userId) {
+      try {
+        const stored = await this.brandingService.getUserBranding(userId)
+        if (stored) {
+          return {
+            companyName: stored.companyName || undefined,
+            website: stored.website || undefined,
+            logoDataUrl: stored.logoDataUrl || undefined,
+            showErc20Transfers: stored.showErc20Transfers === true,
+          }
+        }
+      } catch (e) {
+        this.logger.warn('Failed to load stored branding', { userId })
+      }
+    }
+
+    return undefined
+  }
+
+  /**
    * Purchase a generations pack (e.g., 20 generations for fixed price) by verifying
    * a token payment transaction hash (USDT / USDC). On success increments user's
    * freeGenerationsRemaining counter.
@@ -282,42 +305,26 @@ export class ReceiptsService {
       throw new ForbiddenException('User not authenticated')
     }
 
-    const PACK_GENERATIONS = this.configService.get<number>('PACK_GENERATIONS') ? parseInt(this.configService.get<string>('PACK_GENERATIONS')!, 10) : 20
+    // Validate payment parameters
+    this.validatePaymentParams(paymentTxHash, paymentContractAddress, paymentType, ['USDT', 'USDC'])
+
+    const PACK_GENERATIONS = parseInt(this.configService.get<string>('PACK_GENERATIONS') || '20', 10)
     const expectedAmount = paymentAmount ?? 9.99
-    const tokenSymbol = paymentType
-    const decimals = 6 // Stablecoins
 
-    // Basic validation
-    if (!paymentTxHash || paymentTxHash.length !== 66) {
-      throw new BadRequestException('Invalid payment transaction hash')
-    }
-    if (!paymentContractAddress || !paymentContractAddress.startsWith('0x')) {
-      throw new BadRequestException('Invalid token contract address')
-    }
-    if (!['USDT', 'USDC'].includes(tokenSymbol)) {
-      throw new BadRequestException('Unsupported payment token')
-    }
-
-    // Allow propagation delay (re-use logic)
     await this.delayForNetwork()
 
-    // Verify payment via hash
-    let verified = false
-    try {
-      verified = await this.blockchainService.verifyTokenPaymentByHash(
-        paymentTxHash,
-        userAddress,
-        paymentContractAddress,
-        expectedAmount,
-        tokenSymbol,
-        decimals
-      )
-    } catch (e) {
-      this.logger.error('Error verifying pack payment', e)
-    }
+    // Verify payment
+    const verified = await this.blockchainService.verifyTokenPaymentByHash(
+      paymentTxHash,
+      userAddress,
+      paymentContractAddress!,
+      expectedAmount,
+      paymentType,
+      6
+    )
 
     if (!verified) {
-      throw new PaymentRequiredException(`Payment of ${expectedAmount} ${tokenSymbol} not verified`)
+      throw new PaymentRequiredException(`Payment of ${expectedAmount} ${paymentType} not verified`)
     }
 
     // Increment user's free generations
@@ -326,15 +333,13 @@ export class ReceiptsService {
       data: { freeGenerationsRemaining: { increment: PACK_GENERATIONS } } as any,
     })
 
-    this.logger.log(`Pack purchased: +${PACK_GENERATIONS} generations for user ${userId}`)
-
     return {
       ok: true,
       added: PACK_GENERATIONS,
-  freeGenerationsRemaining: (updatedUser as any).freeGenerationsRemaining,
+      freeGenerationsRemaining: (updatedUser as any).freeGenerationsRemaining,
       paymentTxHash,
       paymentAmount: expectedAmount,
-      paymentType: tokenSymbol,
+      paymentType,
     }
   }
 
@@ -343,36 +348,32 @@ export class ReceiptsService {
    */
   async purchaseSubscription(dto: PurchaseSubscriptionDto, userAddress?: string, userId?: string) {
     const { paymentTxHash, paymentAmount, paymentType, paymentContractAddress } = dto
+    
     if (!userAddress || !userId) {
       throw new ForbiddenException('User not authenticated')
     }
-    if (!paymentTxHash || paymentTxHash.length !== 66) {
-      throw new BadRequestException('Invalid payment transaction hash')
-    }
-    if (!['USDT','USDC'].includes(paymentType)) {
-      throw new BadRequestException('Unsupported token')
-    }
-    if (!paymentContractAddress) {
-      throw new BadRequestException('Missing contract address')
-    }
+
+    // Validate payment parameters
+    this.validatePaymentParams(paymentTxHash, paymentContractAddress, paymentType, ['USDT', 'USDC'])
 
     const expectedAmount = paymentAmount ?? 29.99
-    const decimals = 6
 
     await this.delayForNetwork()
+    
     const verified = await this.blockchainService.verifyTokenPaymentByHash(
       paymentTxHash,
       userAddress,
-      paymentContractAddress,
+      paymentContractAddress!,
       expectedAmount,
       paymentType,
-      decimals
+      6
     )
+    
     if (!verified) {
       throw new PaymentRequiredException(`Payment of ${expectedAmount} ${paymentType} not verified`)
     }
 
-    // Update subscription: extend freeUntil 30 days from now and ensure counter at least 500
+    // Update subscription: extend freeUntil 30 days from now and add 500 generations
     const now = new Date()
     const newUntil = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
 
@@ -395,28 +396,48 @@ export class ReceiptsService {
     }
   }
 
+  /**
+   * Validate payment parameters
+   */
+  private validatePaymentParams(
+    paymentTxHash: string | undefined,
+    paymentContractAddress: string | undefined,
+    paymentType: string,
+    allowedTokens: string[]
+  ): void {
+    if (!paymentTxHash || paymentTxHash.length !== 66) {
+      throw new BadRequestException('Invalid payment transaction hash')
+    }
+    if (!paymentContractAddress || !paymentContractAddress.startsWith('0x')) {
+      throw new BadRequestException('Invalid token contract address')
+    }
+    if (!allowedTokens.includes(paymentType)) {
+      throw new BadRequestException(`Unsupported payment token: ${paymentType}`)
+    }
+  }
+
   async getUserReceipts(userId: string, chainId?: number, page?: number, limit?: number) {
     const whereClause: any = { userId }
     
-    // Add chainId filter if provided
     if (chainId) {
       whereClause.chainId = chainId
     }
     
-    // If pagination is requested, apply it; otherwise return all
     const queryOptions: any = {
       where: whereClause,
       orderBy: { createdAt: 'desc' },
     }
     
+    // Apply pagination if requested
     if (page && limit) {
-      const skip = (page - 1) * limit
-      queryOptions.skip = skip
+      queryOptions.skip = (page - 1) * limit
       queryOptions.take = limit
     }
     
-    const receipts = await this.prisma.client.receipt.findMany(queryOptions)
-    const total = await this.prisma.client.receipt.count({ where: whereClause })
+    const [receipts, total] = await Promise.all([
+      this.prisma.client.receipt.findMany(queryOptions),
+      this.prisma.client.receipt.count({ where: whereClause })
+    ])
 
     const response: any = {
       receipts: receipts.map(receipt => ({
@@ -433,7 +454,7 @@ export class ReceiptsService {
       })),
     }
     
-    // Only include pagination if it was requested
+    // Include pagination metadata if requested
     if (page && limit) {
       response.pagination = {
         page,
@@ -467,7 +488,7 @@ export class ReceiptsService {
     try {
       transactionDetails = await this.blockchainService.getExtendedTransactionDetails(receipt.txHash)
     } catch (error) {
-      this.logger.warn(`Failed to get extended transaction details for ${receipt.txHash}:`, error)
+      this.logger.warn(`Failed to get transaction details for ${receipt.txHash}`)
     }
 
     return {
@@ -481,16 +502,13 @@ export class ReceiptsService {
       pdfUrl: receipt.pdfUrl,
       description: receipt.description,
       createdAt: receipt.createdAt.toISOString(),
-      transactionDetails, // Include extended details
+      transactionDetails,
     }
   }
 
   async verifyTransaction(txHash: string) {
     try {
-      this.logger.log(`Verifying transaction ${txHash} across all supported networks...`)
       const exists = await this.blockchainService.verifyTransactionExists(txHash)
-      
-      this.logger.log(`Transaction ${txHash} verification result: ${exists ? 'FOUND' : 'NOT FOUND'}`)
       
       return {
         exists,
@@ -510,29 +528,21 @@ export class ReceiptsService {
 
   async getTransactionDetails(txHash: string) {
     try {
-      this.logger.log(`📋 Getting transaction details for hash: ${txHash}`)
-      
       const details = await this.blockchainService.getExtendedTransactionDetails(txHash)
       
       if (!details) {
-        this.logger.warn(`❌ Transaction not found: ${txHash}`)
         throw new NotFoundException('Transaction not found')
       }
 
-
-      this.logger.log(`✅ Transaction details retrieved successfully for ${txHash}`)
-      
       return details
     } catch (error) {
-      this.logger.error(`❌ Error getting transaction details for ${txHash}:`, error)
+      this.logger.error(`Error getting transaction details for ${txHash}:`, error)
       throw new BadRequestException('Failed to get transaction details')
     }
   }
 
   async downloadPdf(id: string, userId?: string) {
     const receipt = await this.getReceipt(id, userId)
-    
-    // Return redirect to PDF URL or stream the file
     return { pdfUrl: receipt.pdfUrl }
   }
 }
