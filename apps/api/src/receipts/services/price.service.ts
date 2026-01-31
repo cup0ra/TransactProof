@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { CoinGeckoService } from '../common/services/coingecko.service'
+import { CoinGeckoService } from '../../common/services/coingecko.service'
 
 interface TokenPrice {
   usd: number

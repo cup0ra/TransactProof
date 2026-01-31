@@ -32,7 +32,6 @@ module.exports = {
       '/generate',
       '/help-center',
       '/how-it-works',
-      '/login',
       '/privacy',
       '/terms',
     ];

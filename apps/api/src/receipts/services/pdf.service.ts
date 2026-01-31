@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config'
 import * as puppeteer from 'puppeteer'
 import * as QRCode from 'qrcode'
 import * as fs from 'fs'
-import { resolveUploadsDir, buildUploadFilePath } from '../common/utils/uploads-path.util'
+import { resolveUploadsDir, buildUploadFilePath } from '../../common/utils/uploads-path.util'
 
 interface SwapLeg {
   from: string
@@ -194,6 +194,24 @@ export class PdfService {
       timeZone: 'UTC',
     })
 
+        // Get native token symbol for the network
+    const getNativeTokenSymbol = (chainId: number) => {
+      switch(chainId) {
+        case 1: return 'ETH'
+        case 8453: return 'ETH'
+        case 84532: return 'ETH'
+        case 137: return 'MATIC'
+        case 10: return 'ETH'
+        case 42161: return 'ETH'
+        case 324: return 'ETH'
+        case 56: return 'BNB'
+        case 43114: return 'AVAX'
+        default: return data.nativeTokenSymbol || 'ETH'
+      }
+    }
+    
+    const nativeSymbol = getNativeTokenSymbol(data.chainId)
+
     // Determine input/output USD values (best-effort)
     const inputUsdRaw = data.usdtValueFrom ?? data.usdtValue ?? undefined
     const outputUsdRaw = data.usdtValueTo ?? (data.usdtValueTo === 0 ? 0 : undefined)
@@ -202,6 +220,12 @@ export class PdfService {
     const effectiveOutputUsdRaw = outputUsdRaw != null ? outputUsdRaw : (!isSwap ? inputUsdRaw : undefined)
     const usdtValueInput = inputUsdRaw != null ? inputUsdRaw.toFixed(6) : null
     const usdtValueOutput = effectiveOutputUsdRaw != null ? effectiveOutputUsdRaw.toFixed(6) : null
+    
+    // Check if input or output token is USDT
+    const inputToken = (data.tokenFrom || data.token || '').toUpperCase()
+    const outputToken = (data.tokenTo || data.token || '').toUpperCase()
+    const isInputTokenUsdt = inputToken.includes('USDT')
+    const isOutputTokenUsdt = outputToken.includes('USDT')
     
     // Format transaction fee data
     const transactionFeeEth = data.transactionFeeEth?.toFixed(8) || null
@@ -218,7 +242,7 @@ export class PdfService {
     let totalWithFeeTokens: string | null = null
     if (data.transactionFeeEth) {
       const amountNum = parseFloat(data.amount)
-      totalWithFeeTokens = (amountNum + data.transactionFeeEth).toFixed(8)
+      totalWithFeeTokens = nativeSymbol ===  inputToken ? (amountNum + data.transactionFeeEth).toFixed(8) : amountNum.toFixed(8)
     }
     
     // Get network name
@@ -236,6 +260,7 @@ export class PdfService {
         default: return `CHAIN ${chainId}`
       }
     }
+
 
     // Universal swap detection now via tokenFrom/tokenTo & amountFrom/amountTo
     // isSwap already computed above
@@ -597,7 +622,7 @@ export class PdfService {
                   <th class="number">#</th>
                   <th>SENDER</th>
                   <th class="amount">VALUE (${data.tokenFrom || data.token})</th>
-                  <th class="amount">VALUE (USD)</th>
+                  ${!isInputTokenUsdt ? '<th class="amount">VALUE (USDT)</th>' : ''}
                 </tr>
               </thead>
               <tbody>
@@ -605,19 +630,19 @@ export class PdfService {
                   <td class="number">0</td>
                   <td class="address">${data.sender}</td>
                   <td class="amount">${data.amountFrom || data.amount}</td>
-                  <td class="amount">${usdtValueInput ? usdtValueInput : '-'}</td>
+                  ${!isInputTokenUsdt ? `<td class="amount">${usdtValueInput ? usdtValueInput : '-'}</td>` : ''}
                 </tr>
                 <tr>
                   <td class="number">1</td>
                   <td><strong>Network Fee</strong></td>
-                  <td class="amount">${transactionFeeEth ? transactionFeeEth : '-'}</td>
-                  <td class="amount">${transactionFeeUsd ? transactionFeeUsd : '-'}</td>
+                  <td class="amount">${transactionFeeEth ? transactionFeeEth + ' ' + nativeSymbol  : '-'}</td>
+                  ${!isInputTokenUsdt ? `<td class="amount">${transactionFeeUsd ? transactionFeeUsd : '-'}</td>` : ''}
                 </tr>
                 <tr class="total-row">
                   <td></td>
                   <td><strong>TOTAL:</strong></td>
                   <td class="amount"><strong>${totalWithFeeTokens ? totalWithFeeTokens + ' ' + (data.tokenFrom || data.token) : (data.amountFrom || data.amount) + ' ' + (data.tokenFrom || data.token)}</strong></td>
-                  <td class="amount"><strong>${totalWithFeeUsd ? totalWithFeeUsd + ' USDT' : (usdtValueInput ? usdtValueInput + ' USDT' : '-')}</strong></td>
+                  ${!isInputTokenUsdt ? `<td class="amount"><strong>${totalWithFeeUsd ? totalWithFeeUsd + ' USDT' : (usdtValueInput ? usdtValueInput + ' USDT' : '-')}</strong></td>` : ''}
                 </tr>
               </tbody>
             </table>
@@ -633,7 +658,7 @@ export class PdfService {
                   <th class="number">#</th>
                   <th>RECIPIENT</th>
                   <th class="amount">VALUE (${finalOutputToken})</th>
-                  <th class="amount">VALUE (USD)</th>
+                  ${!isOutputTokenUsdt ? '<th class="amount">VALUE (USDT)</th>' : ''}
                 </tr>
               </thead>
               <tbody>
@@ -641,13 +666,13 @@ export class PdfService {
                   <td class="number">1</td>
                   <td class="address">${finalReceiver}</td>
                   <td class="amount">${finalOutputAmount}</td>
-                  <td class="amount">${usdtValueOutput ? usdtValueOutput : '-'}</td>
+                  ${!isOutputTokenUsdt ? `<td class="amount">${usdtValueOutput ? usdtValueOutput : '-'}</td>` : ''}
                 </tr>
                 <tr>
                   <td style="border-top: 1px solid #000;">→</td>
                   <td style="border-top: 1px solid #000;"><strong>TOTAL:</strong></td>
                   <td class="amount" style="border-top: 1px solid #000;"><strong>${finalOutputAmount} ${finalOutputToken}</strong></td>
-                  <td class="amount" style="border-top: 1px solid #000;"><strong>${usdtValueOutput ? usdtValueOutput + ' USDT' : '-'}</strong></td>
+                  ${!isOutputTokenUsdt ? `<td class="amount" style="border-top: 1px solid #000;"><strong>${usdtValueOutput ? usdtValueOutput + ' USDT' : '-'}</strong></td>` : ''}
                 </tr>
               </tbody>
             </table>

@@ -12,15 +12,15 @@ import {
 import { Request, Response } from 'express'
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger'
 import { ThrottlerGuard } from '@nestjs/throttler'
-import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard'
 import { ReceiptsService } from '../services/receipts.service'
-import { BrandingService } from './services/branding.service'
-import { PayAndGenerateDto } from './dto/pay-and-generate.dto'
-import { ReceiptResponseDto } from './dto/receipt-response.dto'
-import { PurchasePackDto } from './dto/purchase-pack.dto'
-import { PurchaseSubscriptionDto } from './dto/purchase-subscription.dto'
+import { BrandingService } from '../services/branding.service'
+import { PayAndGenerateDto } from '../dto/pay-and-generate.dto'
+import { ReceiptResponseDto } from '../dto/receipt-response.dto'
+import { PurchasePackDto } from '../dto/purchase-pack.dto'
+import { PurchaseSubscriptionDto } from '../dto/purchase-subscription.dto'
 import * as fs from 'fs'
-import { resolveUploadsDir, buildUploadFilePath } from '../common/utils/uploads-path.util'
+import { resolveUploadsDir, buildUploadFilePath } from '../../common/utils/uploads-path.util'
 
 @ApiTags('receipts')
 @Controller('receipts')

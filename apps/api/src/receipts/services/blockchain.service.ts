@@ -252,7 +252,7 @@ export class BlockchainService {
         result = { symbol: 'ETH', decimals: 18 }
         break
       case 137: // Polygon Mainnet
-        result = { symbol: 'MATIC', decimals: 18 }
+        result = { symbol: 'POL', decimals: 18 }
         break
       case 10: // Optimism Mainnet
         result = { symbol: 'ETH', decimals: 18 }

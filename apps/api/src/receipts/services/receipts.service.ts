@@ -6,14 +6,14 @@ import {
   Logger
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { PrismaService } from '../database/prisma.service'
+import { PrismaService } from '../../database/prisma.service'
 import { BlockchainService } from './blockchain.service'
 import { PdfService, BrandingOptions } from './pdf.service'
-import { BrandingService } from './services/branding.service'
-import { PayAndGenerateDto } from './dto/pay-and-generate.dto'
-import { PaymentRequiredException } from '../common/exceptions/payment-required.exception'
-import { PurchasePackDto } from './dto/purchase-pack.dto'
-import { PurchaseSubscriptionDto } from './dto/purchase-subscription.dto'
+import { BrandingService } from './branding.service'
+import { PayAndGenerateDto } from '../dto/pay-and-generate.dto'
+import { PaymentRequiredException } from '../../common/exceptions/payment-required.exception'
+import { PurchasePackDto } from '../dto/purchase-pack.dto'
+import { PurchaseSubscriptionDto } from '../dto/purchase-subscription.dto'
 
 @Injectable()
 export class ReceiptsService {
