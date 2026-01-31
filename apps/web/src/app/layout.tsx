@@ -6,6 +6,7 @@ import { MemoizedHeader as Header } from '@/components/header'
 import { Footer } from '@/components/footer'
 import ReownProvider from '@/contexts/reown-context'
 import { PAYMENT_AMOUNT_WITHDISCOUNT } from '@/config'
+import { Metadata } from 'next'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -14,10 +15,14 @@ const inter = Inter({
   fallback: ['system-ui', 'arial']
 })
 
-export const metadata = {
+const APP_URL = 'https://app.transactproof.com';
+
+export const metadata: Metadata = {
+  metadataBase: new URL(APP_URL),
+
   title: 'TransactProof — Generate Verified Crypto Transaction Receipts (PDF)',
-  description:
-    `TransactProof lets you instantly create verifiable PDF receipts for your crypto transactions. Pay ${PAYMENT_AMOUNT_WITHDISCOUNT} USDT on supported networks — Ethereum Mainnet, Base, Polygon, Optimism, Arbitrum, zkSync Era, BNB Smart Chain, and Avalanche C-Chain — and receive a tamper-proof document with complete blockchain details.`,
+  description: `TransactProof lets you instantly create verifiable PDF receipts for your crypto transactions. Pay ${PAYMENT_AMOUNT_WITHDISCOUNT} USDT on supported networks — Ethereum Mainnet, Base, Polygon, Optimism, Arbitrum, zkSync Era, BNB Smart Chain, and Avalanche C-Chain — and receive a tamper-proof document with complete blockchain details.`,
+
   keywords: [
     'crypto transaction receipt',
     'crypto receipt pdf',
@@ -28,49 +33,61 @@ export const metadata = {
     'usdt transaction receipt',
     'usdt payment receipt',
     'usdt transfer receipt',
-    'crypto invoice pdf'
+    'crypto invoice pdf',
   ],
-  authors: [{ name: 'TransactProof Team', url: 'https://transactproof.com' }],
+
+  authors: [{ name: 'TransactProof Team', url: APP_URL }],
   creator: 'TransactProof',
   publisher: 'TransactProof',
   applicationName: 'TransactProof',
+
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
+
+  alternates: {
+    canonical: APP_URL,
+  },
+
   openGraph: {
     type: 'website',
-    url: 'https://transactproof.com',
+    url: APP_URL,
+    siteName: 'TransactProof',
     title: 'TransactProof — Verified Crypto Receipts',
-    description:
-      `Generate tamper-proof PDF receipts for your blockchain transactions with a simple ${PAYMENT_AMOUNT_WITHDISCOUNT} USDT payment on Ethereum, Base, Polygon, Optimism, Arbitrum, zkSync, BNB Smart Chain, and Avalanche.`,
+    description: `Generate tamper-proof PDF receipts for your blockchain transactions with a simple ${PAYMENT_AMOUNT_WITHDISCOUNT} USDT payment on Ethereum, Base, Polygon, Optimism, Arbitrum, zkSync, BNB Smart Chain, and Avalanche.`,
     images: [
       {
-        url: '/bg-dark.webp',
+        url: `${APP_URL}/bg-dark.webp`,
         width: 1200,
         height: 630,
-        alt: 'TransactProof Crypto Receipt Generator'
-      }
-    ]
+        alt: 'TransactProof Crypto Receipt Generator',
+      },
+    ],
   },
+
   twitter: {
     card: 'summary_large_image',
     site: '@TransactProof',
     creator: '@TransactProof',
     title: 'TransactProof — Crypto Receipt Generator',
-    description:
-      `Create verifiable PDF receipts for your crypto transactions with a simple ${PAYMENT_AMOUNT_WITHDISCOUNT} USDT payment on Ethereum, Base, Polygon, Optimism, Arbitrum, zkSync, BNB Smart Chain, and Avalanche.`,
-    images: ['/bg-dark.webp']
+    description: `Create verifiable PDF receipts for your crypto transactions with a simple ${PAYMENT_AMOUNT_WITHDISCOUNT} USDT payment on Ethereum, Base, Polygon, Optimism, Arbitrum, zkSync, BNB Smart Chain, and Avalanche.`,
+    images: [`${APP_URL}/bg-dark.webp`],
   },
-  icons: {
-    icon: '/logo.ico',
-    shortcut: '/logo.ico',
-    apple: '/logo.png',
-  },
-  metadataBase: new URL('https://transactproof.com'),
-};
 
+  icons: {
+    icon: `${APP_URL}/logo.ico`,
+    shortcut: `${APP_URL}/logo.ico`,
+    apple: `${APP_URL}/logo.png`,
+  },
+
+  // Extra Web3-friendly hints (harmless for SEO)
+  other: {
+    'dapp:name': 'TransactProof',
+    'dapp:url': APP_URL,
+  },
+};
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const headersObj = await headers()

@@ -44,9 +44,9 @@ const fixModalZIndex = () => {
 const metadata = {
   name: 'TransactProof',
   description: 'Generate PDF receipts for crypto transactions',
-  url: 'http://localhost:3000',
-  icons: ['https://avatars.githubusercontent.com/u/179229932']
-}
+  url: 'https://app.transactproof.com',
+  icons: ['https://app.transactproof.com/logo.ico'],
+};
 
 
 try {  
