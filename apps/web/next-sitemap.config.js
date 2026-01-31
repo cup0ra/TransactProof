@@ -27,11 +27,10 @@ module.exports = {
   additionalPaths: async (config) => {
     const staticPaths = [
       '/',
-      '/dashboard',
+      '/subscription',
       '/disclaimer',
       '/generate',
       '/help-center',
-      '/how-it-works',
       '/privacy',
       '/terms',
     ];
