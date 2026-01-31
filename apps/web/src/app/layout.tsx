@@ -83,6 +83,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`${inter.className} ${initialIsDark ? 'dark' : ''}`} suppressHydrationWarning>
       <head>
+        <meta name="yandex-verification" content="6a4283c3a70f9a5a" />
         {/* Preconnect to improve performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

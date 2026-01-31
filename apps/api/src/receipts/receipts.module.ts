@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common'
-import { ReceiptsController } from './receipts.controller'
-import { ReceiptsService } from './receipts.service'
+import { ReceiptsController } from './controllers/receipts.controller'
+import { ReceiptsService } from './services/receipts.service'
 import { BrandingService } from './services/branding.service'
-import { PdfService } from './pdf.service'
-import { BlockchainService } from './blockchain.service'
-import { PriceService } from './price.service'
+import { PdfService } from './services/pdf.service'
+import { BlockchainService } from './services/blockchain.service'
+import { PriceService } from './services/price.service'
 import { CommonModule } from '../common/common.module'
 
 @Module({
