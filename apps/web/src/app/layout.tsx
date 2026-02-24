@@ -5,7 +5,6 @@ import { Providers } from './providers'
 import { MemoizedHeader as Header } from '@/components/header'
 import { Footer } from '@/components/footer'
 import ReownProvider from '@/contexts/reown-context'
-import { PAYMENT_AMOUNT_WITHDISCOUNT } from '@/config'
 import { Metadata } from 'next'
 
 const inter = Inter({ 
@@ -21,7 +20,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
 
   title: 'TransactProof — Generate Verified Crypto Transaction Receipts (PDF)',
-  description: `TransactProof lets you instantly create verifiable PDF receipts for your crypto transactions. Pay ${PAYMENT_AMOUNT_WITHDISCOUNT} USDT on supported networks — Ethereum Mainnet, Base, Polygon, Optimism, Arbitrum, zkSync Era, BNB Smart Chain, and Avalanche C-Chain — and receive a tamper-proof document with complete blockchain details.`,
+  description: 'TransactProof lets you instantly create verifiable PDF receipts for your crypto transactions. Generate a tamper-proof document with complete blockchain details on supported networks — Ethereum Mainnet, Base, Polygon, Optimism, Arbitrum, zkSync Era, BNB Smart Chain, and Avalanche C-Chain.',
 
   keywords: [
     'crypto transaction receipt',
@@ -56,7 +55,7 @@ export const metadata: Metadata = {
     url: APP_URL,
     siteName: 'TransactProof',
     title: 'TransactProof — Verified Crypto Receipts',
-    description: `Generate tamper-proof PDF receipts for your blockchain transactions with a simple ${PAYMENT_AMOUNT_WITHDISCOUNT} USDT payment on Ethereum, Base, Polygon, Optimism, Arbitrum, zkSync, BNB Smart Chain, and Avalanche.`,
+    description: 'Generate tamper-proof PDF receipts for your blockchain transactions on Ethereum, Base, Polygon, Optimism, Arbitrum, zkSync Era, BNB Smart Chain, and Avalanche.',
     images: [
       {
         url: `${APP_URL}/bg-dark.webp`,
@@ -72,7 +71,7 @@ export const metadata: Metadata = {
     site: '@TransactProof',
     creator: '@TransactProof',
     title: 'TransactProof — Crypto Receipt Generator',
-    description: `Create verifiable PDF receipts for your crypto transactions with a simple ${PAYMENT_AMOUNT_WITHDISCOUNT} USDT payment on Ethereum, Base, Polygon, Optimism, Arbitrum, zkSync, BNB Smart Chain, and Avalanche.`,
+    description: 'Create verifiable PDF receipts for your crypto transactions on Ethereum, Base, Polygon, Optimism, Arbitrum, zkSync Era, BNB Smart Chain, and Avalanche.',
     images: [`${APP_URL}/bg-dark.webp`],
   },
 
