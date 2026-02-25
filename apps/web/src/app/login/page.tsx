@@ -14,7 +14,7 @@ const ConnectButton = dynamic(
   { 
     ssr: false,
     loading: () => (
-      <button className="inline-flex items-center justify-center px-8 py-3 text-base font-light text-white bg-orange-400 rounded-none">
+      <button className="inline-flex items-center justify-center px-8 py-3 text-base font-light text-white bg-orange-400 border border-orange-500 rounded-xl">
         Loading...
       </button>
     )
@@ -80,7 +80,7 @@ export default function LoginPage() {
 
         {/* Welcome Text */}
         <MotionDiv 
-          className="mb-8 sm:mb-12"
+          className="mb-8 sm:mb-12 border border-gray-300/50 dark:border-gray-800/50 rounded-2xl p-4 sm:p-6 lg:p-8 bg-white/40 dark:bg-black/40 backdrop-blur-md transition-colors duration-300"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.1, delay: 0.5 }}
@@ -101,7 +101,7 @@ export default function LoginPage() {
 
         {/* Benefits */}
         <MotionDiv 
-          className="border border-gray-300/50 dark:border-gray-800/50 p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 bg-white/50 backdrop-blur-md dark:bg-black/50 transition-colors duration-300"
+          className="border border-gray-300/50 dark:border-gray-800/50 rounded-2xl p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 bg-white/50 backdrop-blur-md dark:bg-black/50 transition-colors duration-300"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.1, delay: 0.9 }}

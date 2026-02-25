@@ -17,7 +17,7 @@ export default function DisclaimerPage() {
 
           {/* Content */}
           <div className="prose prose-gray dark:prose-invert max-w-none">
-            <div className="border border-gray-300 dark:border-gray-800 p-6 sm:p-8 lg:p-12 bg-white dark:bg-black">
+            <div className="border border-gray-300 dark:border-gray-800 rounded-2xl p-6 sm:p-8 lg:p-12 bg-white dark:bg-black">
               
               {/* Last Updated */}
               <div className="mb-8 pb-6 border-b border-gray-200 dark:border-gray-800">
@@ -27,7 +27,7 @@ export default function DisclaimerPage() {
               </div>
 
               {/* Important Notice */}
-              <div className="mb-8 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-6">
+              <div className="mb-8 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6">
                 <div className="flex items-start space-x-3">
                   <div className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5">
                     <svg className="w-full h-full" fill="currentColor" viewBox="0 0 24 24">
@@ -96,7 +96,7 @@ export default function DisclaimerPage() {
                       <span>Availability and uptime of the blockchain networks.</span>
                     </li>
                   </ul>
-                  <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4 mt-4">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 mt-4">
                     <p className="text-yellow-800 dark:text-yellow-200 text-sm font-normal">
                       Receipts may contain inaccuracies if blockchain data or price feeds are incomplete, delayed, or incorrect.
                     </p>
@@ -123,7 +123,7 @@ export default function DisclaimerPage() {
                       <span>Irreversible transactions and loss of funds due to user mistakes.</span>
                     </li>
                   </ul>
-                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 mt-4">
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mt-4">
                     <p className="text-red-800 dark:text-red-200 text-sm font-normal">
                       We are not liable for any financial loss resulting from your use of blockchain networks or our service.
                     </p>
@@ -167,7 +167,7 @@ export default function DisclaimerPage() {
                   </p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                    <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 text-center">
+                    <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 text-center">
                       <div className="w-8 h-8 text-blue-400 mx-auto mb-2">
                         <svg className="w-full h-full" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z" />
@@ -177,7 +177,7 @@ export default function DisclaimerPage() {
                       <p className="text-xs text-gray-500 dark:text-gray-400 font-light">RPC nodes, explorers</p>
                     </div>
                     
-                    <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 text-center">
+                    <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 text-center">
                       <div className="w-8 h-8 text-green-400 mx-auto mb-2">
                         <svg className="w-full h-full" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z" />
@@ -187,7 +187,7 @@ export default function DisclaimerPage() {
                       <p className="text-xs text-gray-500 dark:text-gray-400 font-light">Market data providers</p>
                     </div>
                     
-                    <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 text-center">
+                    <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 text-center">
                       <div className="w-8 h-8 text-purple-400 mx-auto mb-2">
                         <svg className="w-full h-full" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z" />
@@ -201,7 +201,7 @@ export default function DisclaimerPage() {
               </section>
 
               {/* Final Warning */}
-              <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 p-6">
+              <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-6">
                 <div className="flex items-start space-x-3">
                   <div className="w-6 h-6 text-orange-500 flex-shrink-0 mt-0.5">
                     <svg className="w-full h-full" fill="currentColor" viewBox="0 0 24 24">

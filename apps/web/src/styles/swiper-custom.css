@@ -136,19 +136,23 @@
 
 .receipts-swiper .swiper-pagination-bullet,
 .receipts-swiper-grid .swiper-pagination-bullet {
-  width: 12px !important;
-  height: 12px !important;
-  background: #d1d5db !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 9999px !important;
+  background: #4b5563 !important;
   opacity: 1 !important;
-  transition: all 0.3s ease !important;
-  margin: 0 6px !important;
+  transition: all 0.25s ease !important;
+  margin: 0 5px !important;
   cursor: pointer !important;
 }
 
 .receipts-swiper .swiper-pagination-bullet-active,
 .receipts-swiper-grid .swiper-pagination-bullet-active {
   background: #fb923c !important;
-  transform: scale(1.2) !important;
+  width: 32px !important;
+  height: 8px !important;
+  border-radius: 9999px !important;
+  transform: none !important;
 }
 
 /* Dark mode pagination */

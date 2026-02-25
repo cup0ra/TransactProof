@@ -40,7 +40,11 @@ const removeWalletModals = (hideOnly = false) => {
   })
 }
 
-export function ConnectButton() {
+interface ConnectButtonProps {
+  compact?: boolean
+}
+
+export function ConnectButton({ compact = false }: ConnectButtonProps) {
   // Auth & wallet state
   const { isAuthenticated, user, signInWithEthereum, signOut, isLoading } = useAuth()
   const { address, isConnected } = useAccount()
@@ -258,7 +262,7 @@ export function ConnectButton() {
 
   if (isConnected && isFullyAuthenticated) {
     return (
-      <div className="flex items-center gap-3">
+      <div className={`flex items-center ${compact ? 'gap-2' : 'gap-3'}`}>
         {/* Network Selector */}
         <div className="relative">
           <button
@@ -268,14 +272,14 @@ export function ConnectButton() {
             }}
             aria-haspopup="listbox"
             aria-expanded={showNetworkDropdown}
-            className="flex w-[180px] items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white/30 backdrop-blur-md dark:bg-black/30 text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-all duration-300 font-light text-xs tracking-wide"
+            className={`flex items-center gap-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white/30 backdrop-blur-md dark:bg-black/30 text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-all duration-300 font-light text-xs tracking-wide ${compact ? 'w-[132px] xl:w-[148px] 2xl:w-[170px] px-2 py-1.5' : 'w-[148px] xl:w-[160px] 2xl:w-[180px] px-2.5 xl:px-3 py-1.5'}`}
           >
             <div 
               className="w-4 h-4 rounded-full" 
               style={{ backgroundColor: getNetworkColor(currentNetwork?.id) }}
             />
             <span 
-              className="text-sm font-medium flex-1 truncate" 
+              className="text-xs font-medium flex-1 truncate" 
               title={currentNetwork?.name}
             >
               {currentNetwork?.name}
@@ -292,7 +296,7 @@ export function ConnectButton() {
 
           {/* Network Dropdown */}
           {showNetworkDropdown && (
-            <div className="absolute w-[180px] top-full left-0 mt-1 bg-white/30 backdrop-blur-md dark:bg-black/30 border border-gray-300 dark:border-gray-700 shadow-lg z-50">
+            <div className={`absolute top-full left-0 mt-1 bg-white/30 backdrop-blur-md dark:bg-black/30 border border-gray-300 dark:border-gray-700 rounded-xl overflow-hidden shadow-lg z-50 ${compact ? 'w-[132px] xl:w-[148px] 2xl:w-[170px]' : 'w-[148px] xl:w-[160px] 2xl:w-[180px]'}`}>
               {networks.map((network) => (
                 <button
                   key={network.id}
@@ -320,9 +324,12 @@ export function ConnectButton() {
         </div>
 
         {/* User Info */}
-        <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white/30 backdrop-blur-md dark:bg-black/30 text-gray-700 dark:text-gray-300" aria-label="Connected wallet address">
+        <div className={`hidden xl:flex items-center gap-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white/30 backdrop-blur-md dark:bg-black/30 text-gray-700 dark:text-gray-300 ${compact ? 'px-2 py-1.5' : 'px-2.5 xl:px-3 py-2'}`} aria-label="Connected wallet address">
           <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
-          <span className="font-light text-xs tracking-wide">
+          <span className="font-light text-xs tracking-wide 2xl:hidden">
+            {address ? `${address.slice(0, 6)}…` : 'Connected'}
+          </span>
+          <span className="hidden 2xl:inline font-light text-xs tracking-wide">
             {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Connected'}
           </span>
         </div>
@@ -331,7 +338,7 @@ export function ConnectButton() {
         <button
           onClick={handleDisconnect}
           aria-label="Disconnect wallet"
-          className="px-3 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-all duration-300 font-light text-xs tracking-wide"
+          className={`border border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-all duration-300 font-light tracking-wide ${compact ? 'px-2.5 py-1.5 text-[11px]' : 'px-3 py-2 text-xs'}`}
         >
           Disconnect
         </button>
@@ -341,17 +348,17 @@ export function ConnectButton() {
 
   if (isConnected && !isFullyAuthenticated) {
     return (
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 px-3 py-2 border border-orange-400 bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-400" aria-live="polite">
+      <div className={`flex items-center ${compact ? 'gap-2' : 'gap-3'}`}>
+        <div className={`flex items-center gap-2 border border-orange-400 rounded-xl bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-400 ${compact ? 'px-2.5 py-1.5' : 'px-3 py-2'}`} aria-live="polite">
           <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
-          <span className="font-light text-xs tracking-wide">
+          <span className={`font-light tracking-wide ${compact ? 'text-[11px]' : 'text-xs'}`}>
             {isAuthInProgress ? 'Authenticating...' : 'Authentication Required'}
           </span>
         </div>
         <button
           onClick={handleDisconnect}
           aria-label="Disconnect wallet"
-          className="px-3 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-all duration-300 font-light text-xs tracking-wide"
+          className={`border border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-all duration-300 font-light tracking-wide ${compact ? 'px-2.5 py-1.5 text-[11px]' : 'px-3 py-2 text-xs'}`}
         >
           Disconnect
         </button>
@@ -362,7 +369,7 @@ export function ConnectButton() {
   return (
     <button
       onClick={handleConnect}
-      className="btn-primary-minimal text-xs"
+      className={`btn-primary-minimal rounded-xl text-xs !border-transparent hover:!border-transparent ${compact ? 'px-4 py-2 xl:px-5 xl:py-2.5 2xl:px-8 2xl:py-3' : ''}`}
       disabled={isDisconnecting}
       aria-busy={isDisconnecting}
       aria-label={isDisconnecting ? 'Disconnecting' : 'Connect Wallet'}

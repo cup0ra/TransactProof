@@ -69,7 +69,7 @@ export function ReceiptsSwiper({ receipts, itemsPerSlide }: ReceiptsSwiperProps)
       >
         {Array.from({ length: Math.ceil(receipts.length / itemsPerSlide) }, (_, pageIndex) => (
           <SwiperSlide key={pageIndex}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-6 2xl:grid-rows-2 lg:h-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-6 pt-[4px] 2xl:grid-rows-2 lg:h-auto">
               {receipts.slice(pageIndex * itemsPerSlide, (pageIndex + 1) * itemsPerSlide).map((receipt, index) => (
                 <motion.div
                   key={receipt.id}

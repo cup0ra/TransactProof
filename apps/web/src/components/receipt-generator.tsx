@@ -302,7 +302,7 @@ export function ReceiptGenerator() {
 
   if (!mounted) {
     return (
-      <div className="border border-gray-300 dark:border-gray-800 bg-white/30 backdrop-blur-md dark:bg-black/30 p-8 animate-pulse transition-colors duration-300">
+      <div className="border border-gray-300 dark:border-gray-800 rounded-2xl bg-white/30 backdrop-blur-md dark:bg-black/30 p-8 animate-pulse transition-colors duration-300">
         <div className="h-6 bg-gray-200 dark:bg-gray-800 mb-4 transition-colors duration-300"></div>
         <div className="h-3 bg-gray-200 dark:bg-gray-800 mb-6 transition-colors duration-300"></div>
         <div className="h-16 bg-gray-200 dark:bg-gray-800 mb-4 transition-colors duration-300"></div>
@@ -313,7 +313,7 @@ export function ReceiptGenerator() {
 
   if (step === Step.COMPLETE && receiptData) {
     return (
-      <div className="border border-gray-300 dark:border-gray-800 bg-white/20 backdrop-blur-md dark:bg-black/30 p-6 sm:p-8 transition-colors duration-300">
+      <div className="border border-gray-300 dark:border-gray-800 rounded-2xl bg-white/20 backdrop-blur-md dark:bg-black/30 p-6 sm:p-8 transition-colors duration-300">
         <div className="text-center">
           <div className="w-10 h-10 sm:w-12 sm:h-12 text-orange-400 mx-auto mb-4 sm:mb-6">
             <svg className="w-full h-full" fill="currentColor" viewBox="0 0 24 24">
@@ -332,13 +332,13 @@ export function ReceiptGenerator() {
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <button
               onClick={handleDownload}
-              className="btn-primary-minimal text-xs sm:text-sm py-2.5 sm:py-3"
+              className="btn-primary-minimal rounded-xl text-xs sm:text-sm py-2.5 sm:py-3"
             >
               Download PDF
             </button>
             <button
               onClick={resetForm}
-              className="btn-secondary-minimal text-xs sm:text-sm py-2.5 sm:py-3"
+              className="btn-secondary-minimal rounded-xl text-xs sm:text-sm py-2.5 sm:py-3"
             >
               Generate Another
             </button>
@@ -349,7 +349,7 @@ export function ReceiptGenerator() {
   }
 
   return (
-    <div className="border border-gray-300 dark:border-gray-800 bg-white/20 backdrop-blur-md dark:bg-black/30 p-6 sm:p-8 transition-colors duration-300">
+    <div className="border border-gray-300 dark:border-gray-800 rounded-2xl bg-white/20 backdrop-blur-md dark:bg-black/30 p-6 sm:p-8 transition-colors duration-300">
       <div className="text-center mb-4">
         {/* <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4 sm:mb-6 p-2 border border-orange-400 bg-orange-50 dark:bg-orange-900/20">
           <svg className="w-full h-full text-orange-400" fill="currentColor" viewBox="0 0 24 24">
@@ -377,7 +377,7 @@ export function ReceiptGenerator() {
             value={form.txHash}
             onChange={(e) => setForm({ ...form, txHash: e.target.value })}
             placeholder="0x..."
-            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white dark:bg-black border border-gray-300 dark:border-gray-700 text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all duration-300 font-mono text-xs sm:text-sm"
+            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-white dark:bg-black border border-gray-300 dark:border-gray-700 text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all duration-300 font-mono text-xs sm:text-sm"
             required
           />
         </div>
@@ -392,7 +392,7 @@ export function ReceiptGenerator() {
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             placeholder="Add a description for your receipt..."
             rows={3}
-            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white dark:bg-black border border-gray-300 dark:border-gray-700 text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all duration-300 resize-none text-xs sm:text-sm font-light"
+            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-white dark:bg-black border border-gray-300 dark:border-gray-700 text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all duration-300 resize-none text-xs sm:text-sm font-light"
           />
         </div>
 
@@ -400,7 +400,7 @@ export function ReceiptGenerator() {
           <button
             type="submit"
             disabled={!form.txHash || !isFullyAuthenticated}
-            className={`w-full py-2.5 sm:py-3 px-4 sm:px-6 text-xs sm:text-sm font-light tracking-wide transition-all duration-300 ${
+            className={`w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl text-xs sm:text-sm font-light tracking-wide transition-all duration-300 ${
               !form.txHash || !isFullyAuthenticated
                 ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-gray-300 dark:border-gray-700'
                 : 'btn-primary-minimal'
@@ -430,7 +430,7 @@ export function ReceiptGenerator() {
                     key={option.type}
                     type="button"
                     onClick={() => setSelectedPayment(option)}
-                    className={`p-3 sm:p-4 border rounded-lg text-xs sm:text-sm transition-colors duration-300 ${
+                    className={`p-3 sm:p-4 border rounded-xl text-xs sm:text-sm transition-colors duration-300 ${
                       selectedPayment?.type === option.type
                         ? 'border-orange-400 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400'
                         : 'border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600'
@@ -451,7 +451,7 @@ export function ReceiptGenerator() {
               <button
                 type="button"
                 onClick={() => setStep(Step.INPUT)}
-                className="btn-secondary-minimal text-xs sm:text-sm py-2.5 sm:py-3"
+                className="btn-secondary-minimal rounded-xl text-xs sm:text-sm py-2.5 sm:py-3"
               >
                 Back
               </button>
@@ -461,7 +461,7 @@ export function ReceiptGenerator() {
                 disabled={
                   isPaymentLoading || insufficientBalance
                 }
-                className={`text-xs sm:text-sm py-2.5 sm:py-3 transition-all duration-300 ${
+                className={`rounded-xl text-xs sm:text-sm py-2.5 sm:py-3 transition-all duration-300 ${
                   isPaymentLoading || insufficientBalance
                     ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-gray-300 dark:border-gray-700'
                     : 'btn-primary-minimal'
@@ -497,7 +497,7 @@ export function ReceiptGenerator() {
               <button
                 type="button"
                 onClick={() => setStep(Step.INPUT)}
-                className="btn-secondary-minimal text-xs sm:text-sm py-2.5 sm:py-3"
+                className="btn-secondary-minimal rounded-xl text-xs sm:text-sm py-2.5 sm:py-3"
                 disabled={isFreeGenerating}
               >
                 Back
@@ -506,7 +506,7 @@ export function ReceiptGenerator() {
                 type="button"
                 onClick={handleFreeGenerate}
                 disabled={isFreeGenerating}
-                className={`text-xs sm:text-sm py-2.5 sm:py-3 transition-all duration-300 ${
+                className={`rounded-xl text-xs sm:text-sm py-2.5 sm:py-3 transition-all duration-300 ${
                   isFreeGenerating
                     ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-gray-300 dark:border-gray-700'
                     : 'btn-primary-minimal'

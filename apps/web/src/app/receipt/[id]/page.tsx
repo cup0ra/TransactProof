@@ -163,7 +163,7 @@ export default function ReceiptDetailPage() {
             </div>
             <h1 className="text-lg font-light text-black dark:text-white mb-4 tracking-wide transition-colors duration-300">{error || 'Receipt not found'}</h1>
             <p className="text-gray-600 dark:text-gray-400 mb-8 text-sm font-light transition-colors duration-300">The receipt you're looking for doesn't exist or has been removed.</p>
-            <Link href="/dashboard" className="btn-primary-minimal text-xs">
+            <Link href="/dashboard" className="btn-primary-minimal rounded-xl border border-orange-500/50 text-xs">
               Back to Dashboard
             </Link>
           </div>
@@ -179,7 +179,7 @@ export default function ReceiptDetailPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 sm:mb-12 lg:mb-16 gap-4 sm:gap-6">
           <div className="flex items-center space-x-4 sm:space-x-6">
-            <Link href="/dashboard" className="text-gray-600 dark:text-gray-400 hover:text-orange-500 dark:hover:text-orange-500 transition-all duration-300 hover:scale-110 hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-lg -m-2">
+            <Link href="/dashboard" className="text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-700 hover:border-orange-400 hover:text-orange-500 dark:hover:text-orange-500 transition-all duration-300 hover:scale-110 hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-lg -m-2">
               <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
@@ -188,7 +188,7 @@ export default function ReceiptDetailPage() {
           </div>
           <button
             onClick={handleDownload}
-            className="btn-primary-minimal text-xs w-full sm:w-auto"
+            className="btn-primary-minimal rounded-xl border border-orange-500/50 text-xs w-full sm:w-auto"
           >
             Download PDF
           </button>
@@ -198,7 +198,7 @@ export default function ReceiptDetailPage() {
           {/* Main Content */}
           <div className="xl:col-span-2 space-y-6 sm:space-y-8">
             {/* Receipt Card */}
-            <div className="border border-gray-300 dark:border-gray-800 p-4 sm:p-6 lg:p-8 transition-colors duration-300">
+            <div className="border border-gray-300 dark:border-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 transition-colors duration-300">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8 gap-4">
                 <div className="flex items-center space-x-3 sm:space-x-4">
                   <div className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500 transition-colors duration-300">
@@ -223,12 +223,12 @@ export default function ReceiptDetailPage() {
                   <div>
                     <label className="block text-xs font-light text-gray-500 uppercase tracking-wider mb-2 sm:mb-3">From</label>
                     <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
-                      <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 px-2 sm:px-3 py-3 sm:py-3 text-gray-700 dark:text-gray-300 flex-1 font-mono font-light transition-colors duration-300 break-all leading-relaxed">
+                      <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 rounded-xl px-2 sm:px-3 py-3 sm:py-3 text-gray-700 dark:text-gray-300 flex-1 font-mono font-light transition-colors duration-300 break-all leading-relaxed">
                         {receipt.sender}
                       </code>
                       <button
                         onClick={() => copyToClipboard(receipt.sender)}
-                        className="p-2 sm:p-2 text-gray-500 hover:text-orange-500 transition-colors duration-300 flex-shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                        className="p-2 sm:p-2 text-gray-500 border border-gray-300 dark:border-gray-700 hover:border-orange-400 hover:text-orange-500 transition-colors duration-300 flex-shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
                         title="Copy address"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -240,12 +240,12 @@ export default function ReceiptDetailPage() {
                   <div>
                     <label className="block text-xs font-light text-gray-500 uppercase tracking-wider mb-2 sm:mb-3">To</label>
                     <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
-                      <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 px-2 sm:px-3 py-3 sm:py-3 text-gray-700 dark:text-gray-300 flex-1 font-mono font-light transition-colors duration-300 break-all leading-relaxed">
+                      <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 rounded-xl px-2 sm:px-3 py-3 sm:py-3 text-gray-700 dark:text-gray-300 flex-1 font-mono font-light transition-colors duration-300 break-all leading-relaxed">
                         {receipt.receiver}
                       </code>
                       <button
                         onClick={() => copyToClipboard(receipt.receiver)}
-                        className="p-2 sm:p-2 text-gray-500 hover:text-orange-500 transition-colors duration-300 flex-shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                        className="p-2 sm:p-2 text-gray-500 border border-gray-300 dark:border-gray-700 hover:border-orange-400 hover:text-orange-500 transition-colors duration-300 flex-shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
                         title="Copy address"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -259,12 +259,12 @@ export default function ReceiptDetailPage() {
                 <div>
                   <label className="block text-xs font-light text-gray-500 uppercase tracking-wider mb-2 sm:mb-3">Transaction Hash</label>
                   <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
-                    <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 px-2 sm:px-3 py-3 sm:py-3 text-gray-700 dark:text-gray-300 flex-1 break-all font-mono font-light transition-colors duration-300 leading-relaxed">
+                    <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 rounded-xl px-2 sm:px-3 py-3 sm:py-3 text-gray-700 dark:text-gray-300 flex-1 break-all font-mono font-light transition-colors duration-300 leading-relaxed">
                       {receipt.txHash}
                     </code>
                     <button
                       onClick={() => copyToClipboard(receipt.txHash)}
-                      className="p-2 sm:p-2 text-gray-500 hover:text-orange-500 transition-colors duration-300 flex-shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                      className="p-2 sm:p-2 text-gray-500 border border-gray-300 dark:border-gray-700 hover:border-orange-400 hover:text-orange-500 transition-colors duration-300 flex-shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
                       title="Copy transaction hash"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -275,7 +275,7 @@ export default function ReceiptDetailPage() {
                 </div>                {receipt.description && (
                   <div>
                     <label className="block text-xs font-light text-gray-500 uppercase tracking-wider mb-3">Description</label>
-                    <p className="text-black dark:text-white bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 px-3 py-3 text-xs font-light transition-colors duration-300">
+                    <p className="text-black dark:text-white bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-3 text-xs font-light transition-colors duration-300">
                       {receipt.description}
                     </p>
                   </div>
@@ -284,14 +284,14 @@ export default function ReceiptDetailPage() {
             </div>
 
             {/* External Links */}
-            <div className="border border-gray-300 dark:border-gray-800 p-4 sm:p-6 lg:p-8 transition-colors duration-300">
+            <div className="border border-gray-300 dark:border-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 transition-colors duration-300">
               <h3 className="text-sm font-light text-black dark:text-white mb-4 sm:mb-6 tracking-wide uppercase transition-colors duration-300">External Links</h3>
               <div className="space-y-4">
                 <a
                   href={receipt.transactionDetails?.explorerUrl || receipt.explorerUrl || `https://etherscan.io/tx/${receipt.txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between p-3 sm:p-4 border border-gray-300 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-700 transition-colors duration-300">
+                  className="flex items-center justify-between p-3 sm:p-4 border border-gray-300 dark:border-gray-800 rounded-xl hover:border-gray-400 dark:hover:border-gray-700 transition-colors duration-300">
                   <div className="flex items-center space-x-3 sm:space-x-4">
                     <div className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 transition-colors duration-300 flex-shrink-0">
                       <svg className="w-full h-full" fill="currentColor" viewBox="0 0 24 24">
@@ -314,7 +314,7 @@ export default function ReceiptDetailPage() {
 
             {/* Extended Transaction Details */}
             {receipt.transactionDetails && (
-              <div className="border border-gray-300 dark:border-gray-800 p-4 sm:p-6 lg:p-8 transition-colors duration-300">
+              <div className="border border-gray-300 dark:border-gray-800 rounded-2xl p-4 sm:p-6 lg:p-8 transition-colors duration-300">
                 <div className="flex items-center justify-between mb-6 sm:mb-8">
                   <h3 className="text-sm font-light text-black dark:text-white tracking-wide uppercase transition-colors duration-300">Blockchain Details</h3>
                 </div>
@@ -325,12 +325,12 @@ export default function ReceiptDetailPage() {
                     <div>
                       <label className="block text-xs font-light text-gray-500 uppercase tracking-wider mb-3">Block Number</label>
                       <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
-                        <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 px-3 py-3 text-gray-700 dark:text-gray-300 flex-1 font-mono font-light transition-colors duration-300">
+                        <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-3 text-gray-700 dark:text-gray-300 flex-1 font-mono font-light transition-colors duration-300">
                           {receipt.transactionDetails.blockNumber.toLocaleString()}
                         </code>
                         <button
                           onClick={() => copyToClipboard(receipt.transactionDetails?.blockNumber.toString() || '')}
-                          className="p-2 sm:p-2 text-gray-500 hover:text-orange-500 transition-colors duration-300 flex-shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                          className="p-2 sm:p-2 text-gray-500 border border-gray-300 dark:border-gray-700 hover:border-orange-400 hover:text-orange-500 transition-colors duration-300 flex-shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
                           title="Copy block number"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -342,7 +342,7 @@ export default function ReceiptDetailPage() {
                     <div>
                       <label className="block text-xs font-light text-gray-500 uppercase tracking-wider mb-3">Transaction Index</label>
                       <div className="flex items-center space-x-3">
-                        <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 px-3 py-3 text-gray-700 dark:text-gray-300 flex-1 font-mono font-light transition-colors duration-300">
+                        <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-3 text-gray-700 dark:text-gray-300 flex-1 font-mono font-light transition-colors duration-300">
                           {receipt.transactionDetails.transactionIndex}
                         </code>
                       </div>
@@ -353,12 +353,12 @@ export default function ReceiptDetailPage() {
                   <div>
                     <label className="block text-xs font-light text-gray-500 uppercase tracking-wider mb-3">Block Hash</label>
                     <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
-                      <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 px-3 py-3 text-gray-700 dark:text-gray-300 flex-1 break-all font-mono font-light transition-colors duration-300 leading-relaxed">
+                      <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-3 text-gray-700 dark:text-gray-300 flex-1 break-all font-mono font-light transition-colors duration-300 leading-relaxed">
                         {receipt.transactionDetails.blockHash}
                       </code>
                       <button
                         onClick={() => copyToClipboard(receipt.transactionDetails?.blockHash || '')}
-                        className="p-2 sm:p-2 text-gray-500 hover:text-orange-500 transition-colors duration-300 flex-shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                        className="p-2 sm:p-2 text-gray-500 border border-gray-300 dark:border-gray-700 hover:border-orange-400 hover:text-orange-500 transition-colors duration-300 flex-shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
                         title="Copy block hash"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -372,19 +372,19 @@ export default function ReceiptDetailPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                       <label className="block text-xs font-light text-gray-500 uppercase tracking-wider mb-3">Gas Used</label>
-                      <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 px-3 py-3 text-gray-700 dark:text-gray-300 block font-mono font-light transition-colors duration-300">
+                      <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-3 text-gray-700 dark:text-gray-300 block font-mono font-light transition-colors duration-300">
                         {formatGas(receipt.transactionDetails.gasUsed)}
                       </code>
                     </div>
                     <div>
                       <label className="block text-xs font-light text-gray-500 uppercase tracking-wider mb-3">Gas Limit</label>
-                      <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 px-3 py-3 text-gray-700 dark:text-gray-300 block font-mono font-light transition-colors duration-300">
+                      <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-3 text-gray-700 dark:text-gray-300 block font-mono font-light transition-colors duration-300">
                         {formatGas(receipt.transactionDetails.gasLimit)}
                       </code>
                     </div>
                     <div>
                       <label className="block text-xs font-light text-gray-500 uppercase tracking-wider mb-3">Gas Price (Gwei)</label>
-                      <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 px-3 py-3 text-gray-700 dark:text-gray-300 block font-mono font-light transition-colors duration-300">
+                      <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-3 text-gray-700 dark:text-gray-300 block font-mono font-light transition-colors duration-300">
                         {parseFloat(receipt.transactionDetails.gasPrice).toFixed(2)}
                       </code>
                     </div>
@@ -394,13 +394,13 @@ export default function ReceiptDetailPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-xs font-light text-gray-500 uppercase tracking-wider mb-3">Nonce</label>
-                      <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 px-3 py-3 text-gray-700 dark:text-gray-300 block font-mono font-light transition-colors duration-300">
+                      <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-3 text-gray-700 dark:text-gray-300 block font-mono font-light transition-colors duration-300">
                         {receipt.transactionDetails.nonce}
                       </code>
                     </div>
                     <div>
                       <label className="block text-xs font-light text-gray-500 uppercase tracking-wider mb-3">Confirmations</label>
-                      <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 px-3 py-3 text-gray-700 dark:text-gray-300 block font-mono font-light transition-colors duration-300">
+                      <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-3 text-gray-700 dark:text-gray-300 block font-mono font-light transition-colors duration-300">
                         {receipt.transactionDetails.confirmations.toLocaleString()}
                       </code>
                     </div>
@@ -411,12 +411,12 @@ export default function ReceiptDetailPage() {
                     <div>
                       <label className="block text-xs font-light text-gray-500 uppercase tracking-wider mb-3">Input Data</label>
                       <div className="flex flex-col sm:flex-row sm:items-start space-y-2 sm:space-y-0 sm:space-x-3">
-                        <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 px-3 py-3 text-gray-700 dark:text-gray-300 flex-1 break-all font-mono font-light max-h-32 overflow-y-auto transition-colors duration-300 leading-relaxed">
+                        <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-3 text-gray-700 dark:text-gray-300 flex-1 break-all font-mono font-light max-h-32 overflow-y-auto transition-colors duration-300 leading-relaxed">
                           {receipt.transactionDetails.input}
                         </code>
                         <button
                           onClick={() => copyToClipboard(receipt.transactionDetails?.input || '')}
-                          className="p-2 sm:p-2 text-gray-500 hover:text-orange-500 transition-colors duration-300 flex-shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                          className="p-2 sm:p-2 text-gray-500 border border-gray-300 dark:border-gray-700 hover:border-orange-400 hover:text-orange-500 transition-colors duration-300 flex-shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
                           title="Copy input data"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -432,12 +432,12 @@ export default function ReceiptDetailPage() {
                     <div>
                       <label className="block text-xs font-light text-gray-500 uppercase tracking-wider mb-3">Contract Created</label>
                       <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
-                        <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 px-3 py-3 text-gray-700 dark:text-gray-300 flex-1 font-mono font-light transition-colors duration-300 break-all leading-relaxed">
+                        <code className="text-xs bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-3 text-gray-700 dark:text-gray-300 flex-1 font-mono font-light transition-colors duration-300 break-all leading-relaxed">
                           {receipt.transactionDetails.contractAddress}
                         </code>
                         <button
                           onClick={() => copyToClipboard(receipt.transactionDetails?.contractAddress || '')}
-                          className="p-2 sm:p-2 text-gray-500 hover:text-orange-500 transition-colors duration-300 flex-shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                          className="p-2 sm:p-2 text-gray-500 border border-gray-300 dark:border-gray-700 hover:border-orange-400 hover:text-orange-500 transition-colors duration-300 flex-shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
                           title="Copy contract address"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -452,7 +452,7 @@ export default function ReceiptDetailPage() {
                   {receipt.transactionDetails.logs && receipt.transactionDetails.logs.length > 0 && (
                     <div>
                       <label className="block text-xs font-light text-gray-500 uppercase tracking-wider mb-3">Event Logs ({receipt.transactionDetails.logs.length})</label>
-                      <div className="bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 max-h-48 overflow-y-auto transition-colors duration-300">
+                      <div className="bg-gray-50 dark:bg-black border border-gray-300 dark:border-gray-700 rounded-xl max-h-48 overflow-y-auto transition-colors duration-300">
                         {receipt.transactionDetails.logs.map((log: any, index: number) => (
                           <div key={index} className="border-b border-gray-200 dark:border-gray-800 last:border-b-0 p-4 transition-colors duration-300">
                             <div className="flex items-center justify-between mb-3">
@@ -484,12 +484,12 @@ export default function ReceiptDetailPage() {
           {/* Sidebar */}
           <div className="space-y-4 sm:space-y-6">
             {/* Status */}
-            <div className="border border-gray-300 dark:border-gray-800 p-4 sm:p-6 transition-colors duration-300">
+            <div className="border border-gray-300 dark:border-gray-800 rounded-2xl p-4 sm:p-6 transition-colors duration-300">
               <h3 className="text-sm font-light text-black dark:text-white mb-4 sm:mb-6 tracking-wide uppercase transition-colors duration-300">Status</h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-500 font-light uppercase tracking-wider">Status</span>
-                  <span className={`inline-flex items-center px-2 py-1 text-xs font-light border ${
+                  <span className={`inline-flex items-center px-2 py-1 text-xs font-light border rounded-md ${
                     receipt.transactionDetails?.status === 'success' 
                       ? 'bg-green-500/10 text-green-400 border-green-500/30'
                       : receipt.transactionDetails?.status === 'reverted'
@@ -518,7 +518,7 @@ export default function ReceiptDetailPage() {
             </div>
 
             {/* Timestamps */}
-            <div className="border border-gray-300 dark:border-gray-800 p-4 sm:p-6 transition-colors duration-300">
+            <div className="border border-gray-300 dark:border-gray-800 rounded-2xl p-4 sm:p-6 transition-colors duration-300">
               <h3 className="text-sm font-light text-black dark:text-white mb-4 sm:mb-6 tracking-wide uppercase transition-colors duration-300">Timestamps</h3>
               <div className="space-y-4">
                 <div>
@@ -531,18 +531,18 @@ export default function ReceiptDetailPage() {
             </div>
 
             {/* Actions */}
-            <div className="border border-gray-300 dark:border-gray-800 p-4 sm:p-6 transition-colors duration-300">
+            <div className="border border-gray-300 dark:border-gray-800 rounded-2xl p-4 sm:p-6 transition-colors duration-300">
               <h3 className="text-sm font-light text-black dark:text-white mb-4 sm:mb-6 tracking-wide uppercase transition-colors duration-300">Actions</h3>
               <div className="space-y-4">
                 <button
                   onClick={handleDownload}
-                  className="w-full btn-primary-minimal text-xs py-3"
+                  className="w-full btn-primary-minimal rounded-xl border border-orange-500/50 text-xs py-3"
                 >
                   Download PDF
                 </button>
                 <Link
                   href="/dashboard"
-                  className="w-full btn-secondary-minimal text-xs py-3 text-center"
+                  className="w-full btn-secondary-minimal rounded-xl border border-orange-500/40 text-xs py-3 text-center"
                 >
                   Back to Dashboard
                 </Link>

@@ -70,7 +70,7 @@ export default function CustomizePdfPage() {
                 <p className='text-sm text-gray-600 dark:text-gray-400 mb-8'>Add your company branding that will be used when generating receipts.</p>
             </div>
           <div className='flex flex-col sm:flex-row gap-3'>
-            <Link href='/dashboard' className='btn-secondary-minimal text-xs py-2 px-4 text-center'>Back to Dashboard</Link>
+            <Link href='/dashboard' className='btn-secondary-minimal rounded-xl border border-orange-500/50 text-xs py-2 px-4 text-center'>Back to Dashboard</Link>
           </div>
             </div>
         </MotionDiv>
@@ -81,7 +81,7 @@ export default function CustomizePdfPage() {
 
         <div className='space-y-8'>
           {/* Company Info + Logo (combined) */}
-          <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className='border border-gray-200 dark:border-gray-800 p-6 bg-white/50 dark:bg-black/40 backdrop-blur-sm'>
+          <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className='border rounded-2xl border-gray-200 dark:border-gray-800 p-6 bg-white/50 dark:bg-black/40 backdrop-blur-sm'>
             <div className='flex items-start justify-between mb-4 gap-4'>
               <h2 className='text-sm uppercase tracking-wider font-medium text-orange-500'>Company Information</h2>
               <div className='flex items-center gap-2'>
@@ -89,7 +89,7 @@ export default function CustomizePdfPage() {
                 {saveStatus === 'error' && <span className='text-[10px] text-red-500'>Error</span>}
                 {saveStatus === 'saving' && <span className='text-[10px] text-orange-500'>Saving...</span>}
                 {dirty && saveStatus==='idle' && <span className='text-[10px] text-orange-500'>Unsaved changes</span>}
-                <button onClick={reset} className='text-[11px] px-3 py-1.5 border border-orange-500/40 text-orange-600 hover:bg-orange-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'>Reset</button>
+                <button onClick={reset} className='text-[11px] px-3 py-1.5 rounded-lg border border-orange-500/40 text-orange-600 hover:bg-orange-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'>Reset</button>
                 <button
                   onClick={async () => {
                     setSaveStatus('saving')
@@ -103,7 +103,7 @@ export default function CustomizePdfPage() {
                       setTimeout(()=> setSaveStatus('idle'), 3000)
                     }
                   }}
-                  className='text-[11px] px-3 py-1.5 border border-orange-500/40 text-orange-600 hover:bg-orange-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                  className='text-[11px] px-3 py-1.5 rounded-lg border border-orange-500/40 text-orange-600 hover:bg-orange-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
                   disabled={!loaded || saveStatus==='saving' || !dirty}
                 >Save</button>
               </div>
@@ -114,7 +114,7 @@ export default function CustomizePdfPage() {
                 <div className='flex flex-col gap-1'>
                   <label className='text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-400'>Company Name</label>
                   <input
-                    className='px-3 py-2 text-xs bg-white/70 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-orange-500'
+                    className='px-3 py-2 rounded-2xl text-xs bg-white/70 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-orange-500'
                     value={branding.companyName}
                     onChange={e => update({ companyName: e.target.value })}
                     placeholder='e.g. My Crypto LLC'
@@ -123,19 +123,19 @@ export default function CustomizePdfPage() {
                 <div className='flex flex-col gap-1'>
                   <label className='text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-400'>Website</label>
                   <input
-                    className='px-3 py-2 text-xs bg-white/70 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-orange-500'
+                    className='px-3 py-2 rounded-2xl text-xs bg-white/70 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-orange-500'
                     value={branding.website}
                     onChange={e => update({ website: e.target.value })}
                     placeholder='https://example.com'
                   />
                 </div>
                 <div className='mt-2'>
-                  <label className='flex items-center gap-2 text-[11px] cursor-pointer select-none'>
+                  <label className='flex items-center rounded-2xl gap-2 text-[11px] cursor-pointer select-none'>
                     <input
                       type='checkbox'
                       checked={showDetails}
                       onChange={e => update({ showErc20Transfers: e.target.checked })}
-                      className='h-4 w-4 cursor-pointer rounded-sm border border-gray-400 dark:border-gray-600 text-orange-500 appearance-none outline-none focus:outline-none focus-visible:outline-none transition-colors checked:bg-orange-500 checked:border-orange-500 checked:hover:bg-orange-600'
+                      className='h-4 w-4 cursor-pointer rounded-2xl border border-gray-400 dark:border-gray-600 text-orange-500 appearance-none outline-none focus:outline-none focus-visible:outline-none transition-colors checked:bg-orange-500 checked:border-orange-500 checked:hover:bg-orange-600'
                     />
                     <span className='text-gray-700 dark:text-gray-300'>Show transaction details</span>
                   </label>
@@ -149,7 +149,7 @@ export default function CustomizePdfPage() {
                   onDragOver={e => { e.preventDefault(); }}
                   onDrop={onDrop}
                   onDragLeave={e => { e.preventDefault(); setDragActive(false) }}
-                  className={`relative border-2 border-dashed rounded-sm p-4 flex flex-col items-center justify-center text-center transition-colors duration-300 min-h-[180px] ${dragActive ? 'border-orange-400 bg-orange-50/40 dark:bg-orange-500/10' : 'border-gray-300 dark:border-gray-700'}`}
+                  className={`relative border-2 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center text-center transition-colors duration-300 min-h-[180px] ${dragActive ? 'border-orange-400 bg-orange-50/40 dark:bg-orange-500/10' : 'border-gray-300 dark:border-gray-700'}`}
                 >
                   {branding.logoDataUrl ? (
                     <div className='flex flex-col items-center gap-3 w-full'>
@@ -162,7 +162,7 @@ export default function CustomizePdfPage() {
                           onClick={() => fileInputRef.current?.click()}
                           aria-label='Change logo'
                           title='Change logo'
-                          className='w-8 h-8 flex items-center justify-center p-0 border-0 bg-transparent hover:bg-orange-500/10 text-orange-500 dark:text-orange-500 hover:text-orange-500 transition-colors'
+                          className='w-8 h-8 flex items-center justify-center p-0 border border-orange-500/40 rounded-lg bg-transparent hover:bg-orange-500/10 text-orange-500 dark:text-orange-500 hover:text-orange-500 transition-colors'
                         >
                           <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round' strokeLinejoin='round' className='w-4 h-4'>
                             <path d='M11 4H4a1 1 0 0 0-1 1v15a1 1 0 0 0 1 1h15a1 1 0 0 0 1-1v-7' />
@@ -173,7 +173,7 @@ export default function CustomizePdfPage() {
                           onClick={removeLogo}
                           aria-label='Remove logo'
                           title='Remove logo'
-                          className='w-8 h-8 flex items-center justify-center p-0 border-0 bg-transparent hover:bg-red-500/10 text-red-500 hover:text-red-600 transition-colors'
+                          className='w-8 h-8 flex items-center justify-center p-0 border border-red-500/40 rounded-lg bg-transparent hover:bg-red-500/10 text-red-500 hover:text-red-600 transition-colors'
                         >
                           <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round' strokeLinejoin='round' className='w-4 h-4'>
                             <path d='M3 6h18' />
@@ -189,7 +189,7 @@ export default function CustomizePdfPage() {
                     <>
                       <p className='text-[11px] text-gray-600 dark:text-gray-400'>Drag & drop logo</p>
                       <p className='text-[10px] text-gray-500 dark:text-gray-500'>PNG / JPG / SVG • Max 500KB</p>
-                      <button onClick={() => fileInputRef.current?.click()} className='mt-3 btn-primary-minimal text-[11px] px-3 py-1.5'>Select File</button>
+                      <button onClick={() => fileInputRef.current?.click()} className='mt-3 btn-primary-minimal rounded-xl border border-orange-500/60 text-[11px] px-3 py-1.5'>Select File</button>
                     </>
                   )}
                   <input
@@ -206,7 +206,7 @@ export default function CustomizePdfPage() {
           </MotionDiv>
 
           {/* Full Template Preview (Server HTML Approximation) */}
-          <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className='border border-gray-200 dark:border-gray-800 p-6 bg-white/60 dark:bg-black/40 backdrop-blur-sm'>
+          <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className='border rounded-2xl border-gray-200 dark:border-gray-800 p-6 bg-white/60 dark:bg-black/40 backdrop-blur-sm'>
             <h2 className='text-sm uppercase tracking-wider font-medium text-orange-500 mb-4'>Preview (PDF Template)</h2>
             {mounted && (() => {
               // Helper mimicking server-side network name resolution

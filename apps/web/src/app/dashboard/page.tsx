@@ -44,7 +44,7 @@ const ReceiptsSwiper = dynamic(
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
         {[...Array(6)].map((_, i) => (
           <div key={i} className="animate-pulse">
-            <div className="border border-gray-200 dark:border-gray-800 p-4 sm:p-6 bg-gray-50 dark:bg-transparent transition-colors duration-300">
+            <div className="border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-6 bg-gray-50 dark:bg-transparent transition-colors duration-300">
               <div className="h-3 bg-gray-300 dark:bg-gray-800 mb-2 transition-colors duration-300"></div>
               <div className="h-2 bg-gray-300 dark:bg-gray-800 mb-4 w-2/3 transition-colors duration-300"></div>
               <div className="h-6 bg-gray-300 dark:bg-gray-800 transition-colors duration-300"></div>
@@ -270,20 +270,20 @@ export default function DashboardPage() {
                 <MotionDiv
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
                 >
-                  <Link href="/generate" className="btn-primary-minimal text-xs py-2 px-4 text-center block">
+                  <Link href="/generate" className="btn-primary-minimal rounded-xl text-xs py-2 px-4 text-center block">
                     Generate New Receipt
                   </Link>
                 </MotionDiv>
                 <MotionDiv
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
                 >
-                  <Link href="/dashboard/customize-pdf" className="btn-secondary-minimal text-xs py-2 px-4 text-center block">
+                  <Link href="/dashboard/customize-pdf" className="btn-secondary-minimal rounded-xl text-xs py-2 px-4 text-center block">
                     Customize PDF
                   </Link>
                 </MotionDiv>
                 <MotionButton 
                   onClick={() => fetchReceipts()}
-                  className="btn-secondary-minimal text-xs py-2 px-4"
+                  className="btn-secondary-minimal rounded-xl text-xs py-2 px-4"
                   disabled={loading || !isConnected || !isAuthenticated}
         
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
@@ -320,7 +320,7 @@ export default function DashboardPage() {
                   transition={{ duration: 0.5, delay: 0.35 }}
                   className="mb-8"
                 >
-                  <div className="relative overflow-hidden border border-orange-300/60 dark:border-orange-500/40 bg-gradient-to-r from-orange-50/70 via-amber-50/60 to-orange-100/60 dark:from-orange-900/20 dark:via-orange-800/10 dark:to-orange-900/20 px-4 sm:px-6 py-4 backdrop-blur rounded-sm flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <div className="relative overflow-hidden border border-orange-300/60 dark:border-orange-500/40 bg-gradient-to-r from-orange-50/70 via-amber-50/60 to-orange-100/60 dark:from-orange-900/20 dark:via-orange-800/10 dark:to-orange-900/20 px-4 sm:px-6 py-4 backdrop-blur rounded-2xl flex flex-col sm:flex-row items-start sm:items-center gap-3">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
                       <p className="text-[11px] sm:text-xs tracking-wide font-medium text-orange-700 dark:text-orange-300 uppercase">Usage Status</p>
@@ -364,7 +364,7 @@ export default function DashboardPage() {
             transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
           >
             <MotionDiv 
-              className="border border-gray-200 dark:border-gray-800 p-4 sm:p-6 bg-white/50 backdrop-blur-md dark:bg-black/50 transition-colors duration-300"
+              className="border border-gray-200 dark:border-gray-800 rounded-2xl card-hover p-4 sm:p-6 bg-white/50 backdrop-blur-md dark:bg-black/50 hover:bg-white/70 dark:hover:bg-black/70 transition-colors duration-300"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5, ease: "easeOut" }}
@@ -394,7 +394,7 @@ export default function DashboardPage() {
             </MotionDiv>
 
             <MotionDiv 
-              className="border border-gray-200 dark:border-gray-800 p-4 sm:p-6 bg-white/50 backdrop-blur-md dark:bg-black/50 transition-colors duration-300"
+              className="border border-gray-200 dark:border-gray-800 rounded-2xl card-hover p-4 sm:p-6 bg-white/50 backdrop-blur-md dark:bg-black/50 hover:bg-white/70 dark:hover:bg-black/70 transition-colors duration-300"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.6, ease: "easeOut" }}
@@ -424,7 +424,7 @@ export default function DashboardPage() {
             </MotionDiv>
 
             <MotionDiv 
-              className="border border-gray-200 dark:border-gray-800 p-4 sm:p-6 bg-white/50 backdrop-blur-md dark:bg-black/50 transition-colors duration-300 sm:col-span-2 lg:col-span-1"
+              className="border border-gray-200 dark:border-gray-800 rounded-2xl card-hover p-4 sm:p-6 bg-white/50 backdrop-blur-md dark:bg-black/50 hover:bg-white/70 dark:hover:bg-black/70 transition-colors duration-300 sm:col-span-2 lg:col-span-1"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.7, ease: "easeOut" }}
@@ -473,7 +473,7 @@ export default function DashboardPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
                 >
-                  <div className="border border-gray-200 dark:border-gray-800 p-4 sm:p-6 bg-gray-50 dark:bg-transparent transition-colors duration-300">
+                  <div className="border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-6 bg-gray-50 dark:bg-transparent transition-colors duration-300">
                     <div className="h-3 bg-gray-300 dark:bg-gray-800 mb-2 transition-colors duration-300"></div>
                     <div className="h-2 bg-gray-300 dark:bg-gray-800 mb-4 w-2/3 transition-colors duration-300"></div>
                     <div className="h-6 bg-gray-300 dark:bg-gray-800 transition-colors duration-300"></div>

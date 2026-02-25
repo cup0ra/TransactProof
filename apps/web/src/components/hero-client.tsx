@@ -68,14 +68,16 @@ export default function HeroClient() {
         >
           <Link
             href="/generate"
-            className="group relative inline-flex items-center justify-center px-8 sm:px-10 lg:px-12 py-3 sm:py-4 text-base sm:text-lg font-light text-white dark:text-black bg-orange-400 rounded-none hover:bg-orange-500 hover:text-white dark:hover:text-black transition-all duration-300 border-2 border-transparent hover:border-orange-600"
+            className="group relative inline-flex items-center justify-center overflow-hidden px-7 sm:px-8 lg:px-9 py-2.5 sm:py-3 text-base sm:text-lg font-light text-white dark:text-black bg-orange-400 rounded-lg hover:bg-orange-500 hover:text-white dark:hover:text-black transition-all duration-300 border-transparent hover:border-orange-600"
+            style={{ fontFamily: "'Clash Display', system-ui, sans-serif" }}
           >
             <span className="relative z-10">Generate Receipt</span>
-            <div className="absolute inset-0 bg-orange-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
+            <div className="absolute inset-0 rounded-lg bg-orange-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
           </Link>
           <Link
             href="/dashboard"
-            className="inline-flex items-center justify-center px-8 sm:px-10 lg:px-12 py-3 sm:py-4 text-base sm:text-lg font-light text-orange-400 border border-orange-400 rounded-none hover:border-orange-500 hover:text-orange-500 hover:bg-orange-950/10 dark:hover:bg-orange-950 transition-all duration-300"
+            className="inline-flex items-center justify-center px-7 sm:px-8 lg:px-9 py-2.5 sm:py-3 text-base sm:text-lg font-light text-orange-400 border border-orange-400 rounded-lg hover:border-orange-500 hover:text-orange-500 hover:bg-orange-950/10 dark:hover:bg-orange-950 transition-all duration-300"
+            style={{ fontFamily: "'Clash Display', system-ui, sans-serif" }}
           >
             Dashboard
           </Link>

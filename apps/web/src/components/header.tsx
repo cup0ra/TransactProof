@@ -51,22 +51,22 @@ export function Header() {
     home: `text-sm transition-colors font-light tracking-wide ${
       pathname === '/' 
         ? 'text-orange-400 border-b border-orange-400 pb-1' 
-        : 'text-gray-600 dark:text-gray-400 hover:text-orange-400'
+        : 'text-black dark:text-white hover:text-orange-400'
     }`,
     generate: `text-sm transition-colors font-light tracking-wide ${
       pathname === '/generate' 
         ? 'text-orange-400 border-b border-orange-400 pb-1' 
-        : 'text-gray-600 dark:text-gray-400 hover:text-orange-400'
+        : 'text-black dark:text-white hover:text-orange-400'
     }`,
     subscription: `text-sm transition-colors font-light tracking-wide ${
       pathname === '/subscription' 
         ? 'text-orange-400 border-b border-orange-400 pb-1' 
-        : 'text-gray-600 dark:text-gray-400 hover:text-orange-400'
+        : 'text-black dark:text-white hover:text-orange-400'
     }`,
     dashboard: `text-sm transition-colors font-light tracking-wide ${
       pathname === '/dashboard' 
         ? 'text-orange-400 border-b border-orange-400 pb-1' 
-        : 'text-gray-600 dark:text-gray-400 hover:text-orange-400'
+        : 'text-black dark:text-white hover:text-orange-400'
     }`
   }), [pathname])
 
@@ -81,7 +81,7 @@ export function Header() {
   return (
     <>
       <header className="fixed top-0 w-full z-50">
-        <div className="mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-16">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-4 lg:gap-8">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2 sm:space-x-3" onClick={closeMobileMenu}>
             <Logo />
@@ -89,7 +89,7 @@ export function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-8 lg:space-x-12">
+          <nav className="hidden md:flex space-x-5 lg:space-x-7 xl:space-x-10">
             <Link 
               href="/" 
               className={navClasses.home}
@@ -118,9 +118,9 @@ export function Header() {
             )}
           </nav>
           {/* Desktop Actions */}
-          <div className="hidden md:flex items-center ml-auto space-x-2">
+          <div className="hidden md:flex items-center ml-auto space-x-1.5 lg:space-x-2 border border-gray-300/50 dark:border-gray-800/50 rounded-xl px-1.5 lg:px-2 py-1 bg-white/20 dark:bg-black/20 backdrop-blur-sm">
             <ThemeToggle />
-            <ConnectButton />
+            <ConnectButton compact />
           </div>
 
           {/* Mobile Menu Button */}
@@ -128,7 +128,7 @@ export function Header() {
             <ThemeToggle />
             <button
               onClick={toggleMobileMenu}
-              className="p-3 text-gray-600 dark:text-gray-400 hover:text-orange-400 transition-colors duration-300 ml-2"
+              className="p-3 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-600 dark:text-gray-400 hover:text-orange-400 hover:border-orange-400 transition-colors duration-300 ml-2"
               aria-label="Toggle mobile menu"
             >
               <svg 
@@ -154,7 +154,7 @@ export function Header() {
       }`}>
         <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm" onClick={closeMobileMenu}></div>
         {/* Mobile Menu Panel sliding from right */}
-        <div className={`fixed top-0 right-0 bottom-0 w-80 max-w-[80vw] z-[70] bg-white/50 backdrop-blur-md dark:bg-black/50 border-l border-gray-200 dark:border-gray-800 transform transition-transform duration-300 ease-in-out ${
+        <div className={`fixed top-0 right-0 bottom-0 w-80 max-w-[80vw] z-[70] bg-white/50 backdrop-blur-md dark:bg-black/50 border-l border-gray-200 dark:border-gray-800 rounded-l-2xl transform transition-transform duration-300 ease-in-out ${
           mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         }`}>
           {/* Mobile Menu Header */}
@@ -165,7 +165,7 @@ export function Header() {
             </div>
             <button
               onClick={closeMobileMenu}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-orange-400 transition-colors duration-300"
+              className="p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-400 hover:text-orange-400 hover:border-orange-400 transition-colors duration-300"
               aria-label="Close mobile menu"
             >
               <svg 
@@ -188,8 +188,8 @@ export function Header() {
                 onClick={closeMobileMenu}
                 className={`block text-sm transition-colors font-light tracking-wide py-2 px-2 rounded-lg ${
                   pathname === '/' 
-                    ? 'text-orange-400' 
-                    : 'text-gray-600 dark:text-gray-400 hover:text-orange-400 hover:bg-gray-50 dark:hover:bg-gray-900'
+                    ? 'text-orange-400 border-orange-400/60 bg-orange-50/30 dark:bg-orange-950/20' 
+                    : 'text-gray-600 dark:text-gray-400 border-gray-300/60 dark:border-gray-700 hover:text-orange-400 hover:border-orange-400 hover:bg-gray-50 dark:hover:bg-gray-900'
                 }`}
               >
                 Home
@@ -199,8 +199,8 @@ export function Header() {
                 onClick={closeMobileMenu}
                 className={`block text-sm transition-colors font-light tracking-wide py-2 px-2 rounded-lg ${
                   pathname === '/generate' 
-                    ? 'text-orange-400' 
-                    : 'text-gray-600 dark:text-gray-400 hover:text-orange-400 hover:bg-gray-50 dark:hover:bg-gray-900'
+                    ? 'text-orange-400 border-orange-400/60 bg-orange-50/30 dark:bg-orange-950/20' 
+                    : 'text-gray-600 dark:text-gray-400 border-gray-300/60 dark:border-gray-700 hover:text-orange-400 hover:border-orange-400 hover:bg-gray-50 dark:hover:bg-gray-900'
                 }`}
               >
                 Generate
@@ -210,8 +210,8 @@ export function Header() {
                 onClick={closeMobileMenu}
                 className={`block text-sm transition-colors font-light tracking-wide py-2 px-2 rounded-lg ${
                   pathname === '/subscription' 
-                    ? 'text-orange-400' 
-                    : 'text-gray-600 dark:text-gray-400 hover:text-orange-400 hover:bg-gray-50 dark:hover:bg-gray-900'
+                    ? 'text-orange-400 border-orange-400/60 bg-orange-50/30 dark:bg-orange-950/20' 
+                    : 'text-gray-600 dark:text-gray-400 border-gray-300/60 dark:border-gray-700 hover:text-orange-400 hover:border-orange-400 hover:bg-gray-50 dark:hover:bg-gray-900'
                 }`}
               >
                 Subscription
@@ -222,8 +222,8 @@ export function Header() {
                   onClick={closeMobileMenu}
                   className={`block text-sm transition-colors font-light tracking-wide py-2 px-2 rounded-lg ${
                     pathname === '/dashboard' 
-                      ? 'text-orange-400' 
-                      : 'text-gray-600 dark:text-gray-400 hover:text-orange-400 hover:bg-gray-50 dark:hover:bg-gray-900'
+                      ? 'text-orange-400 border-orange-400/60 bg-orange-50/30 dark:bg-orange-950/20' 
+                      : 'text-gray-600 dark:text-gray-400 border-gray-300/60 dark:border-gray-700 hover:text-orange-400 hover:border-orange-400 hover:bg-gray-50 dark:hover:bg-gray-900'
                   }`}
                 >
                   Dashboard

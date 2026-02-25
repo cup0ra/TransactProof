@@ -53,7 +53,7 @@ interface PlanCardProps {
   highlight?: boolean
 }
 const PlanCard: React.FC<PlanCardProps & { footerContent?: React.ReactNode; subtitleOverride?: React.ReactNode; hideAction?: boolean }> = ({ title, price, description, features, cta, onSelect, highlight, footerContent, discountedPrice, subtitleOverride, hideAction }) => (
-  <div className={`relative flex flex-col h-full border  p-6 backdrop-blur-sm transition-all duration-300 ${highlight ? 'border-orange-400/80 bg-white/70 dark:bg-black/60 shadow-[0_0_0_1px_rgba(249,115,22,0.4),0_8px_30px_-10px_rgba(249,115,22,0.25)]' : 'border-gray-300/40 dark:border-gray-800/60 bg-white/30 dark:bg-black/40'} hover:border-orange-400/80`}> 
+  <div className={`relative flex flex-col h-full border rounded-2xl card-hover p-6 backdrop-blur-sm ${highlight ? 'border-orange-400/80 bg-white/70 dark:bg-black/60 shadow-[0_0_0_1px_rgba(249,115,22,0.4),0_8px_30px_-10px_rgba(249,115,22,0.25)]' : 'border-gray-300/40 dark:border-gray-800/60 bg-white/30 dark:bg-black/40'}`}> 
     {highlight && (
   <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-orange-400 text-white dark:text-black text-xs tracking-wide font-medium px-3 py-1  shadow">POPULAR</span>
     )}
@@ -81,8 +81,8 @@ const PlanCard: React.FC<PlanCardProps & { footerContent?: React.ReactNode; subt
         size="lg" 
         className={
           highlight
-            ? 'bg-orange-400 text-white dark:text-black rounded-none hover:bg-orange-600 hover:text-white dark:hover:text-black transition-all duration-300 border-2 border-transparent hover:border-orange-600 tracking-wide focus:outline-none focus:ring-0 focus:ring-offset-0'
-            : 'bg-white/20 dark:bg-black/20 font-light text-orange-400 dark:text-orange-400 border border-orange-400 rounded-none hover:border-orange-500 hover:text-orange-500 hover:bg-orange-950/10 dark:hover:bg-orange-950 transition-all duration-300 tracking-wide focus:outline-none focus:ring-0 focus:ring-offset-0'
+            ? 'bg-orange-400 text-white dark:text-black rounded-lg hover:bg-orange-600 hover:text-white dark:hover:text-black transition-all duration-300 border-2 border-transparent hover:border-orange-600 tracking-wide focus:outline-none focus:ring-0 focus:ring-offset-0'
+            : 'bg-white/20 dark:bg-black/20 font-light text-orange-400 dark:text-orange-400 border border-orange-400 rounded-lg hover:border-orange-500 hover:text-orange-500 hover:bg-orange-950/10 dark:hover:bg-orange-950 transition-all duration-300 tracking-wide focus:outline-none focus:ring-0 focus:ring-offset-0'
         }
       >
         {cta}
@@ -304,7 +304,7 @@ export default function SubscriptionPage() {
                   key={opt.type}
                   type="button"
                   onClick={() => setSelectedPackToken(opt)}
-                  className={`p-3 border text-xs tracking-wide transition-all ${selectedPackToken?.type === opt.type ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' : 'border-gray-300 dark:border-gray-700 hover:border-gray-500'}`}
+                  className={`p-3 border rounded-lg text-xs tracking-wide ${selectedPackToken?.type === opt.type ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' : 'border-gray-300 dark:border-gray-700 hover:border-gray-500'}`}
                 >{opt.symbol}</button>
               ))}
             </div>
@@ -313,16 +313,16 @@ export default function SubscriptionPage() {
                 type="button"
                 disabled={isPayingToken || isProcessingPack}
                 onClick={() => setShowPackTokens(false)}
-                className="text-xs py-2 border border-gray-300 dark:border-gray-700 hover:border-orange-400 hover:text-orange-500 transition disabled:opacity-50"
+                className="text-xs py-2 rounded-lg border border-gray-300 dark:border-gray-700 hover:border-orange-400 hover:text-orange-500 transition disabled:opacity-50"
               >Cancel</button>
               <button
                 type="button"
                 disabled={isPayingToken || isProcessingPack || insufficientPackBalance || !selectedPackToken}
                 onClick={purchasePack}
-                className={`text-xs py-2 transition ${
+                className={`text-xs py-2 rounded-lg transition ${
                   (isPayingToken || isProcessingPack || insufficientPackBalance || !selectedPackToken)
                     ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed border border-gray-300 dark:border-gray-700'
-                    : ' bg-orange-400 text-white dark:text-black rounded-none hover:bg-orange-600 hover:text-white dark:hover:text-black'
+                    : ' bg-orange-400 text-white dark:text-black hover:bg-orange-600 hover:text-white dark:hover:text-black'
                 }`}
               >{insufficientPackBalance
                   ? `Insufficient ${selectedPackToken?.symbol}`
@@ -369,7 +369,7 @@ export default function SubscriptionPage() {
                   key={opt.type}
                   type="button"
                   onClick={() => setSelectedSubToken(opt)}
-                  className={`p-3 border text-xs tracking-wide transition-all ${selectedSubToken?.type === opt.type ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' : 'border-gray-300 dark:border-gray-700 hover:border-gray-500'}`}
+                  className={`p-3 border rounded-lg text-xs tracking-wide ${selectedSubToken?.type === opt.type ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' : 'border-gray-300 dark:border-gray-700 hover:border-gray-500'}`}
                 >{opt.symbol}</button>
               ))}
             </div>
@@ -378,16 +378,16 @@ export default function SubscriptionPage() {
                 type="button"
                 disabled={isProcessingSub || isPayingToken}
                 onClick={() => setShowSubTokens(false)}
-                className="text-xs py-2 border border-gray-300 dark:border-gray-700 hover:border-orange-400 hover:text-orange-500 transition disabled:opacity-50"
+                className="text-xs py-2 rounded-lg border border-gray-300 dark:border-gray-700 hover:border-orange-400 hover:text-orange-500 transition disabled:opacity-50"
               >Cancel</button>
               <button
                 type="button"
                 disabled={isProcessingSub || isPayingToken || insufficientSubBalance || !selectedSubToken}
                 onClick={purchaseSubscription}
-                className={`text-xs py-2 transition ${
+                className={`text-xs py-2 rounded-lg transition ${
                   (isProcessingSub || isPayingToken || insufficientSubBalance || !selectedSubToken)
                     ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed border border-gray-300 dark:border-gray-700'
-                    : 'bg-orange-400 text-white dark:text-black rounded-none hover:bg-orange-600 hover:text-white dark:hover:text-black'
+                    : 'bg-orange-400 text-white dark:text-black hover:bg-orange-600 hover:text-white dark:hover:text-black'
                 }`}
               >{insufficientSubBalance
                   ? `Insufficient ${selectedSubToken?.symbol}`

@@ -70,7 +70,7 @@ export default function HelpCenterPage() {
         </h2>
         
         <div className="space-y-4">
-          <details className="group border border-gray-200 dark:border-gray-800 p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/30">
+          <details className="group border border-gray-200 dark:border-gray-800 rounded-2xl card-hover p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/30 hover:bg-white/70 dark:hover:bg-black/70">
             <summary className="cursor-pointer text-sm sm:text-base font-light text-black dark:text-white mb-2 list-none">
               <div className="flex justify-between items-center">
                 <span>How to generate a receipt for crypto transactions?</span>
@@ -83,7 +83,7 @@ export default function HelpCenterPage() {
             </p>
           </details>
 
-          <details className="group border border-gray-200 dark:border-gray-800 p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/30">
+          <details className="group border border-gray-200 dark:border-gray-800 rounded-2xl card-hover p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/30 hover:bg-white/70 dark:hover:bg-black/70">
             <summary className="cursor-pointer text-sm sm:text-base font-light text-black dark:text-white mb-2 list-none">
               <div className="flex justify-between items-center">
                 <span>Which networks are supported?</span>
@@ -95,7 +95,7 @@ export default function HelpCenterPage() {
             </p>
           </details>
 
-          <details className="group border border-gray-200 dark:border-gray-800 p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/30">
+          <details className="group border border-gray-200 dark:border-gray-800 rounded-2xl card-hover p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/30 hover:bg-white/70 dark:hover:bg-black/70">
             <summary className="cursor-pointer text-sm sm:text-base font-light text-black dark:text-white mb-2 list-none">
               <div className="flex justify-between items-center">
                 <span>How much does receipt generation cost?</span>
@@ -107,7 +107,7 @@ export default function HelpCenterPage() {
             </p>
           </details>
 
-          <details className="group border border-gray-200 dark:border-gray-800 p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/30">
+          <details className="group border border-gray-200 dark:border-gray-800 rounded-2xl card-hover p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/30 hover:bg-white/70 dark:hover:bg-black/70">
             <summary className="cursor-pointer text-sm sm:text-base font-light text-black dark:text-white mb-2 list-none">
               <div className="flex justify-between items-center">
                 <span>Is the platform secure?</span>
@@ -119,7 +119,7 @@ export default function HelpCenterPage() {
             </p>
           </details>
 
-          <details className="group border border-gray-200 dark:border-gray-800 p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/30">
+          <details className="group border border-gray-200 dark:border-gray-800 rounded-2xl card-hover p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/30 hover:bg-white/70 dark:hover:bg-black/70">
             <summary className="cursor-pointer text-sm sm:text-base font-light text-black dark:text-white mb-2 list-none">
               <div className="flex justify-between items-center">
                 <span>How can I view my previous receipts?</span>
@@ -131,7 +131,7 @@ export default function HelpCenterPage() {
             </p>
           </details>
 
-          <details className="group border border-gray-200 dark:border-gray-800 p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/30">
+          <details className="group border border-gray-200 dark:border-gray-800 rounded-2xl card-hover p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/30 hover:bg-white/70 dark:hover:bg-black/70">
             <summary className="cursor-pointer text-sm sm:text-base font-light text-black dark:text-white mb-2 list-none">
               <div className="flex justify-between items-center">
                 <span>What to do if transaction is not found?</span>
@@ -164,7 +164,7 @@ export default function HelpCenterPage() {
                 value={formData.name}
                 onChange={handleInputChange}
                 required
-                className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/30 text-black dark:text-white text-sm font-light focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-300"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/30 text-black dark:text-white text-sm font-light focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-300"
                 placeholder="Your name"
               />
             </div>
@@ -180,7 +180,7 @@ export default function HelpCenterPage() {
                 value={formData.email}
                 onChange={handleInputChange}
                 required
-                className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/30 text-black dark:text-white text-sm font-light focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-300"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/30 text-black dark:text-white text-sm font-light focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-300"
                 placeholder="your.email@example.com"
               />
             </div>
@@ -197,7 +197,7 @@ export default function HelpCenterPage() {
               value={formData.subject}
               onChange={handleInputChange}
               required
-              className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/30 text-black dark:text-white text-sm font-light focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-300"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/30 text-black dark:text-white text-sm font-light focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-300"
               placeholder="Subject of your message"
             />
           </div>
@@ -213,7 +213,7 @@ export default function HelpCenterPage() {
               onChange={handleInputChange}
               required
               rows={6}
-              className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/30 text-black dark:text-white text-sm font-light focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-300 resize-vertical"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/30 text-black dark:text-white text-sm font-light focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-300 resize-vertical"
               placeholder="Describe your question or issue in detail..."
             />
           </div>
@@ -223,7 +223,7 @@ export default function HelpCenterPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full sm:w-auto px-8 py-3 bg-orange-400 hover:bg-orange-500 disabled:bg-gray-400 text-white dark:text-black font-light text-sm transition-colors duration-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              className="w-full sm:w-auto px-8 py-3 rounded-xl bg-orange-400 hover:bg-orange-500 disabled:bg-gray-400 text-white dark:text-black font-light text-sm transition-colors duration-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
               {isSubmitting && (
                 <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
@@ -257,14 +257,14 @@ export default function HelpCenterPage() {
         </h2>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div className="p-6 border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30">
+          <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-2xl card-hover bg-gray-50 dark:bg-gray-900/30 hover:bg-white/70 dark:hover:bg-black/70">
             <h3 className="text-base font-light text-black dark:text-white mb-2">Email Support</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 font-light">
               support@transactproof.com
             </p>
           </div>
           
-          <div className="p-6 border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30">
+          <div className="p-6 border border-gray-200 dark:border-gray-800 rounded-2xl card-hover bg-gray-50 dark:bg-gray-900/30 hover:bg-white/70 dark:hover:bg-black/70">
             <h3 className="text-base font-light text-black dark:text-white mb-2">Response Time</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 font-light">
               We typically respond within 24 hours
