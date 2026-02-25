@@ -19,7 +19,7 @@ export default function TermsOfServicePage() {
 
           {/* Content */}
           <div className="prose prose-gray dark:prose-invert max-w-none">
-            <div className="border border-gray-300 dark:border-gray-800 p-6 sm:p-8 lg:p-12 bg-white dark:bg-black">
+            <div className="border border-gray-300 dark:border-gray-800 rounded-2xl p-6 sm:p-8 lg:p-12 bg-white dark:bg-black">
               
               {/* Last Updated */}
               <div className="mb-8 pb-6 border-b border-gray-200 dark:border-gray-800">
@@ -45,7 +45,7 @@ export default function TermsOfServicePage() {
                 <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300 font-light leading-relaxed">
                   <p>TransactProof provides a platform to generate PDF receipts for blockchain transactions.</p>
                   
-                  <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
                     <div className="space-y-2">
                       <p className="text-yellow-800 dark:text-yellow-200 font-normal">
                         • We do not provide financial, investment, or tax advice.
@@ -155,7 +155,7 @@ export default function TermsOfServicePage() {
               <section className="mb-8">
                 <h2 className="text-lg font-light text-black dark:text-white mb-4 tracking-wide">8. Disclaimer of Warranties</h2>
                 <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300 font-light leading-relaxed">
-                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
                     <div className="space-y-2">
                       <p className="text-red-800 dark:text-red-200 font-normal">
                         • TransactProof is provided "as is" and "as available".

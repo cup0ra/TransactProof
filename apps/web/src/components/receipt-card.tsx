@@ -55,7 +55,7 @@ export function ReceiptCard({ receipt }: ReceiptCardProps) {
   }
 
   return (
-    <div className="border border-gray-200 dark:border-gray-800 p-6 bg-white/30 backdrop-blur-md dark:bg-black/50 hover:border-gray-300 dark:hover:border-gray-700 transition-all duration-300">
+    <div className="border border-gray-200 dark:border-gray-800 rounded-2xl card-hover p-6 bg-white/30 backdrop-blur-md dark:bg-black/50 hover:bg-white/70 dark:hover:bg-black/70 transition-all duration-300">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
@@ -103,7 +103,7 @@ export function ReceiptCard({ receipt }: ReceiptCardProps) {
       {/* Transaction Hash */}
       <div className="mb-6">
         <p className="text-xs text-orange-400 uppercase tracking-wider mb-2">Transaction Hash</p>
-        <p className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-900 p-3 border border-gray-200 dark:border-gray-800 truncate font-light transition-colors duration-300">
+        <p className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800 truncate font-light transition-colors duration-300">
           {receipt.txHash}
         </p>
       </div>
@@ -112,13 +112,13 @@ export function ReceiptCard({ receipt }: ReceiptCardProps) {
       <div className="grid grid-cols-2 gap-3 mb-4">
         <button
           onClick={handleDownload}
-          className="btn-primary-minimal text-xs py-2"
+          className="btn-primary-minimal rounded-xl text-xs py-2"
         >
           Download PDF
         </button>
         <Link
           href={`/receipt/${receipt.id}`}
-          className="btn-secondary-minimal text-xs py-2 text-center"
+          className="btn-secondary-minimal rounded-xl text-xs py-2 text-center"
         >
           View Details
         </Link>

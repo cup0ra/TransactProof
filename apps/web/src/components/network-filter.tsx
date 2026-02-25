@@ -76,7 +76,7 @@ export function NetworkFilter({
           e.stopPropagation()
           setShowDropdown(!showDropdown)
         }}
-        className="flex w-48 items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white/30 backdrop-blur-md dark:bg-black/30 text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-all duration-300 font-light text-xs tracking-wide"
+        className="flex w-48 items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white/30 backdrop-blur-md dark:bg-black/30 text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-all duration-300 font-light text-xs tracking-wide"
       >
         <div 
           className="w-4 h-4 rounded-full" 
@@ -100,7 +100,7 @@ export function NetworkFilter({
 
       {/* Network Dropdown */}
       {showDropdown && (
-        <div className="absolute top-full left-0 mt-1 w-48 bg-white/30 backdrop-blur-md dark:bg-black/30 border border-gray-300 dark:border-gray-700 shadow-lg z-50">
+        <div className="absolute top-full left-0 mt-1 w-48 bg-white/30 backdrop-blur-md dark:bg-black/30 border border-gray-300 dark:border-gray-700 rounded-xl shadow-lg z-50 overflow-hidden">
           {networkOptions.map((option) => (
             <button
               key={option.id || 'all'}

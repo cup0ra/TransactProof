@@ -1,18 +1,10 @@
 import './globals.css'
-import { Inter } from 'next/font/google'
 import { headers, cookies } from 'next/headers'
 import { Providers } from './providers'
 import { MemoizedHeader as Header } from '@/components/header'
 import { Footer } from '@/components/footer'
 import ReownProvider from '@/contexts/reown-context'
 import { Metadata } from 'next'
-
-const inter = Inter({ 
-  subsets: ['latin'],
-  display: 'swap',
-  preload: true,
-  fallback: ['system-ui', 'arial']
-})
 
 const APP_URL = 'https://app.transactproof.com';
 
@@ -97,12 +89,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const initialIsDark = normalizedTheme === 'dark' || (normalizedTheme === 'system')
 
   return (
-    <html lang="en" className={`${inter.className} ${initialIsDark ? 'dark' : ''}`} suppressHydrationWarning>
+    <html lang="en" className={initialIsDark ? 'dark' : ''} suppressHydrationWarning>
       <head>
         <meta name="yandex-verification" content="6a4283c3a70f9a5a" />
         {/* Preconnect to improve performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://fonts.cdnfonts.com" />
+        <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/satoshi" />
+        <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/clash-display" />
         <link rel="preconnect" href="https://pulse.walletconnect.org" />
         <link rel="preconnect" href="https://api.transactproof.com" />
         <link rel="preconnect" href="https://api.web3modal.org" />

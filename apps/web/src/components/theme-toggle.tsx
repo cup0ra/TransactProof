@@ -30,7 +30,7 @@ export function ThemeToggle({ className = '' }: ThemeToggleProps) {
   if (!mounted) {
     return (
       <div className={`w-8 h-8 ${className}`}>
-        <div className="w-full h-full animate-pulse bg-gray-300 dark:bg-gray-700"></div>
+        <div className="w-full h-full animate-pulse bg-gray-300 dark:bg-gray-700 border border-gray-300 dark:border-gray-700 rounded-xl"></div>
       </div>
     )
   }
@@ -75,13 +75,13 @@ export function ThemeToggle({ className = '' }: ThemeToggleProps) {
     <button
       onClick={handleThemeChange}
       className={`
-        relative p-2 rounded-sm
+        relative p-2 rounded-xl
         text-gray-600 dark:text-gray-400
         hover:text-orange-500 dark:hover:text-orange-400
         hover:bg-gray-100 dark:hover:bg-gray-800
         transition-all duration-200
-        border border-transparent
-        hover:border-gray-200 dark:hover:border-gray-700
+        border border-gray-300 dark:border-gray-700
+        hover:border-orange-400
         ${className}
       `}
       title={getTitle()}

@@ -18,7 +18,7 @@ export default function PrivacyPolicyPage() {
 
           {/* Content */}
           <div className="prose prose-gray dark:prose-invert max-w-none">
-            <div className="border border-gray-300 dark:border-gray-800 p-6 sm:p-8 lg:p-12 bg-white dark:bg-black">
+            <div className="border border-gray-300 dark:border-gray-800 rounded-2xl p-6 sm:p-8 lg:p-12 bg-white dark:bg-black">
               
               {/* Last Updated */}
               <div className="mb-8 pb-6 border-b border-gray-200 dark:border-gray-800">
@@ -69,7 +69,7 @@ export default function PrivacyPolicyPage() {
                     </div>
                   </div>
                   
-                  <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 p-4 mt-6">
+                  <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 mt-6">
                     <p className="text-orange-800 dark:text-orange-200 font-normal">
                       We do not collect private keys or have access to your funds. You remain in full control of your crypto wallet.
                     </p>
@@ -185,7 +185,7 @@ export default function PrivacyPolicyPage() {
                       <span>No storage of private keys or sensitive wallet credentials.</span>
                     </li>
                   </ul>
-                  <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 mt-4">
+                  <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 mt-4">
                     <p className="text-gray-600 dark:text-gray-400 text-sm">
                       However, no method of online transmission or storage is 100% secure. You use our service at your own risk.
                     </p>
