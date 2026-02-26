@@ -83,7 +83,7 @@
 @layer components {
   /* Обновленные кнопки с поддержкой тем */
   .btn-minimal {
-    @apply inline-flex items-center justify-center px-8 py-3 font-light tracking-wide transition-all duration-300;
+    @apply inline-flex items-center justify-center px-2 py-3 font-light tracking-wide transition-all duration-300;
   }
 
   .card-hover {

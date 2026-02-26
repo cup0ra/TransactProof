@@ -26,7 +26,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
               background: 'var(--toast-bg, #000000)',
               color: 'var(--toast-text, #ffffff)',
               border: 'var(--toast-border, 1px solid #374151)',
-              borderRadius: '0px',
+              borderRadius: '12px',
               fontSize: '12px',
               fontWeight: '300',
               letterSpacing: '0.025em',
