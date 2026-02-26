@@ -49,7 +49,7 @@ export function SupportedNetworksMarquee({ networks }: SupportedNetworksMarqueeP
             key={`${network}-${index}`}
             type="button"
             onClick={() => handleNetworkClick(network)}
-            className="supported-network-card card-hover flex flex-col items-center justify-center p-3 sm:p-4 min-w-[130px] sm:min-w-[150px] bg-white/50 dark:bg-black/30 rounded-lg border border-gray-100 dark:border-gray-800 hover:bg-orange-400/10 dark:hover:bg-orange-400/10"
+            className="supported-network-card card-hover flex flex-col items-center justify-center p-3 sm:p-4 min-w-[130px] sm:min-w-[150px] bg-white/50 dark:bg-black/30 rounded-2xl border border-gray-100 dark:border-gray-800 hover:bg-orange-400/10 dark:hover:bg-orange-400/10"
           >
             <span className="text-xs sm:text-sm font-medium text-orange-500 dark:text-orange-400 text-center">{network}</span>
           </button>

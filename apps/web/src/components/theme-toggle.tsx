@@ -78,10 +78,7 @@ export function ThemeToggle({ className = '' }: ThemeToggleProps) {
         relative p-2 rounded-xl
         text-gray-600 dark:text-gray-400
         hover:text-orange-500 dark:hover:text-orange-400
-        hover:bg-gray-100 dark:hover:bg-gray-800
         transition-all duration-200
-        border border-gray-300 dark:border-gray-700
-        hover:border-orange-400
         ${className}
       `}
       title={getTitle()}

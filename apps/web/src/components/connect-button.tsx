@@ -272,7 +272,7 @@ export function ConnectButton({ compact = false }: ConnectButtonProps) {
             }}
             aria-haspopup="listbox"
             aria-expanded={showNetworkDropdown}
-            className={`flex items-center gap-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white/30 backdrop-blur-md dark:bg-black/30 text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-all duration-300 font-light text-xs tracking-wide ${compact ? 'w-[132px] xl:w-[148px] 2xl:w-[170px] px-2 py-1.5' : 'w-[148px] xl:w-[160px] 2xl:w-[180px] px-2.5 xl:px-3 py-1.5'}`}
+            className={`flex items-center gap-2 border border-gray-300 dark:border-gray-700 rounded-xl dark:bg-black/30 text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 dark:hover:border-orange-400 dark:hover:text-orange-400 transition-all duration-300 font-light text-xs tracking-wide ${compact ? 'w-[132px] xl:w-[148px] 2xl:w-[170px] px-2 py-1.5' : 'w-[148px] xl:w-[160px] 2xl:w-[180px] px-2.5 xl:px-3 py-1.5'}`}
           >
             <div 
               className="w-4 h-4 rounded-full" 
@@ -338,7 +338,7 @@ export function ConnectButton({ compact = false }: ConnectButtonProps) {
         <button
           onClick={handleDisconnect}
           aria-label="Disconnect wallet"
-          className={`border border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-all duration-300 font-light tracking-wide ${compact ? 'px-2.5 py-1.5 text-[11px]' : 'px-3 py-2 text-xs'}`}
+          className={`border border-gray-300 dark:border-gray-900 rounded-xl text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 dark:hover:border-orange-400 dark:hover:text-orange-400 transition-all duration-300 font-light tracking-wide ${compact ? 'px-2.5 py-1.5 text-[11px]' : 'px-3 py-2 text-xs'}`}
         >
           Disconnect
         </button>
@@ -358,7 +358,7 @@ export function ConnectButton({ compact = false }: ConnectButtonProps) {
         <button
           onClick={handleDisconnect}
           aria-label="Disconnect wallet"
-          className={`border border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 transition-all duration-300 font-light tracking-wide ${compact ? 'px-2.5 py-1.5 text-[11px]' : 'px-3 py-2 text-xs'}`}
+          className={`border border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 text-gray-900 dark:text-gray-300 hover:border-orange-400 hover:text-orange-400 dark:hover:border-orange-400 dark:hover:text-orange-400 transition-all duration-300 font-light tracking-wide ${compact ? 'px-2.5 py-1.5 text-[11px]' : 'px-3 py-2 text-xs'}`}
         >
           Disconnect
         </button>

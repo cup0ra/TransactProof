@@ -73,7 +73,7 @@ export default function GeneratePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2, delay: 0.3 }}
             >
-              <div className="border rounded-card-14  border-gray-300/50 dark:border-gray-800/50 p-4 sm:p-6 md:p-8 lg:p-12 bg-white/50 backdrop-blur-md dark:bg-black/50 backdrop-blur-md transition-colors duration-300 shadow-2xl bg-white/30 backdrop-blur-sm">
+              <div className="border rounded-2xl  border-gray-300/50 dark:border-gray-800/50 bg-white/20 dark:bg-black/20 backdrop-blur-sm p-4 sm:p-6 md:p-8 lg:p-12  transition-colors duration-300">
                 <ReceiptGenerator />
               </div>
             </MotionDiv>

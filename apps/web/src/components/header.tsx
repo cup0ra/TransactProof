@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useMemo, memo, useEffect } from 'react'
+import { LayoutGroup, motion } from 'framer-motion'
 import { ConnectButton } from './connect-button'
 import { ThemeToggle } from './theme-toggle'
 import { useAuth } from '@/hooks/use-auth'
@@ -47,28 +48,13 @@ export function Header() {
     return null
   }, [actualPathname])
   
-  const navClasses = useMemo(() => ({
-    home: `text-sm transition-colors font-light tracking-wide ${
-      pathname === '/' 
-        ? 'text-orange-400 border-b border-orange-400 pb-1' 
-        : 'text-black dark:text-white hover:text-orange-400'
-    }`,
-    generate: `text-sm transition-colors font-light tracking-wide ${
-      pathname === '/generate' 
-        ? 'text-orange-400 border-b border-orange-400 pb-1' 
-        : 'text-black dark:text-white hover:text-orange-400'
-    }`,
-    subscription: `text-sm transition-colors font-light tracking-wide ${
-      pathname === '/subscription' 
-        ? 'text-orange-400 border-b border-orange-400 pb-1' 
-        : 'text-black dark:text-white hover:text-orange-400'
-    }`,
-    dashboard: `text-sm transition-colors font-light tracking-wide ${
-      pathname === '/dashboard' 
-        ? 'text-orange-400 border-b border-orange-400 pb-1' 
-        : 'text-black dark:text-white hover:text-orange-400'
-    }`
-  }), [pathname])
+  const desktopNavItemBaseClass = 'relative overflow-hidden  rounded-xl px-2.5 py-1.5 text-[12px] transition-colors duration-300 font-light'
+
+  const getDesktopNavClass = (isActive: boolean) => `${desktopNavItemBaseClass} ${
+    isActive
+      ? 'text-orange-400 dark:text-orange-400'
+      : 'text-gray-900 dark:text-gray-300 hover:text-orange-400 dark:hover:text-orange-400'
+  }`
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen)
@@ -82,6 +68,8 @@ export function Header() {
     <>
       <header className="fixed top-0 w-full z-50">
         <div className="mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-4 lg:gap-8">
+          <div className="flex items-center gap-4 lg:gap-8 border border-gray-300/50 dark:border-gray-800/50 rounded-xl px-1.5 lg:px-2 py-1 bg-white/20 dark:bg-black/20 backdrop-blur-sm"
+           style={{ fontFamily: "'Clash Display', system-ui, sans-serif" }}>
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2 sm:space-x-3" onClick={closeMobileMenu}>
             <Logo />
@@ -89,34 +77,65 @@ export function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-5 lg:space-x-7 xl:space-x-10">
-            <Link 
-              href="/" 
-              className={navClasses.home}
-            >
-              Home
-            </Link>
-            <Link 
-              href="/generate" 
-              className={navClasses.generate}
-            >
-              Generate
-            </Link>
-            <Link 
-              href="/subscription" 
-              className={navClasses.subscription}
-            >
-              Subscription
-            </Link>
-            {isFullyAuthenticated && (
-              <Link 
-                href="/dashboard" 
-                className={navClasses.dashboard}
+          <LayoutGroup id="desktop-header-nav">
+            <nav className="hidden md:flex space-x-5 lg:space-x-7 xl:space-x-10">
+              <Link
+                href="/"
+                className={getDesktopNavClass(pathname === '/')}
               >
-                Dashboard
+                {pathname === '/' && (
+                  <motion.span
+                    layoutId="desktop-active-nav-pill"
+                    className="absolute inset-0 rounded-xl border border-orange-400"
+                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                  />
+                )}
+                <span className="relative z-10">Home</span>
               </Link>
-            )}
-          </nav>
+              <Link
+                href="/generate"
+                className={getDesktopNavClass(pathname === '/generate')}
+              >
+                {pathname === '/generate' && (
+                  <motion.span
+                    layoutId="desktop-active-nav-pill"
+                    className="absolute inset-0 rounded-xl border border-orange-400"
+                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                  />
+                )}
+                <span className="relative z-10">Generate</span>
+              </Link>
+              <Link
+                href="/subscription"
+                className={getDesktopNavClass(pathname === '/subscription')}
+              >
+                {pathname === '/subscription' && (
+                  <motion.span
+                    layoutId="desktop-active-nav-pill"
+                    className="absolute inset-0 rounded-xl border border-orange-400"
+                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                  />
+                )}
+                <span className="relative z-10">Subscription</span>
+              </Link>
+              {isFullyAuthenticated && (
+                <Link
+                  href="/dashboard"
+                  className={getDesktopNavClass(pathname === '/dashboard')}
+                >
+                  {pathname === '/dashboard' && (
+                    <motion.span
+                      layoutId="desktop-active-nav-pill"
+                      className="absolute inset-0 rounded-xl border border-orange-400"
+                      transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                    />
+                  )}
+                  <span className="relative z-10">Dashboard</span>
+                </Link>
+              )}
+            </nav>
+          </LayoutGroup>
+          </div>
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center ml-auto space-x-1.5 lg:space-x-2 border border-gray-300/50 dark:border-gray-800/50 rounded-xl px-1.5 lg:px-2 py-1 bg-white/20 dark:bg-black/20 backdrop-blur-sm">
             <ThemeToggle />
@@ -124,11 +143,11 @@ export function Header() {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center space-x-3 ml-auto">
+          <div className="md:hidden flex items-center  ml-auto border border-gray-300/50 dark:border-gray-800/50 rounded-xl px-1.5 lg:px-2 py-1 bg-white/20 dark:bg-black/20 backdrop-blur-sm">
             <ThemeToggle />
             <button
               onClick={toggleMobileMenu}
-              className="p-3 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-600 dark:text-gray-400 hover:text-orange-400 hover:border-orange-400 transition-colors duration-300 ml-2"
+              className="text-gray-600 dark:text-gray-400 hover:text-orange-400 hover:border-orange-400 transition-colors duration-300 ml-2"
               aria-label="Toggle mobile menu"
             >
               <svg 
@@ -165,7 +184,7 @@ export function Header() {
             </div>
             <button
               onClick={closeMobileMenu}
-              className="p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-400 hover:text-orange-400 hover:border-orange-400 transition-colors duration-300"
+              className="text-gray-600 dark:text-gray-400 hover:text-orange-400 hover:border-orange-400 transition-colors duration-300"
               aria-label="Close mobile menu"
             >
               <svg 
@@ -188,8 +207,8 @@ export function Header() {
                 onClick={closeMobileMenu}
                 className={`block text-sm transition-colors font-light tracking-wide py-2 px-2 rounded-lg ${
                   pathname === '/' 
-                    ? 'text-orange-400 border-orange-400/60 bg-orange-50/30 dark:bg-orange-950/20' 
-                    : 'text-gray-600 dark:text-gray-400 border-gray-300/60 dark:border-gray-700 hover:text-orange-400 hover:border-orange-400 hover:bg-gray-50 dark:hover:bg-gray-900'
+                    ? 'text-orange-400 border-orange-400/60' 
+                    : 'text-gray-600 dark:text-gray-400 border-gray-300/60 dark:border-gray-700 hover:text-orange-400 dark:hover:text-orange-400'
                 }`}
               >
                 Home
@@ -199,8 +218,8 @@ export function Header() {
                 onClick={closeMobileMenu}
                 className={`block text-sm transition-colors font-light tracking-wide py-2 px-2 rounded-lg ${
                   pathname === '/generate' 
-                    ? 'text-orange-400 border-orange-400/60 bg-orange-50/30 dark:bg-orange-950/20' 
-                    : 'text-gray-600 dark:text-gray-400 border-gray-300/60 dark:border-gray-700 hover:text-orange-400 hover:border-orange-400 hover:bg-gray-50 dark:hover:bg-gray-900'
+                    ? 'text-orange-400 border-orange-400/60' 
+                    : 'text-gray-600 dark:text-gray-400 border-gray-300/60 dark:border-gray-700 hover:text-orange-400 dark:hover:text-orange-400'
                 }`}
               >
                 Generate
@@ -210,8 +229,8 @@ export function Header() {
                 onClick={closeMobileMenu}
                 className={`block text-sm transition-colors font-light tracking-wide py-2 px-2 rounded-lg ${
                   pathname === '/subscription' 
-                    ? 'text-orange-400 border-orange-400/60 bg-orange-50/30 dark:bg-orange-950/20' 
-                    : 'text-gray-600 dark:text-gray-400 border-gray-300/60 dark:border-gray-700 hover:text-orange-400 hover:border-orange-400 hover:bg-gray-50 dark:hover:bg-gray-900'
+                    ? 'text-orange-400 border-orange-400/60' 
+                    : 'text-gray-600 dark:text-gray-400 border-gray-300/60 dark:border-gray-700 hover:text-orange-400 dark:hover:text-orange-400'
                 }`}
               >
                 Subscription
@@ -222,8 +241,8 @@ export function Header() {
                   onClick={closeMobileMenu}
                   className={`block text-sm transition-colors font-light tracking-wide py-2 px-2 rounded-lg ${
                     pathname === '/dashboard' 
-                      ? 'text-orange-400 border-orange-400/60 bg-orange-50/30 dark:bg-orange-950/20' 
-                      : 'text-gray-600 dark:text-gray-400 border-gray-300/60 dark:border-gray-700 hover:text-orange-400 hover:border-orange-400 hover:bg-gray-50 dark:hover:bg-gray-900'
+                      ? 'text-orange-400 border-orange-400/60' 
+                      : 'text-gray-600 dark:text-gray-400 border-gray-300/60 dark:border-gray-700 hover:text-orange-400 dark:hover:text-orange-400'
                   }`}
                 >
                   Dashboard
