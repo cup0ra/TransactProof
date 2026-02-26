@@ -369,7 +369,7 @@ export function ConnectButton({ compact = false }: ConnectButtonProps) {
   return (
     <button
       onClick={handleConnect}
-      className={`btn-primary-minimal rounded-xl text-xs !border-transparent hover:!border-transparent ${compact ? 'px-4 py-2 xl:px-5 xl:py-2.5 2xl:px-8 2xl:py-3' : ''}`}
+      className={`btn-primary-minimal rounded-xl !border-transparent hover:!border-transparent ${compact ? 'px-2.5 py-1.5 text-[12px] font-light' : 'text-xs'}`}
       disabled={isDisconnecting}
       aria-busy={isDisconnecting}
       aria-label={isDisconnecting ? 'Disconnecting' : 'Connect Wallet'}
