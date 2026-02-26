@@ -364,7 +364,7 @@ export default function DashboardPage() {
             transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
           >
             <MotionDiv 
-              className="border border-gray-200 dark:border-gray-800 rounded-2xl card-hover p-4 sm:p-6 bg-white/50 backdrop-blur-md dark:bg-black/50 hover:bg-white/70 dark:hover:bg-black/70 transition-colors duration-300"
+              className="border rounded-2xl border-gray-300/50 dark:border-gray-800/50 bg-white/20 dark:bg-black/20 backdrop-blur-sm card-hover p-4 sm:p-6 transition-colors duration-300"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5, ease: "easeOut" }}
@@ -394,7 +394,7 @@ export default function DashboardPage() {
             </MotionDiv>
 
             <MotionDiv 
-              className="border border-gray-200 dark:border-gray-800 rounded-2xl card-hover p-4 sm:p-6 bg-white/50 backdrop-blur-md dark:bg-black/50 hover:bg-white/70 dark:hover:bg-black/70 transition-colors duration-300"
+              className="border rounded-2xl border-gray-300/50 dark:border-gray-800/50 bg-white/20 dark:bg-black/20 backdrop-blur-sm card-hover p-4 sm:p-6 transition-colors duration-300"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.6, ease: "easeOut" }}
@@ -424,7 +424,7 @@ export default function DashboardPage() {
             </MotionDiv>
 
             <MotionDiv 
-              className="border border-gray-200 dark:border-gray-800 rounded-2xl card-hover p-4 sm:p-6 bg-white/50 backdrop-blur-md dark:bg-black/50 hover:bg-white/70 dark:hover:bg-black/70 transition-colors duration-300 sm:col-span-2 lg:col-span-1"
+              className="border rounded-2xl border-gray-300/50 dark:border-gray-800/50 bg-white/20 dark:bg-black/20 backdrop-blur-sm card-hover p-4 sm:p-6 transition-colors duration-300 sm:col-span-2 lg:col-span-1"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.7, ease: "easeOut" }}

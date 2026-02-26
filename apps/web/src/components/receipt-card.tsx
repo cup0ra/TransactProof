@@ -55,7 +55,7 @@ export function ReceiptCard({ receipt }: ReceiptCardProps) {
   }
 
   return (
-    <div className="border border-gray-200 dark:border-gray-800 rounded-2xl card-hover p-6 bg-white/30 backdrop-blur-md dark:bg-black/50 hover:bg-white/70 dark:hover:bg-black/70 transition-all duration-300">
+    <div className="border rounded-2xl border-gray-300/50 dark:border-gray-800/50 bg-white/20 dark:bg-black/20 backdrop-blur-sm card-hover p-4 sm:p-6 transition-colors duration-300">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">

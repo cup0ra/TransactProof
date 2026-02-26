@@ -313,7 +313,7 @@ export function ReceiptGenerator() {
 
   if (step === Step.COMPLETE && receiptData) {
     return (
-      <div className="border border-gray-300 dark:border-gray-800 rounded-2xl bg-white/20 backdrop-blur-md dark:bg-black/30 p-6 sm:p-8 transition-colors duration-300">
+      <div className="border rounded-2xl  border-gray-300/50 dark:border-gray-800/50 bg-white/20 dark:bg-black/20 backdrop-blur-sm p-6 sm:p-8 transition-colors duration-300">
         <div className="text-center">
           <div className="w-10 h-10 sm:w-12 sm:h-12 text-orange-400 mx-auto mb-4 sm:mb-6">
             <svg className="w-full h-full" fill="currentColor" viewBox="0 0 24 24">
@@ -377,7 +377,7 @@ export function ReceiptGenerator() {
             value={form.txHash}
             onChange={(e) => setForm({ ...form, txHash: e.target.value })}
             placeholder="0x..."
-            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-white dark:bg-black border border-gray-300 dark:border-gray-700 text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all duration-300 font-mono text-xs sm:text-sm"
+            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border rounded-2xl  border-gray-300/50 dark:border-gray-800/50 bg-white/20 dark:bg-black/20 backdrop-blur-sm text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all duration-300 font-mono text-xs sm:text-sm"
             required
           />
         </div>
@@ -392,7 +392,7 @@ export function ReceiptGenerator() {
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             placeholder="Add a description for your receipt..."
             rows={3}
-            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-white dark:bg-black border border-gray-300 dark:border-gray-700 text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all duration-300 resize-none text-xs sm:text-sm font-light"
+            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border rounded-2xl  border-gray-300/50 dark:border-gray-800/50 bg-white/20 dark:bg-black/20 backdrop-blur-sm text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all duration-300 resize-none text-xs sm:text-sm font-light"
           />
         </div>
 
