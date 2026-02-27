@@ -145,7 +145,7 @@ export default function ReceiptDetailPage() {
       <div className="min-h-screen bg-white dark:bg-black flex flex-col transition-colors duration-300">
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="w-6 h-6 border border-orange-500 border-t-transparent animate-spin mx-auto mb-4"></div>
+            <div className="w-6 h-6 border border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-600 dark:text-gray-400 text-xs font-light transition-colors duration-300">Loading receipt...</p>
           </div>
         </div>

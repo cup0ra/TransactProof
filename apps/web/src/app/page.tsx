@@ -12,7 +12,7 @@ const HeroClient = dynamic(() => import('../components/hero-client').then(m => m
       <div className=" bg-white dark:bg-black flex flex-col transition-colors duration-300">
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="w-6 h-6 border border-orange-500 border-t-transparent animate-spin mx-auto mb-4"></div>
+            <div className="w-6 h-6 border border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-[#5a6480] text-xs font-light transition-colors duration-300">Loading...</p>
           </div>
         </div>
@@ -58,7 +58,7 @@ export default function HomePage() {
       {/* How It Works Section (server-rendered static) */}
       <section className="py-16 sm:py-24 lg:py-32 relative bg-gray-50 dark:bg-black transition-colors duration-300">
           {/* Parallax separator */}
-          <div className="absolute inset-0 parallax-separator" style={{
+          <div className="absolute inset-0" style={{
             backgroundImage: `
               radial-gradient(circle at 60% 20%, rgba(245, 158, 11, 0.1) 0%, transparent 50%),
               radial-gradient(circle at 20% 80%, rgba(249, 115, 22, 0.08) 0%, transparent 50%)
@@ -271,7 +271,7 @@ export default function HomePage() {
         {/* CTA Section (static) */}
         <section className="py-16 sm:py-20 lg:py-24 relative bg-white dark:bg-black text-center transition-colors duration-300">
           {/* Parallax CTA background */}
-          <div className="absolute inset-0 parallax-cta" style={{
+          <div className="absolute inset-0" style={{
             backgroundImage: `
               radial-gradient(circle at 40% 40%, rgba(249, 115, 22, 0.12) 0%, transparent 70%),
               radial-gradient(circle at 80% 60%, rgba(245, 158, 11, 0.08) 0%, transparent 70%)

@@ -492,7 +492,7 @@ export function ReceiptGenerator({ initialTxHash, startFromPayment = false, onBu
 
         {step === Step.VERIFYING && (
           <div className="text-center py-6 sm:py-8">
-            <div className="w-5 h-5 sm:w-6 sm:h-6 border border-orange-400 border-t-transparent animate-spin mx-auto mb-3 sm:mb-4"></div>
+            <div className="w-5 h-5 sm:w-6 sm:h-6 border border-orange-400 border-t-transparent rounded-full animate-spin mx-auto mb-3 sm:mb-4"></div>
             <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-light transition-colors duration-300">Verifying transaction on blockchain...</p>
             <p className="text-gray-500 text-xs font-light mt-2">This may take a few seconds</p>
           </div>
