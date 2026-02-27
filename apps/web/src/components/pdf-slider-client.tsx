@@ -182,7 +182,7 @@ export default function PdfSliderClient({ pdfExamples }: PdfSliderClientProps) {
             {/* Navigation Buttons */}
             <button
               onClick={handlePrevious}
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-20 p-2 bg-white/90 dark:bg-black/90 border border-gray-300 dark:border-gray-700 hover:bg-orange-400 hover:border-orange-600 hover:text-white dark:hover:text-white dark:hover:bg-orange-400 dark:hover:border-orange-400 transition-all duration-300 shadow-lg"
+              className="absolute rounded-2xl left-0 top-1/2 -translate-y-1/2 z-20 p-2  bg-white/90 dark:bg-black/90 border border-gray-300 dark:border-gray-700 hover:border-orange-400 hover:text-orange-400 dark:hover:text-orange-400  dark:hover:border-orange-400 transition-all duration-300 shadow-lg"
               aria-label="Previous image"
             >
               <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -192,7 +192,7 @@ export default function PdfSliderClient({ pdfExamples }: PdfSliderClientProps) {
 
             <button
               onClick={handleNext}
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-20 p-2  bg-white/90 dark:bg-black/90 border border-gray-300 dark:border-gray-700 hover:bg-orange-400 hover:border-orange-600 hover:text-white dark:hover:text-white dark:hover:bg-orange-400 dark:hover:border-orange-400 transition-all duration-300 shadow-lg"
+              className="absolute rounded-2xl right-0 top-1/2 -translate-y-1/2 z-20 p-2  bg-white/90 dark:bg-black/90 border border-gray-300 dark:border-gray-700 hover:border-orange-400 hover:text-orange-400 dark:hover:text-orange-400  dark:hover:border-orange-400 transition-all duration-300 shadow-lg"
               aria-label="Next image"
             >
               <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
