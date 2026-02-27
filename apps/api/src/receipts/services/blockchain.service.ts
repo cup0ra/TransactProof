@@ -67,6 +67,26 @@ export interface SwapLeg {
   usdValue?: number
 }
 
+export interface WalletTransfer {
+  hash: string
+  from: string
+  to: string
+  value: number
+  timestamp?: string
+  asset: string // token symbol or 'ETH'
+  category: 'external' | 'internal' | 'erc20' | 'erc721' | 'erc1155'
+  blockNum: number
+  chainId: number
+  networkName: string
+  explorerUrl: string
+  rawContract?: {
+    address: string
+    decimals: number
+  }
+}
+
+const ERC20_TRANSFER_SELECTOR = '0xa9059cbb'
+
 interface TransactionCacheEntry {
   exists: boolean
   network?: NetworkConfig
@@ -1161,6 +1181,205 @@ export class BlockchainService {
       this.logger.error(`Error finding network for transaction ${txHash}:`, error)
       return null
     }
+  }
+
+  /**
+   * Get token transfers for a wallet address using Alchemy's alchemy_getAssetTransfers.
+   * Queries all Alchemy-backed networks in parallel.
+   */
+  async getTokenTransfersByAddress(params: {
+    address: string
+    chainId?: number
+    category?: ('external' | 'internal' | 'erc20' | 'erc721' | 'erc1155')[]
+    fromBlock?: string  // hex block number or 'latest'
+    toBlock?: string
+    maxCount?: number   // max results per network (hex), default 100
+    order?: 'asc' | 'desc'
+  }): Promise<WalletTransfer[]> {
+    const {
+      address,
+      chainId,
+      category = ['external', 'erc20'],
+      fromBlock = '0x0',
+      toBlock = 'latest',
+      maxCount = 100,
+      order = 'desc',
+    } = params
+
+    // Determine which networks to query
+    const networksToQuery: NetworkConfig[] = []
+    if (chainId) {
+      const network = this.networks.get(chainId.toString())
+      if (network) networksToQuery.push(network)
+    } else {
+      // Deduplicate (networks stored by both decimal and hex keys)
+      const seen = new Set<number>()
+      for (const network of this.networks.values()) {
+        if (!seen.has(network.chainId)) {
+          seen.add(network.chainId)
+          networksToQuery.push(network)
+        }
+      }
+    }
+
+    const maxHex = `0x${maxCount.toString(16)}`
+
+    const fetchFromNetwork = async (network: NetworkConfig): Promise<WalletTransfer[]> => {
+      // Only works with Alchemy RPCs
+      if (!network.rpcUrl.includes('alchemy.com')) {
+        return []
+      }
+
+      const body = {
+        id: 1,
+        jsonrpc: '2.0',
+        method: 'alchemy_getAssetTransfers',
+        params: [{
+          fromBlock,
+          toBlock,
+          fromAddress: address,
+          category,
+          maxCount: maxHex,
+          order,
+          withMetadata: true,
+          excludeZeroValue: true,
+        }],
+      }
+
+      // Also fetch incoming transfers
+      const bodyTo = {
+        id: 2,
+        jsonrpc: '2.0',
+        method: 'alchemy_getAssetTransfers',
+        params: [{
+          fromBlock,
+          toBlock,
+          toAddress: address,
+          category,
+          maxCount: maxHex,
+          order,
+          withMetadata: true,
+          excludeZeroValue: true,
+        }],
+      }
+
+      try {
+        const [resFrom, resTo] = await Promise.all([
+          fetch(network.rpcUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          }),
+          fetch(network.rpcUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bodyTo),
+          }),
+        ])
+
+        const [dataFrom, dataTo] = await Promise.all([
+          resFrom.json() as Promise<any>,
+          resTo.json() as Promise<any>,
+        ])
+
+        const rawTransfers: any[] = [
+          ...(dataFrom?.result?.transfers || []),
+          ...(dataTo?.result?.transfers || []),
+        ]
+
+        // Keep only txs that are plain native transfer (input = 0x)
+        // or direct ERC20 transfer(...) calls.
+        const txMethodByHash = new Map<string, string>()
+        const uniqueHashes = [...new Set(rawTransfers.map(t => t?.hash).filter(Boolean))] as string[]
+
+        await Promise.all(uniqueHashes.map(async (hash) => {
+          try {
+            if (!network.client) return
+            const tx = await network.client.getTransaction({
+              hash: hash as `0x${string}`,
+            })
+            txMethodByHash.set(hash.toLowerCase(), (tx.input || '0x').toLowerCase())
+          } catch {
+            txMethodByHash.set(hash.toLowerCase(), '0x')
+          }
+        }))
+
+        // Deduplicate by tx hash + logIndex
+        const seen = new Set<string>()
+        const transfers: WalletTransfer[] = []
+
+        for (const t of rawTransfers) {
+          const txInput = txMethodByHash.get(String(t.hash || '').toLowerCase()) || ''
+          const isNativeTransfer = txInput === '0x'
+          const isErc20TransferMethod = txInput.startsWith(ERC20_TRANSFER_SELECTOR)
+
+          if (!isNativeTransfer && !isErc20TransferMethod) {
+            continue
+          }
+
+          const key = `${t.hash}:${t.from}:${t.to}:${t.value}`
+          if (seen.has(key)) continue
+          seen.add(key)
+
+          transfers.push({
+            hash: t.hash,
+            from: t.from,
+            to: t.to,
+            value: t.value ?? 0,
+            timestamp: t.metadata?.blockTimestamp,
+            asset: t.asset || this.getNativeTokenInfo(network.chainId).symbol,
+            category: t.category,
+            blockNum: parseInt(t.blockNum, 16),
+            chainId: network.chainId,
+            networkName: network.name,
+            explorerUrl: `${network.explorerBaseUrl}/tx/${t.hash}`,
+            rawContract: t.rawContract ? {
+              address: t.rawContract.address,
+              decimals: t.rawContract.decimal ? parseInt(t.rawContract.decimal, 16) : 18,
+            } : undefined,
+          })
+        }
+
+        return transfers
+      } catch (error) {
+        this.logger.warn(`Failed to fetch transfers from ${network.name}: ${(error as Error).message}`)
+        return []
+      }
+    }
+
+    const results = await Promise.all(networksToQuery.map(fetchFromNetwork))
+    const allTransfers = results.flat()
+
+    // For all-network queries, sort by actual timestamp because block numbers
+    // are not comparable across different chains.
+    if (!chainId) {
+      const getTimestampMs = (transfer: WalletTransfer): number => {
+        if (!transfer.timestamp) return 0
+        const ms = Date.parse(transfer.timestamp)
+        return Number.isNaN(ms) ? 0 : ms
+      }
+
+      if (order === 'desc') {
+        allTransfers.sort((a, b) => {
+          const diff = getTimestampMs(b) - getTimestampMs(a)
+          return diff !== 0 ? diff : b.blockNum - a.blockNum
+        })
+      } else {
+        allTransfers.sort((a, b) => {
+          const diff = getTimestampMs(a) - getTimestampMs(b)
+          return diff !== 0 ? diff : a.blockNum - b.blockNum
+        })
+      }
+    } else {
+      // Single-network query can safely sort by block number.
+      if (order === 'desc') {
+        allTransfers.sort((a, b) => b.blockNum - a.blockNum)
+      } else {
+        allTransfers.sort((a, b) => a.blockNum - b.blockNum)
+      }
+    }
+
+    return allTransfers
   }
 
   // Keep the old method for backward compatibility but make it use the new multi-network approach

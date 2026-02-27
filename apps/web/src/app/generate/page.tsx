@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { ReceiptGenerator } from '@/components/receipt-generator'
+import { WalletTransfers } from '@/components/wallet-transfers'
 import { useAuth } from '@/hooks/use-auth'
 import { useAccount } from 'wagmi'
 import { ParallaxBackground } from '@/components/parallax-background'
 import { PAYMENT_AMOUNT_WITHDISCOUNT } from '@/config'
+import { AnimatedPillNav } from '@/components/animated-pill-nav'
 
 // Dynamic import for motion to reduce initial bundle size
 const MotionDiv = dynamic(
@@ -20,6 +22,9 @@ export default function GeneratePage() {
   const { isAuthenticated } = useAuth()
   const { isConnected } = useAccount()
   const [mounted, setMounted] = useState(false)
+
+  // Состояние для переключения отображения
+  const [showReceipt, setShowReceipt] = useState(true)
 
   useEffect(() => {
     setMounted(true)
@@ -50,7 +55,7 @@ export default function GeneratePage() {
   return (
     <>
       {/* Centered Hero Section with Receipt Generator */}
-            <section className="relative min-h-screen flex items-center justify-center overflow-hidden py-8 sm:py-12 lg:py-20">
+            <section className="relative min-h-screen flex items-between justify-between overflow-hidden py-8 sm:py-12 lg:py-20 pt-20">
           {/* Background with parallax effect */}
           <ParallaxBackground 
             enableParallax={true}
@@ -60,24 +65,58 @@ export default function GeneratePage() {
           />
           
           <MotionDiv 
-            className="relative z-40 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center"
+            className="relative flex flex-col z-40 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center"
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: "easeOut" }}
           >
-            
-            {/* Receipt Generator Card */}
-            <MotionDiv 
-              className="relative max-w-2xl mx-auto"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, delay: 0.3 }}
-            >
-              <div className="border rounded-2xl  border-gray-300/50 dark:border-gray-800/50 bg-white/20 dark:bg-black/20 backdrop-blur-sm p-4 sm:p-6 md:p-8 lg:p-12  transition-colors duration-300">
-                <ReceiptGenerator />
-              </div>
-            </MotionDiv>
-          
+            {/* Переключатель */}
+            <AnimatedPillNav
+              items={[
+                {
+                  key: 'receipt',
+                  label: 'Receipt Generator',
+                  onClick: () => setShowReceipt(true),
+                },
+                {
+                  key: 'transfers',
+                  label: 'Wallet Transfers',
+                  onClick: () => setShowReceipt(false),
+                },
+              ]}
+              activeKey={showReceipt ? 'receipt' : 'transfers'}
+              className="relative flex items-center justify-center max-w-md mx-auto mb-8 mt-8 px-1.5 py-1 gap-4 border border-gray-300/50 dark:border-gray-800/50 rounded-2xl bg-white/20 dark:bg-black/20 backdrop-blur-sm"
+              itemBaseClassName="relative overflow-hidden rounded-xl px-2.5 py-1.5 text-[12px] transition-colors duration-300 font-light"
+              itemActiveClassName="text-orange-400 dark:text-orange-400"
+              itemInactiveClassName="text-gray-900 dark:text-gray-300 hover:text-orange-400 dark:hover:text-orange-400"
+              pillClassName="absolute inset-0 rounded-xl border border-orange-400/90 bg-orange-400/10 shadow-[0_0_0_1px_rgba(251,146,60,0.25),0_8px_20px_rgba(251,146,60,0.18)]"
+            />
+
+            {showReceipt ? (
+              <MotionDiv 
+                className="relative   max-w-2xl mx-auto"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, delay: 0.3 }}
+              >
+                <div className="border rounded-2xl  border-gray-300/50 dark:border-gray-800/50 bg-white/20 dark:bg-black/20 backdrop-blur-sm p-4 sm:p-6 md:p-8 lg:p-12  transition-colors duration-300">
+                  <ReceiptGenerator />
+                </div>
+              </MotionDiv>
+            ) : (
+              <MotionDiv
+                className="relative w-full max-w-6xl mx-auto"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, delay: 0.3 }}
+              >
+                <div
+                  className="flex w-full flex-1 border rounded-2xl border-gray-300/50 dark:border-gray-800/50 bg-white/20 dark:bg-black/20 backdrop-blur-sm p-4 sm:p-6 transition-colors duration-300"
+                >
+                  <WalletTransfers />
+                </div>
+              </MotionDiv>
+            )}
           </MotionDiv>
         </section>
 

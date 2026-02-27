@@ -20,6 +20,7 @@ import { toast } from 'react-hot-toast'
 import { ApiClient } from '@/lib/api-client'
 import { useAuth } from '@/hooks/use-auth'
 import { formatDiscount } from '@/utils/format-numbers'
+import { AnimatedPillNav } from '@/components/animated-pill-nav'
 
 
 // Subscription actions with callback when pack purchase is initiated
@@ -298,30 +299,35 @@ export default function SubscriptionPage() {
         ) : (
           <div className="space-y-4">
             <div className="text-[11px] uppercase tracking-wide text-orange-500">Select Token</div>
-            <div className="grid grid-cols-2 gap-3">
-              {availablePackTokens.map(opt => (
-                <button
-                  key={opt.type}
-                  type="button"
-                  onClick={() => setSelectedPackToken(opt)}
-                  className={`p-3 border rounded-lg text-xs tracking-wide ${selectedPackToken?.type === opt.type ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' : 'border-gray-300 dark:border-gray-700 hover:border-gray-500'}`}
-                >{opt.symbol}</button>
-              ))}
+            <div className="rounded-2xl border border-gray-300/70 dark:border-gray-800/50 p-1.5">
+              <AnimatedPillNav
+                items={availablePackTokens.map((opt) => ({
+                  key: opt.type,
+                  label: opt.symbol,
+                  onClick: () => setSelectedPackToken(opt),
+                }))}
+                activeKey={selectedPackToken?.type ?? null}
+                className="relative flex w-full gap-2"
+                itemBaseClassName="relative z-10 flex-1 rounded-2xl px-3 py-2 text-center text-xs tracking-wide transition-colors duration-300"
+                itemActiveClassName="text-orange-500 dark:text-orange-400"
+                itemInactiveClassName="text-gray-700 dark:text-gray-300 hover:text-orange-500 dark:hover:text-orange-400"
+                pillClassName="absolute inset-0 rounded-2xl border border-orange-400/90 bg-orange-400/10 shadow-[0_0_0_1px_rgba(251,146,60,0.25),0_8px_20px_rgba(251,146,60,0.18)]"
+              />
             </div>
             <div className="grid grid-cols-2 gap-3 pt-1">
               <button
                 type="button"
                 disabled={isPayingToken || isProcessingPack}
                 onClick={() => setShowPackTokens(false)}
-                className="text-xs py-2 rounded-lg border border-gray-300 dark:border-gray-700 hover:border-orange-400 hover:text-orange-500 transition disabled:opacity-50"
+                className="text-xs py-2 rounded-2xl hover:border-orange-400 hover:text-orange-500 transition disabled:opacity-50 btn-secondary-minimal"
               >Cancel</button>
               <button
                 type="button"
                 disabled={isPayingToken || isProcessingPack || insufficientPackBalance || !selectedPackToken}
                 onClick={purchasePack}
-                className={`text-xs py-2 rounded-lg transition ${
+                className={`text-xs py-2 rounded-2xl transition ${
                   (isPayingToken || isProcessingPack || insufficientPackBalance || !selectedPackToken)
-                    ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed border border-gray-300 dark:border-gray-700'
+                    ? ' text-gray-400 cursor-not-allowed border border-gray-300 dark:border-gray-700'
                     : ' bg-orange-400 text-white dark:text-black hover:bg-orange-600 hover:text-white dark:hover:text-black'
                 }`}
               >{insufficientPackBalance
@@ -363,30 +369,35 @@ export default function SubscriptionPage() {
         ) : (
           <div className="space-y-4">
             <div className="text-[11px] uppercase tracking-wide text-orange-500">Select Token</div>
-            <div className="grid grid-cols-2 gap-3">
-              {availableSubTokens.map(opt => (
-                <button
-                  key={opt.type}
-                  type="button"
-                  onClick={() => setSelectedSubToken(opt)}
-                  className={`p-3 border rounded-lg text-xs tracking-wide ${selectedSubToken?.type === opt.type ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' : 'border-gray-300 dark:border-gray-700 hover:border-gray-500'}`}
-                >{opt.symbol}</button>
-              ))}
+            <div className="rounded-xl border border-gray-300/70 dark:border-gray-800/50 p-1.5">
+              <AnimatedPillNav
+                items={availableSubTokens.map((opt) => ({
+                  key: opt.type,
+                  label: opt.symbol,
+                  onClick: () => setSelectedSubToken(opt),
+                }))}
+                activeKey={selectedSubToken?.type ?? null}
+                className="relative flex w-full gap-2"
+                itemBaseClassName="relative z-10 flex-1 rounded-2xl px-3 py-2 text-center text-xs tracking-wide transition-colors duration-300"
+                itemActiveClassName="text-orange-500 dark:text-orange-400"
+                itemInactiveClassName="text-gray-700 dark:text-gray-300 hover:text-orange-500 dark:hover:text-orange-400"
+                pillClassName="absolute inset-0 rounded-2xl border border-orange-400/90 bg-orange-400/10 shadow-[0_0_0_1px_rgba(251,146,60,0.25),0_8px_20px_rgba(251,146,60,0.18)]"
+              />
             </div>
             <div className="grid grid-cols-2 gap-3 pt-1">
               <button
                 type="button"
                 disabled={isProcessingSub || isPayingToken}
                 onClick={() => setShowSubTokens(false)}
-                className="text-xs py-2 rounded-lg border border-gray-300 dark:border-gray-700 hover:border-orange-400 hover:text-orange-500 transition disabled:opacity-50"
+                className="text-xs py-2 rounded-2xl hover:border-orange-400 hover:text-orange-500 transition disabled:opacity-50 btn-secondary-minimal"
               >Cancel</button>
               <button
                 type="button"
                 disabled={isProcessingSub || isPayingToken || insufficientSubBalance || !selectedSubToken}
                 onClick={purchaseSubscription}
-                className={`text-xs py-2 rounded-lg transition ${
+                className={`text-xs py-2 rounded-2xl transition ${
                   (isProcessingSub || isPayingToken || insufficientSubBalance || !selectedSubToken)
-                    ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed border border-gray-300 dark:border-gray-700'
+                    ? 'text-gray-400 cursor-not-allowed border border-gray-300 dark:border-gray-700'
                     : 'bg-orange-400 text-white dark:text-black hover:bg-orange-600 hover:text-white dark:hover:text-black'
                 }`}
               >{insufficientSubBalance

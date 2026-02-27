@@ -108,6 +108,35 @@ export class ReceiptsController {
     return this.receiptsService.getUserReceipts(userId, chainIdNum, pageNum, limitNum)
   }
 
+  @Get('wallet/:address/transfers')
+  @ApiOperation({ summary: 'Get token transfers for a wallet address (via Alchemy)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Wallet transfers retrieved successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid address' })
+  async getWalletTransfers(
+    @Param('address') address: string,
+    @Query('chainId') chainId?: string,
+    @Query('category') category?: string,
+    @Query('maxCount') maxCount?: string,
+    @Query('order') order?: string,
+  ) {
+    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+      throw new (await import('@nestjs/common')).BadRequestException('Invalid wallet address')
+    }
+    const categories = category
+      ? (category.split(',') as ('external' | 'internal' | 'erc20' | 'erc721' | 'erc1155')[])
+      : undefined
+    return this.receiptsService.getWalletTransfers({
+      address,
+      chainId: chainId ? parseInt(chainId, 10) : undefined,
+      category: categories,
+      maxCount: maxCount ? parseInt(maxCount, 10) : undefined,
+      order: order === 'asc' ? 'asc' : order === 'desc' ? 'desc' : undefined,
+    })
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get receipt by ID' })

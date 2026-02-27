@@ -15,6 +15,7 @@ import { useTokenBalance } from '@/hooks/use-token-balance'
 import { useMultiTokenBalance } from '@/hooks/use-multi-token-balance'
 import { useETHBalance } from '@/hooks/use-eth-balance'
 import {  formatPaymentAmountDisplay } from '@/utils/format-numbers'
+import { AnimatedPillNav } from '@/components/animated-pill-nav'
 
 const receiptSchema = z.object({
   txHash: z.string().min(66, 'Transaction hash must be 66 characters').max(66, 'Transaction hash must be 66 characters'),
@@ -39,6 +40,14 @@ interface FreeGenerationInfo {
   dateActive: boolean
 }
 
+interface ReceiptGeneratorProps {
+  initialTxHash?: string
+  startFromPayment?: boolean
+  onBusyChange?: (isBusy: boolean) => void
+  compactMode?: boolean
+  onReceiptGenerated?: (data: { txHash: string; receiptId: string; pdfUrl: string }) => void
+}
+
 // Narrow user type locally to avoid 'any' while remaining flexible
 interface MinimalUser {
   freeGenerationsRemaining?: number
@@ -54,17 +63,18 @@ function computeFreeInfo(user: MinimalUser | undefined): FreeGenerationInfo {
   return { hasFree: count > 0 || dateActive, count, dateActive }
 }
 
-export function ReceiptGenerator() {
+export function ReceiptGenerator({ initialTxHash, startFromPayment = false, onBusyChange, compactMode = false, onReceiptGenerated }: ReceiptGeneratorProps) {
   const { isAuthenticated, user, checkAuth } = useAuth()
   const { address, isConnected } = useAccount()
   const chainId = useChainId()
-  const [form, setForm] = useState<ReceiptForm>({ txHash: '', description: '' })
+  const [form, setForm] = useState<ReceiptForm>({ txHash: initialTxHash || '', description: '' })
   const [step, setStep] = useState<Step>(Step.INPUT)
   const freeInfo = computeFreeInfo(user || undefined)
   interface GeneratedReceipt { id: string; pdfUrl: string }
   const [receiptData, setReceiptData] = useState<GeneratedReceipt | null>(null)
   const [mounted, setMounted] = useState(false)
   const [globalAuthState, setGlobalAuthState] = useState(false)
+  const [isFreeGenerating, setIsFreeGenerating] = useState(false)
   
   // Get available payment options for current network
   const availablePaymentOptions = useMemo(() => getAvailablePaymentOptions(chainId || 1), [chainId])
@@ -76,13 +86,15 @@ export function ReceiptGenerator() {
   const { verifyTransaction } = useVerifyTransaction()
 
   // Get balance for selected payment option
-  const { hasInsufficientBalance: hasInsufficientTokenBalance } = useTokenBalance(
+  const { balance: tokenBalance, isLoading: isTokenBalanceLoading, hasInsufficientBalance: hasInsufficientTokenBalance } = useTokenBalance(
     selectedPayment?.contractAddress || undefined,
     selectedPayment?.decimals
   )
   
   // Use multi-token balance for better token support (especially on Polygon)
   const { 
+    balance: multiTokenBalance,
+    isLoading: isMultiTokenBalanceLoading,
     hasInsufficientBalance: hasInsufficientMultiTokenBalance,
     contractAddress: detectedContractAddress,
   } = useMultiTokenBalance(
@@ -90,7 +102,7 @@ export function ReceiptGenerator() {
     selectedPayment?.decimals
   )
   
-  const { hasInsufficientBalance: hasInsufficientETHBalance } = useETHBalance()
+  const { balance: ethBalance, isLoading: isEthBalanceLoading, hasInsufficientBalance: hasInsufficientETHBalance } = useETHBalance()
   
   // Determine which balance and functions to use based on payment type
   const isETHPayment = selectedPayment?.type === 'ETH'
@@ -112,6 +124,32 @@ export function ReceiptGenerator() {
   }, [isETHPayment, isTokenPayment, hasInsufficientETHBalance, hasInsufficientMultiTokenBalance, hasInsufficientTokenBalance, selectedPayment?.amount])
 
   const isPaymentLoading = isPaymentETHLoading || isPaymentTokenLoading
+  const isBusy = step === Step.VERIFYING || step === Step.GENERATING || isPaymentLoading || isFreeGenerating
+  const actionButtonBaseClass = 'rounded-xl text-[12px] py-1.5 transition-all duration-300'
+  const actionButtonWidthClass = compactMode ? 'w-auto min-w-[190px] mx-auto' : 'w-full'
+
+  const selectedBalance = useMemo(() => {
+    if (!selectedPayment) {
+      return { value: '0', loading: false }
+    }
+
+    if (selectedPayment.type === 'ETH') {
+      return { value: ethBalance, loading: isEthBalanceLoading }
+    }
+
+    return {
+      value: multiTokenBalance || tokenBalance,
+      loading: isMultiTokenBalanceLoading || isTokenBalanceLoading,
+    }
+  }, [
+    selectedPayment,
+    ethBalance,
+    isEthBalanceLoading,
+    multiTokenBalance,
+    tokenBalance,
+    isMultiTokenBalanceLoading,
+    isTokenBalanceLoading,
+  ])
 
   // Update selected payment when network changes
   useEffect(() => {
@@ -151,11 +189,44 @@ export function ReceiptGenerator() {
   }, [])
 
   useEffect(() => {
+    if (!initialTxHash) {
+      return
+    }
+
+    setForm((prev) => ({ ...prev, txHash: initialTxHash }))
+    if (startFromPayment) {
+      setStep(freeInfo.hasFree ? Step.FREE : Step.PAYMENT)
+    } else {
+      setStep(Step.INPUT)
+    }
+    setReceiptData(null)
+  }, [initialTxHash, startFromPayment, freeInfo.hasFree])
+
+  useEffect(() => {
+    if (!startFromPayment || !initialTxHash) {
+      return
+    }
+
+    if (freeInfo.hasFree && step === Step.PAYMENT) {
+      setStep(Step.FREE)
+    }
+  }, [startFromPayment, initialTxHash, freeInfo.hasFree, step])
+
+  useEffect(() => {
     if (!isConnected && (step === Step.PAYMENT || step === Step.GENERATING)) {
       setStep(Step.INPUT)
       toast.error('Wallet disconnected. Please reconnect to continue.')
     }
   }, [isConnected, step])
+
+  useEffect(() => {
+    if (!onBusyChange) {
+      return
+    }
+
+    onBusyChange(isBusy)
+    return () => onBusyChange(false)
+  }, [isBusy, onBusyChange])
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
@@ -195,8 +266,6 @@ export function ReceiptGenerator() {
     }
   }, [isFullyAuthenticated, form, step, verifyTransaction, freeInfo.hasFree])
 
-  const [isFreeGenerating, setIsFreeGenerating] = useState(false)
-
   const handleFreeGenerate = useCallback(async () => {
     if (isFreeGenerating) return
     setIsFreeGenerating(true)
@@ -208,6 +277,7 @@ export function ReceiptGenerator() {
       })
       if (receipt) {
         setReceiptData(receipt)
+        onReceiptGenerated?.({ txHash: form.txHash, receiptId: receipt.id, pdfUrl: receipt.pdfUrl })
         try { await checkAuth() } catch { /* ignore */ }
         setStep(Step.COMPLETE)
         toast.success('Receipt generated for free!')
@@ -221,7 +291,7 @@ export function ReceiptGenerator() {
     } finally {
       setIsFreeGenerating(false)
     }
-  }, [isFreeGenerating, generateReceipt, form, checkAuth])
+  }, [isFreeGenerating, generateReceipt, form, checkAuth, onReceiptGenerated])
 
   const handlePayment = useCallback(async () => {
     if (!selectedPayment) {
@@ -266,6 +336,7 @@ export function ReceiptGenerator() {
         
         if (receipt) {
           setReceiptData(receipt)
+          onReceiptGenerated?.({ txHash: form.txHash, receiptId: receipt.id, pdfUrl: receipt.pdfUrl })
           // Update user state (in case future paid logic adjusts counters/promos)
           try { await checkAuth() } catch { /* ignore */ }
           setStep(Step.COMPLETE)
@@ -281,7 +352,7 @@ export function ReceiptGenerator() {
       toast.error(errorMessage)
       setStep(Step.PAYMENT)
     }
-  }, [selectedPayment, payETH, payToken, detectedContractAddress, generateReceipt, form, checkAuth])
+  }, [selectedPayment, payETH, payToken, detectedContractAddress, generateReceipt, form, checkAuth, onReceiptGenerated])
 
   const handleDownload = useCallback(() => {
     if (receiptData?.pdfUrl) {
@@ -329,19 +400,21 @@ export function ReceiptGenerator() {
             <p className="text-black dark:text-white font-mono text-xs sm:text-sm transition-colors duration-300">{receiptData.id}</p>
           </div>
           
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <div className={compactMode ? 'grid grid-cols-1' : 'grid grid-cols-2 gap-3 sm:gap-4'}>
             <button
               onClick={handleDownload}
-              className="btn-primary-minimal rounded-xl text-xs sm:text-sm py-2.5 sm:py-3"
+              className={`${actionButtonBaseClass} ${actionButtonWidthClass} btn-primary-minimal`}
             >
               Download PDF
             </button>
-            <button
-              onClick={resetForm}
-              className="btn-secondary-minimal rounded-xl text-xs sm:text-sm py-2.5 sm:py-3"
-            >
-              Generate Another
-            </button>
+            {!compactMode && (
+              <button
+                onClick={resetForm}
+                className={`${actionButtonBaseClass} ${actionButtonWidthClass} btn-secondary-minimal`}
+              >
+                Generate Another
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -350,6 +423,7 @@ export function ReceiptGenerator() {
 
   return (
     <div className="border border-gray-300 dark:border-gray-800 rounded-2xl bg-white/20 backdrop-blur-md dark:bg-black/30 p-6 sm:p-8 transition-colors duration-300">
+      {!compactMode && (
       <div className="text-center mb-4">
         {/* <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4 sm:mb-6 p-2 border border-orange-400 bg-orange-50 dark:bg-orange-900/20">
           <svg className="w-full h-full text-orange-400" fill="currentColor" viewBox="0 0 24 24">
@@ -361,12 +435,14 @@ export function ReceiptGenerator() {
           {freeInfo.hasFree ? (
             <span>You have a free receipt available. Enter a transaction hash to generate it without payment.</span>
           ) : (
-            <span>Enter your transaction hash and pay {formatPaymentAmountDisplay(selectedPayment.amount)} {selectedPayment.symbol} to generate a verified PDF receipt</span>
+      ''
           )}
         </p>
       </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
+        {!compactMode && (
         <div>
           <label htmlFor="txHash" className="block text-xs sm:text-sm text-orange-400 uppercase tracking-wider mb-2 sm:mb-3">
             Transaction Hash *
@@ -377,11 +453,14 @@ export function ReceiptGenerator() {
             value={form.txHash}
             onChange={(e) => setForm({ ...form, txHash: e.target.value })}
             placeholder="0x..."
-            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border rounded-2xl  border-gray-300/50 dark:border-gray-800/50 bg-white/20 dark:bg-black/20 backdrop-blur-sm text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all duration-300 font-mono text-xs sm:text-sm"
+            readOnly={startFromPayment}
+            className="w-full px-3 py-1.5 rounded-xl border border-gray-300/50 dark:border-gray-800/50 bg-white/20 dark:bg-black/20 backdrop-blur-sm text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all duration-300 font-mono text-[12px]"
             required
           />
         </div>
+        )}
 
+        {!startFromPayment && (
         <div>
           <label htmlFor="description" className="block text-xs sm:text-sm text-orange-400 uppercase tracking-wider mb-2 sm:mb-3">
             Description (Optional)
@@ -395,14 +474,15 @@ export function ReceiptGenerator() {
             className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border rounded-2xl  border-gray-300/50 dark:border-gray-800/50 bg-white/20 dark:bg-black/20 backdrop-blur-sm text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-all duration-300 resize-none text-xs sm:text-sm font-light"
           />
         </div>
+        )}
 
         {step === Step.INPUT && (
           <button
             type="submit"
             disabled={!form.txHash || !isFullyAuthenticated}
-            className={`w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl text-xs sm:text-sm font-light tracking-wide transition-all duration-300 ${
+            className={`${actionButtonBaseClass} w-auto min-w-[190px] mx-auto px-4 sm:px-6 font-light tracking-wide ${
               !form.txHash || !isFullyAuthenticated
-                ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-gray-300 dark:border-gray-700'
+                ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed border border-gray-300 dark:border-gray-700'
                 : 'btn-primary-minimal'
             }`}
           >
@@ -424,46 +504,54 @@ export function ReceiptGenerator() {
             
             {/* Payment Method Selector */}
             <div className="mb-4 sm:mb-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-                {availablePaymentOptions.map((option) => (
-                  <button
-                    key={option.type}
-                    type="button"
-                    onClick={() => setSelectedPayment(option)}
-                    className={`p-3 sm:p-4 border rounded-xl text-xs sm:text-sm transition-colors duration-300 ${
-                      selectedPayment?.type === option.type
-                        ? 'border-orange-400 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400'
-                        : 'border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600'
-                    }`}
-                  >
-                    <div className="font-medium text-sm sm:text-base">{formatPaymentAmountDisplay(option.amount)} {option.symbol}</div>
-                  </button>
-                ))}
-              </div>
+              <AnimatedPillNav
+                items={availablePaymentOptions.map((option) => ({
+                  key: option.type,
+                  label: `${formatPaymentAmountDisplay(option.amount)} ${option.symbol}`,
+                  onClick: () => setSelectedPayment(option),
+                }))}
+                activeKey={selectedPayment?.type || null}
+                className="relative grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3"
+                itemBaseClassName="relative overflow-hidden rounded-xl px-3 py-1.5 text-[12px] transition-colors duration-300 font-light"
+                itemActiveClassName="text-orange-400 dark:text-orange-400"
+                itemInactiveClassName="text-gray-900 dark:text-gray-300 hover:text-orange-400 dark:hover:text-orange-400"
+                pillClassName="absolute inset-0 rounded-xl border border-orange-400/90 bg-orange-400/10 shadow-[0_0_0_1px_rgba(251,146,60,0.25),0_8px_20px_rgba(251,146,60,0.18)]"
+              />
               {availablePaymentOptions.length === 0 && (
                 <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
                   No payment options available on this network. Please switch to a supported network.
                 </div>
               )}
+
+              {selectedPayment && (
+                <p className="mt-3 text-[11px] text-gray-500 dark:text-gray-400">
+                  Balance:{' '}
+                  <span className="text-gray-700 dark:text-gray-300">
+                    {selectedBalance.loading ? 'Loading...' : `${formatPaymentAmountDisplay(Number(selectedBalance.value || 0))} ${selectedPayment.symbol}`}
+                  </span>
+                </p>
+              )}
             </div>
             
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className={startFromPayment ? 'grid grid-cols-1' : 'grid grid-cols-2 gap-3'}>
+              {!startFromPayment && (
               <button
                 type="button"
                 onClick={() => setStep(Step.INPUT)}
-                className="btn-secondary-minimal rounded-xl text-xs sm:text-sm py-2.5 sm:py-3"
+                className={`${actionButtonBaseClass} ${actionButtonWidthClass} btn-secondary-minimal`}
               >
                 Back
               </button>
+              )}
               <button
                 type="button"
                 onClick={handlePayment}
                 disabled={
                   isPaymentLoading || insufficientBalance
                 }
-                className={`rounded-xl text-xs sm:text-sm py-2.5 sm:py-3 transition-all duration-300 ${
+                className={`${actionButtonBaseClass} ${actionButtonWidthClass} ${
                   isPaymentLoading || insufficientBalance
-                    ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-gray-300 dark:border-gray-700'
+                    ? 'bg-transparent text-gray-400 dark:text-gray-500 cursor-not-allowed border border-gray-300/70 dark:border-gray-700'
                     : 'btn-primary-minimal'
                 }`}
               >
@@ -493,20 +581,22 @@ export function ReceiptGenerator() {
                 </span>
               )}
             </p>
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className={startFromPayment ? 'grid grid-cols-1' : 'grid grid-cols-2 gap-3 sm:gap-4'}>
+              {!startFromPayment && (
               <button
                 type="button"
                 onClick={() => setStep(Step.INPUT)}
-                className="btn-secondary-minimal rounded-xl text-xs sm:text-sm py-2.5 sm:py-3"
+                className={`${actionButtonBaseClass} ${actionButtonWidthClass} btn-secondary-minimal`}
                 disabled={isFreeGenerating}
               >
                 Back
               </button>
+              )}
               <button
                 type="button"
                 onClick={handleFreeGenerate}
                 disabled={isFreeGenerating}
-                className={`rounded-xl text-xs sm:text-sm py-2.5 sm:py-3 transition-all duration-300 ${
+                className={`${actionButtonBaseClass} ${actionButtonWidthClass} ${
                   isFreeGenerating
                     ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-gray-300 dark:border-gray-700'
                     : 'btn-primary-minimal'
@@ -520,9 +610,7 @@ export function ReceiptGenerator() {
 
         {step === Step.GENERATING && (
           <div className="text-center py-6 sm:py-8">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 border border-gray-300 dark:border-gray-600 flex items-center justify-center mx-auto mb-3 sm:mb-4 transition-colors duration-300">
-              <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-orange-400 border-t-transparent animate-spin"></div>
-            </div>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-orange-400 border-t-transparent animate-spin mx-auto mb-3 sm:mb-4"></div>
             <p className="text-black dark:text-white font-light text-xs sm:text-sm tracking-wide transition-colors duration-300">Generating your receipt...</p>
             <p className="text-gray-500 text-xs font-light mt-2">This may take a few moments</p>
           </div>
