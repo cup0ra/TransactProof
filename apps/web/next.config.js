@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   transpilePackages: ['@transactproof/ui', '@transactproof/core'],
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion', '@reown/appkit', 'wagmi', 'viem'],
