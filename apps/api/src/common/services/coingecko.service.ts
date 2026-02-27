@@ -37,10 +37,15 @@ export class CoinGeckoService {
   private readonly INTRADAY_PRICE_CACHE_TTL = 30 * 60 * 1000 // 30 minutes
   private readonly INTRADAY_BUCKET_SECONDS = 300 // 5 minutes
   private readonly INTRADAY_WINDOW_SECONDS = 1800 // ±30 min window for range query
+  private readonly COINGECKO_PUBLIC_HISTORY_DAYS_LIMIT = 365
 
   // Retry configuration for transient CoinGecko errors
   private readonly MAX_RETRIES = 3
   private readonly RETRY_BASE_DELAY_MS = 500
+
+  private isRetryableHttpStatus(status: number): boolean {
+    return status === 429 || status >= 500
+  }
 
   /**
    * Find token ID with fallback strategies
@@ -387,8 +392,11 @@ export class CoinGeckoService {
     try {
       const response = await fetch(url, { method: 'GET', headers })
       if (!response.ok) {
+        let bodyText: string | undefined
+        try { bodyText = await response.text() } catch { /* ignore */ }
+
         // For 429 or 5xx, attempt retry with backoff
-        if ((response.status === 429 || response.status >= 500) && attempt < this.MAX_RETRIES) {
+        if (this.isRetryableHttpStatus(response.status) && attempt < this.MAX_RETRIES) {
           const retryAfterHeader = response.headers.get('Retry-After')
           const retryAfterMs = retryAfterHeader ? parseInt(retryAfterHeader, 10) * 1000 : this.RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1)
           this.logger.warn(`CoinGecko request failed with status ${response.status}. Retrying in ${retryAfterMs}ms (attempt ${attempt}/${this.MAX_RETRIES})`)
@@ -396,20 +404,21 @@ export class CoinGeckoService {
           return this.fetchWithRetry(url, attempt + 1)
         }
 
-        let bodyText: string | undefined
-        try { bodyText = await response.text() } catch { /* ignore */ }
         throw new Error(`HTTP ${response.status} ${response.statusText} body=${bodyText?.slice(0,300)}`)
       }
       return await response.json()
     } catch (err) {
-      if (attempt < this.MAX_RETRIES) {
+      const errMessage = err instanceof Error ? err.message : String(err)
+      const nonRetryableHttpError = /^HTTP\s+\d{3}\b/.test(errMessage) && !/^HTTP\s+(429|5\d\d)\b/.test(errMessage)
+
+      if (attempt < this.MAX_RETRIES && !nonRetryableHttpError) {
         const delay = this.RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1)
-        this.logger.warn(`Fetch error on attempt ${attempt} for ${url}: ${err.message}. Retrying in ${delay}ms`)
+        this.logger.warn(`Fetch error on attempt ${attempt} for ${url}: ${errMessage}. Retrying in ${delay}ms`)
         await new Promise(res => setTimeout(res, delay))
         return this.fetchWithRetry(url, attempt + 1)
       }
-      this.logger.error(`Failed to fetch ${url} after ${attempt} attempts: ${err.message}`)
-      throw err
+      this.logger.error(`Failed to fetch ${url} after ${attempt} attempts: ${errMessage}`)
+      throw err instanceof Error ? err : new Error(errMessage)
     }
   }
 
@@ -424,6 +433,14 @@ export class CoinGeckoService {
   async getHistoricalPriceAtTimestamp(coinGeckoId: string, timestamp: Date): Promise<number | null> {
     try {
       const tsSec = Math.floor(timestamp.getTime() / 1000)
+      const publicApiOldestAllowedSec = Math.floor(Date.now() / 1000) - (this.COINGECKO_PUBLIC_HISTORY_DAYS_LIMIT * 24 * 60 * 60)
+      if (tsSec < publicApiOldestAllowedSec) {
+        this.logger.log(
+          `Skipping intraday range query for ${coinGeckoId} at ${timestamp.toISOString()} (older than ${this.COINGECKO_PUBLIC_HISTORY_DAYS_LIMIT} days).`,
+        )
+        return null
+      }
+
       const bucket = tsSec - (tsSec % this.INTRADAY_BUCKET_SECONDS)
       const cacheKey = `${coinGeckoId}:${bucket}`
       const cached = this.intradayPriceCache.get(cacheKey)
