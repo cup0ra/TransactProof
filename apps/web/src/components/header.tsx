@@ -3,13 +3,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useMemo, memo, useEffect } from 'react'
-import { LayoutGroup, motion } from 'framer-motion'
 import { ConnectButton } from './connect-button'
 import { ThemeToggle } from './theme-toggle'
 import { useAuth } from '@/hooks/use-auth'
 import { useAccount } from 'wagmi'
 import { globalAuthManager } from '@/utils/global-auth-manager'
 import { Logo } from './logo'
+import { AnimatedPillNav } from './animated-pill-nav'
 
 export function Header() {
   const { isAuthenticated, user } = useAuth()
@@ -21,6 +21,7 @@ export function Header() {
   useEffect(() => {
     const unsubscribe = globalAuthManager.onAuthChange((changedAddress, isAuth) => {
       if (address && changedAddress === address.toLowerCase()) {
+        console.log('Global auth state changed for address:', changedAddress, 'isAuth:', isAuth)
         setGlobalAuthState(isAuth)
       }
     })
@@ -47,14 +48,20 @@ export function Header() {
     }
     return null
   }, [actualPathname])
-  
-  const desktopNavItemBaseClass = 'relative overflow-hidden  rounded-xl px-2.5 py-1.5 text-[12px] transition-colors duration-300 font-light'
 
-  const getDesktopNavClass = (isActive: boolean) => `${desktopNavItemBaseClass} ${
-    isActive
-      ? 'text-orange-400 dark:text-orange-400'
-      : 'text-gray-900 dark:text-gray-300 hover:text-orange-400 dark:hover:text-orange-400'
-  }`
+  const desktopNavItems = useMemo(() => {
+    const items = [
+      { key: '/', href: '/', label: 'Home' },
+      { key: '/generate', href: '/generate', label: 'Generate' },
+      { key: '/subscription', href: '/subscription', label: 'Subscription' }
+    ]
+
+    if (isFullyAuthenticated) {
+      items.push({ key: '/dashboard', href: '/dashboard', label: 'Dashboard' })
+    }
+
+    return items
+  }, [isFullyAuthenticated])
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen)
@@ -77,64 +84,7 @@ export function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <LayoutGroup id="desktop-header-nav">
-            <nav className="hidden md:flex space-x-5 lg:space-x-7 xl:space-x-10">
-              <Link
-                href="/"
-                className={getDesktopNavClass(pathname === '/')}
-              >
-                {pathname === '/' && (
-                  <motion.span
-                    layoutId="desktop-active-nav-pill"
-                    className="absolute inset-0 rounded-xl border border-orange-400"
-                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-                  />
-                )}
-                <span className="relative z-10">Home</span>
-              </Link>
-              <Link
-                href="/generate"
-                className={getDesktopNavClass(pathname === '/generate')}
-              >
-                {pathname === '/generate' && (
-                  <motion.span
-                    layoutId="desktop-active-nav-pill"
-                    className="absolute inset-0 rounded-xl border border-orange-400"
-                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-                  />
-                )}
-                <span className="relative z-10">Generate</span>
-              </Link>
-              <Link
-                href="/subscription"
-                className={getDesktopNavClass(pathname === '/subscription')}
-              >
-                {pathname === '/subscription' && (
-                  <motion.span
-                    layoutId="desktop-active-nav-pill"
-                    className="absolute inset-0 rounded-xl border border-orange-400"
-                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-                  />
-                )}
-                <span className="relative z-10">Subscription</span>
-              </Link>
-              {isFullyAuthenticated && (
-                <Link
-                  href="/dashboard"
-                  className={getDesktopNavClass(pathname === '/dashboard')}
-                >
-                  {pathname === '/dashboard' && (
-                    <motion.span
-                      layoutId="desktop-active-nav-pill"
-                      className="absolute inset-0 rounded-xl border border-orange-400"
-                      transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-                    />
-                  )}
-                  <span className="relative z-10">Dashboard</span>
-                </Link>
-              )}
-            </nav>
-          </LayoutGroup>
+          <AnimatedPillNav items={desktopNavItems} activeKey={pathname} />
           </div>
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center ml-auto space-x-1.5 lg:space-x-2 border border-gray-300/50 dark:border-gray-800/50 rounded-xl px-1.5 lg:px-2 py-1 bg-white/20 dark:bg-black/20 backdrop-blur-sm">

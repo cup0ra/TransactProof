@@ -541,6 +541,48 @@ export class ReceiptsService {
     }
   }
 
+  async getWalletTransfers(params: {
+    address: string
+    chainId?: number
+    category?: ('external' | 'internal' | 'erc20' | 'erc721' | 'erc1155')[]
+    maxCount?: number
+    order?: 'asc' | 'desc'
+  }) {
+    const transfers = await this.blockchainService.getTokenTransfersByAddress(params)
+
+    const transferHashes = [...new Set(transfers.map((t) => t.hash).filter(Boolean))]
+    const receipts = transferHashes.length
+      ? await this.prisma.client.receipt.findMany({
+          where: { txHash: { in: transferHashes } },
+          select: { id: true, txHash: true, pdfUrl: true, createdAt: true },
+          orderBy: { createdAt: 'desc' },
+        })
+      : []
+
+    const receiptByHash = new Map<string, { id: string; pdfUrl: string }>()
+    for (const receipt of receipts) {
+      if (!receiptByHash.has(receipt.txHash)) {
+        receiptByHash.set(receipt.txHash, { id: receipt.id, pdfUrl: receipt.pdfUrl })
+      }
+    }
+
+    const transfersWithReceiptInfo = transfers.map((transfer) => {
+      const receipt = receiptByHash.get(transfer.hash)
+      return {
+        ...transfer,
+        receiptId: receipt?.id || null,
+        receiptPdfUrl: receipt?.pdfUrl || null,
+      }
+    })
+
+    return {
+      address: params.address,
+      chainId: params.chainId || null,
+      count: transfersWithReceiptInfo.length,
+      transfers: transfersWithReceiptInfo,
+    }
+  }
+
   async downloadPdf(id: string, userId?: string) {
     const receipt = await this.getReceipt(id, userId)
     return { pdfUrl: receipt.pdfUrl }
