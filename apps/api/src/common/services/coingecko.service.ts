@@ -40,11 +40,16 @@ export class CoinGeckoService {
   private readonly COINGECKO_PUBLIC_HISTORY_DAYS_LIMIT = 365
 
   // Retry configuration for transient CoinGecko errors
-  private readonly MAX_RETRIES = 3
+  // 429 retry is disabled by default to avoid long waits under hard rate limits.
+  private readonly MAX_RETRIES = Math.max(1, parseInt(process.env.COINGECKO_MAX_RETRIES || '2', 10) || 2)
+  private readonly RETRY_ON_429 = (process.env.COINGECKO_RETRY_ON_429 || 'false').toLowerCase() === 'true'
   private readonly RETRY_BASE_DELAY_MS = 500
 
   private isRetryableHttpStatus(status: number): boolean {
-    return status === 429 || status >= 500
+    if (status === 429) {
+      return this.RETRY_ON_429
+    }
+    return status >= 500
   }
 
   /**
