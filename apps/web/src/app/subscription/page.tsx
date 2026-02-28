@@ -54,9 +54,9 @@ interface PlanCardProps {
   highlight?: boolean
 }
 const PlanCard: React.FC<PlanCardProps & { footerContent?: React.ReactNode; subtitleOverride?: React.ReactNode; hideAction?: boolean }> = ({ title, price, description, features, cta, onSelect, highlight, footerContent, discountedPrice, subtitleOverride, hideAction }) => (
-  <div className={`relative flex flex-col h-full border rounded-2xl card-hover p-6 backdrop-blur-sm ${highlight ? 'border-orange-400/80 bg-white/40 dark:bg-black/40 shadow-[0_0_0_1px_rgba(249,115,22,0.4),0_8px_30px_-10px_rgba(249,115,22,0.25)]' : 'border-gray-300/50 dark:border-gray-800/50 bg-white/20 dark:bg-black/20 backdrop-blur-sm'}`}> 
+  <div className={`relative flex flex-col h-full border rounded-3xl card-hover p-6 backdrop-blur-sm ${highlight ? 'border-orange-400/80 bg-white/40 dark:bg-black/40 shadow-[0_0_0_1px_rgba(249,115,22,0.4),0_8px_30px_-10px_rgba(249,115,22,0.25)]' : 'border-gray-300/50 dark:border-gray-800/50 bg-white/20 dark:bg-black/20 backdrop-blur-sm'}`}> 
     {highlight && (
-  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-orange-400 rounded-2xl text-white dark:text-black text-xs tracking-wide font-medium px-3 py-1  shadow">POPULAR</span>
+  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-orange-400 rounded-3xl text-white dark:text-black text-xs tracking-wide font-medium px-3 py-1  shadow">POPULAR</span>
     )}
     <div className="mb-4">
       <h3 className="text-xl font-light tracking-wide text-black dark:text-white mb-2">{title}</h3>
@@ -82,8 +82,8 @@ const PlanCard: React.FC<PlanCardProps & { footerContent?: React.ReactNode; subt
         size="lg" 
         className={
           highlight
-            ? 'bg-orange-400 text-white dark:text-black rounded-2xl hover:bg-orange-600 hover:text-white dark:hover:text-black transition-all duration-300 border-2 border-transparent hover:border-orange-600 tracking-wide focus:outline-none focus:ring-0 focus:ring-offset-0'
-            : 'bg-white/20 dark:bg-black/20 font-light text-orange-400 dark:text-orange-400 border border-orange-400 rounded-2xl hover:border-orange-500 hover:text-orange-500 hover:bg-orange-950/10 dark:hover:bg-orange-950 transition-all duration-300 tracking-wide focus:outline-none focus:ring-0 focus:ring-offset-0'
+            ? 'bg-orange-400 text-white dark:text-black rounded-3xl hover:bg-orange-600 hover:text-white dark:hover:text-black transition-all duration-300 border-2 border-transparent hover:border-orange-600 tracking-wide focus:outline-none focus:ring-0 focus:ring-offset-0'
+            : 'bg-white/20 dark:bg-black/20 font-light text-orange-400 dark:text-orange-400 border border-orange-400 rounded-3xl hover:border-orange-500 hover:text-orange-500 hover:bg-orange-950/10 dark:hover:bg-orange-950 transition-all duration-300 tracking-wide focus:outline-none focus:ring-0 focus:ring-offset-0'
         }
       >
         {cta}
@@ -299,7 +299,7 @@ export default function SubscriptionPage() {
         ) : (
           <div className="space-y-4">
             <div className="text-[11px] uppercase tracking-wide text-orange-500">Select Token</div>
-            <div className="rounded-2xl border border-gray-300/70 dark:border-gray-800/50 p-1.5">
+            <div className="rounded-3xl border border-gray-300/70 dark:border-gray-800/50 p-1.5">
               <AnimatedPillNav
                 items={availablePackTokens.map((opt) => ({
                   key: opt.type,
@@ -369,7 +369,7 @@ export default function SubscriptionPage() {
         ) : (
           <div className="space-y-4">
             <div className="text-[11px] uppercase tracking-wide text-orange-500">Select Token</div>
-            <div className="rounded-xl border border-gray-300/70 dark:border-gray-800/50 p-1.5">
+            <div className="rounded-3xl border border-gray-300/70 dark:border-gray-800/50 p-1.5">
               <AnimatedPillNav
                 items={availableSubTokens.map((opt) => ({
                   key: opt.type,
