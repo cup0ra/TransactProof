@@ -1582,12 +1582,48 @@ export class BlockchainService {
       let pricePerTokenTo: number | undefined
 
       if (timestamp) {
+        const tokenRateCache = new Map<string, number>()
+        const getCachedHistoricalPrice = async (
+          token: string,
+          amount: string,
+        ): Promise<{ usdtValue: number; pricePerToken: number } | null> => {
+          const cacheKey = token.trim().toUpperCase()
+          const parsedAmount = parseFloat(amount)
+
+          if (!Number.isFinite(parsedAmount)) {
+            return null
+          }
+
+          const cachedRate = tokenRateCache.get(cacheKey)
+          if (cachedRate != null) {
+            return {
+              usdtValue: parsedAmount * cachedRate,
+              pricePerToken: cachedRate,
+            }
+          }
+
+          const priceData = await this.priceService.getHistoricalTokenPriceInUSDT(
+            token,
+            amount,
+            timestamp,
+          )
+
+          if (!priceData) {
+            return null
+          }
+
+          tokenRateCache.set(cacheKey, priceData.pricePerToken)
+          return {
+            usdtValue: priceData.usdtValue,
+            pricePerToken: priceData.pricePerToken,
+          }
+        }
+
         // Input side pricing
         try {
-          const priceDataFrom = await this.priceService.getHistoricalTokenPriceInUSDT(
+          const priceDataFrom = await getCachedHistoricalPrice(
             primarySenderToken,
             primaryAmount,
-            timestamp
           )
           if (priceDataFrom) {
             usdtValueFrom = priceDataFrom.usdtValue
@@ -1611,10 +1647,9 @@ export class BlockchainService {
               pricePerTokenTo = pricePerTokenFrom
             }
           } else {
-            const priceDataTo = await this.priceService.getHistoricalTokenPriceInUSDT(
+            const priceDataTo = await getCachedHistoricalPrice(
               primaryReceiverToken,
               primaryOutputAmount,
-              timestamp
             )
             if (priceDataTo) {
               usdtValueTo = priceDataTo.usdtValue
@@ -1628,10 +1663,9 @@ export class BlockchainService {
         // Fee pricing (native token)
         if (txFeeEth != null) {
           try {
-            const feePriceData = await this.priceService.getHistoricalTokenPriceInUSDT(
+            const feePriceData = await getCachedHistoricalPrice(
               nativeTokenInfo.symbol,
               txFeeEth.toString(),
-              timestamp
             )
             if (feePriceData) {
               txFeeUsd = feePriceData.usdtValue
