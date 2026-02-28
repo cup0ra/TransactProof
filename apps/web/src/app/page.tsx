@@ -283,9 +283,11 @@ export default function HomePage() {
               Ready to start?
             </h2>
             <div className="w-16 sm:w-20 lg:w-24 h-px bg-orange-500 mx-auto mb-8 sm:mb-10 lg:mb-12"></div>
-              <Link href="/generate" className="group relative inline-flex items-center justify-center overflow-hidden px-8 sm:px-12 lg:px-16 py-4 sm:py-5 text-base sm:text-lg font-light text-white dark:text-black bg-orange-400 backdrop-blur-sm rounded-2xl hover:bg-orange-500 hover:text-white dark:hover:text-black transition-all duration-300" style={{ fontFamily: "'Clash Display', system-ui, sans-serif" }}>
-              <span className="relative z-10">Generate Your First Receipt</span>
-              <div className="absolute inset-0 rounded-2xl bg-orange-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+              <Link href="/generate" 
+                className="group relative inline-flex items-center justify-center overflow-hidden px-7 sm:px-8 lg:px-9 py-2.5 sm:py-3 text-base sm:text-lg font-light text-white dark:text-black bg-orange-400 backdrop-blur-sm rounded-3xl hover:bg-orange-500 hover:text-white dark:hover:text-black transition-all duration-300 border-transparent hover:border-orange-600"
+                style={{ fontFamily: "'Clash Display', system-ui, sans-serif" }}>
+              <span className="relative z-10">Generate Your First Receipt - Free</span>
+              <div className="absolute inset-0 rounded-3xl bg-orange-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
             </Link>
           </div>
         </section>
