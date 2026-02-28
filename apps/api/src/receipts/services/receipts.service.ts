@@ -19,6 +19,8 @@ import { PurchaseSubscriptionDto } from '../dto/purchase-subscription.dto'
 @Injectable()
 export class ReceiptsService {
   private readonly logger = new Logger(ReceiptsService.name)
+  private readonly DEFAULT_BATCH_TX_DETAILS_CONCURRENCY = 4
+  private readonly MAX_BATCH_TX_DETAILS_CONCURRENCY = 10
 
   constructor(
     private readonly prisma: PrismaService,
@@ -42,6 +44,51 @@ export class ReceiptsService {
     if (delayMs > 0) {
       await new Promise(resolve => setTimeout(resolve, delayMs))
     }
+  }
+
+  private getBatchTxDetailsConcurrency(): number {
+    const configured = this.configService.get<string>('BATCH_TX_DETAILS_CONCURRENCY')
+    if (!configured) {
+      return this.DEFAULT_BATCH_TX_DETAILS_CONCURRENCY
+    }
+
+    const parsed = Number.parseInt(configured, 10)
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      return this.DEFAULT_BATCH_TX_DETAILS_CONCURRENCY
+    }
+
+    return Math.min(parsed, this.MAX_BATCH_TX_DETAILS_CONCURRENCY)
+  }
+
+  private async mapWithConcurrency<T, R>(
+    items: T[],
+    concurrency: number,
+    worker: (item: T, index: number) => Promise<R>,
+  ): Promise<R[]> {
+    if (items.length === 0) {
+      return []
+    }
+
+    const effectiveConcurrency = Math.max(1, Math.min(concurrency, items.length))
+    const results = new Array<R>(items.length)
+    let nextIndex = 0
+
+    const runWorker = async (): Promise<void> => {
+      while (nextIndex < items.length) {
+        const current = nextIndex
+        nextIndex += 1
+
+        results[current] = await worker(items[current], current)
+      }
+    }
+
+    await Promise.all(
+      Array.from({ length: effectiveConcurrency }, async () => {
+        await runWorker()
+      }),
+    )
+
+    return results
   }
 
   async payAndGenerate(
@@ -201,6 +248,41 @@ export class ReceiptsService {
     }
 
     const effectiveBranding = await this.getEffectiveBranding(userId, companyName, website, logoDataUrl)
+    const traceRpcUrl = this.configService.get<string>('TRACE_RPC_URL') || undefined
+    const detailsConcurrency = this.getBatchTxDetailsConcurrency()
+
+    this.logger.log(
+      `Batch details fetch: ${uniqueTransactions.length} tx(s), concurrency=${detailsConcurrency}`,
+    )
+
+    const txDetailsResults = await this.mapWithConcurrency(
+      uniqueTransactions,
+      detailsConcurrency,
+      async (txItem) => {
+        try {
+          const universalDetails = await this.blockchainService.getUniversalTxDetails({
+            hash: txItem.hash,
+            chainId: txItem.chainId,
+            traceRpcUrl,
+            loadTokenMeta: true,
+          })
+
+          return {
+            txHash: txItem.hash,
+            chainId: txItem.chainId,
+            universalDetails,
+          }
+        } catch (error) {
+          this.logger.error(`Failed to fetch tx details for ${txItem.hash}`, error as any)
+          return {
+            txHash: txItem.hash,
+            chainId: txItem.chainId,
+            universalDetails: null,
+          }
+        }
+      },
+    )
+
     const receipts: Array<{
       id: string
       txHash: string
@@ -215,15 +297,10 @@ export class ReceiptsService {
     }> = []
     const failedTxHashes: string[] = []
 
-    for (const txItem of uniqueTransactions) {
-      const txHash = txItem.hash
+    for (const txResult of txDetailsResults) {
+      const txHash = txResult.txHash
       try {
-        const universalDetails = await this.blockchainService.getUniversalTxDetails({
-          hash: txHash,
-          chainId: txItem.chainId,
-          traceRpcUrl: this.configService.get<string>('TRACE_RPC_URL') || undefined,
-          loadTokenMeta: true,
-        })
+        const universalDetails = txResult.universalDetails
 
         if (!universalDetails) {
           failedTxHashes.push(txHash)

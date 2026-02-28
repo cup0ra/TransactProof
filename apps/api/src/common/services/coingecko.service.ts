@@ -59,7 +59,7 @@ export class CoinGeckoService {
     // Check cache first
     if (this.tokenSearchCache.has(normalizedSymbol)) {
       const cached = this.tokenSearchCache.get(normalizedSymbol)
-      this.logger.log(`Using cached result for ${symbol}: ${cached?.coinGeckoId || 'not found'}`)
+      this.logger.debug(`Using cached result for ${symbol}: ${cached?.coinGeckoId || 'not found'}`)
       return cached
     }
 
@@ -281,6 +281,16 @@ export class CoinGeckoService {
         effectiveDate = now
       }
 
+      // CoinGecko public API only supports historical data up to 365 days back.
+      // Skip the request early to avoid predictable 401/10012 errors for old timestamps.
+      const oldestAllowedMs = Date.now() - (this.COINGECKO_PUBLIC_HISTORY_DAYS_LIMIT * 24 * 60 * 60 * 1000)
+      if (effectiveDate.getTime() < oldestAllowedMs) {
+        this.logger.log(
+          `Skipping daily history query for ${coinGeckoId} on ${effectiveDate.toISOString()} (older than ${this.COINGECKO_PUBLIC_HISTORY_DAYS_LIMIT} days).`,
+        )
+        return null
+      }
+
       // Format date as DD-MM-YYYY (CoinGecko format)
       const formattedDate = this.formatDateForCoinGecko(effectiveDate)
       const cacheKey = `${coinGeckoId}:${formattedDate}`
@@ -445,14 +455,14 @@ export class CoinGeckoService {
       const cacheKey = `${coinGeckoId}:${bucket}`
       const cached = this.intradayPriceCache.get(cacheKey)
       if (cached && cached.expiry > Date.now()) {
-        this.logger.log(`Using cached intraday price for ${coinGeckoId} @ bucket ${bucket}`)
+        this.logger.debug(`Using cached intraday price for ${coinGeckoId} @ bucket ${bucket}`)
         return cached.value
       }
 
       const from = tsSec - this.INTRADAY_WINDOW_SECONDS
       const to = tsSec + this.INTRADAY_WINDOW_SECONDS
       const url = `${this.baseUrl}/coins/${coinGeckoId}/market_chart/range?vs_currency=usd&from=${from}&to=${to}`
-      this.logger.log(`Fetching intraday price range for ${coinGeckoId} ts=${tsSec} (from=${from}, to=${to})`)
+      this.logger.debug(`Fetching intraday price range for ${coinGeckoId} ts=${tsSec} (from=${from}, to=${to})`)
       const data = await this.fetchWithRetry(url)
 
       if (!data || !Array.isArray(data.prices) || data.prices.length === 0) {

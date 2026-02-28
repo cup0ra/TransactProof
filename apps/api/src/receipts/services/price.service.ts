@@ -117,7 +117,7 @@ export class PriceService {
       }
 
       const { coinGeckoId, confidence, source } = tokenSearchResult
-      this.logger.log(`Getting historical price (hybrid) for ${token} -> ${coinGeckoId} at ${date.toISOString()} (confidence: ${confidence}, source: ${source})`)
+      this.logger.debug(`Getting historical price (hybrid) for ${token} -> ${coinGeckoId} at ${date.toISOString()} (confidence: ${confidence}, source: ${source})`)
 
       // 1. Try intraday timestamp-based price (higher precision)
       let pricePerToken: number | null = await this.coinGeckoService.getHistoricalPriceAtTimestamp(coinGeckoId, date)
@@ -142,7 +142,7 @@ export class PriceService {
       const tokenAmount = parseFloat(amount)
       const usdtValue = tokenAmount * pricePerToken
 
-      this.logger.log(`Historical (${pricingMode}) conversion: ${amount} ${token} = ${usdtValue.toFixed(6)} USDT (rate: ${pricePerToken} at ${date.toISOString()})`)
+      this.logger.debug(`Historical (${pricingMode}) conversion: ${amount} ${token} = ${usdtValue.toFixed(6)} USDT (rate: ${pricePerToken} at ${date.toISOString()})`)
 
       return {
         usdtValue,
