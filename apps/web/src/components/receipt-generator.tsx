@@ -42,7 +42,10 @@ interface FreeGenerationInfo {
 
 interface ReceiptGeneratorProps {
   initialTxHash?: string
+  txChainId?: number
   startFromPayment?: boolean
+  forcePayment?: boolean
+  batchPayableRemaining?: number
   onBusyChange?: (isBusy: boolean) => void
   compactMode?: boolean
   onReceiptGenerated?: (data: { txHash: string; receiptId: string; pdfUrl: string }) => void
@@ -63,13 +66,23 @@ function computeFreeInfo(user: MinimalUser | undefined): FreeGenerationInfo {
   return { hasFree: count > 0 || dateActive, count, dateActive }
 }
 
-export function ReceiptGenerator({ initialTxHash, startFromPayment = false, onBusyChange, compactMode = false, onReceiptGenerated }: ReceiptGeneratorProps) {
+export function ReceiptGenerator({
+  initialTxHash,
+  txChainId,
+  startFromPayment = false,
+  forcePayment = false,
+  batchPayableRemaining = 0,
+  onBusyChange,
+  compactMode = false,
+  onReceiptGenerated,
+}: ReceiptGeneratorProps) {
   const { isAuthenticated, user, checkAuth } = useAuth()
   const { address, isConnected } = useAccount()
   const chainId = useChainId()
   const [form, setForm] = useState<ReceiptForm>({ txHash: initialTxHash || '', description: '' })
   const [step, setStep] = useState<Step>(Step.INPUT)
   const freeInfo = computeFreeInfo(user || undefined)
+  const canUseFreeStep = freeInfo.hasFree && !forcePayment
   interface GeneratedReceipt { id: string; pdfUrl: string }
   const [receiptData, setReceiptData] = useState<GeneratedReceipt | null>(null)
   const [mounted, setMounted] = useState(false)
@@ -125,7 +138,7 @@ export function ReceiptGenerator({ initialTxHash, startFromPayment = false, onBu
 
   const isPaymentLoading = isPaymentETHLoading || isPaymentTokenLoading
   const isBusy = step === Step.VERIFYING || step === Step.GENERATING || isPaymentLoading || isFreeGenerating
-  const actionButtonBaseClass = 'rounded-xl text-[12px] py-1.5 transition-all duration-300'
+  const actionButtonBaseClass = 'rounded-2xl text-[12px] py-1.5 transition-all duration-300'
   const actionButtonWidthClass = compactMode ? 'w-auto min-w-[190px] mx-auto' : 'w-full'
 
   const selectedBalance = useMemo(() => {
@@ -195,22 +208,22 @@ export function ReceiptGenerator({ initialTxHash, startFromPayment = false, onBu
 
     setForm((prev) => ({ ...prev, txHash: initialTxHash }))
     if (startFromPayment) {
-      setStep(freeInfo.hasFree ? Step.FREE : Step.PAYMENT)
+      setStep(canUseFreeStep ? Step.FREE : Step.PAYMENT)
     } else {
       setStep(Step.INPUT)
     }
     setReceiptData(null)
-  }, [initialTxHash, startFromPayment, freeInfo.hasFree])
+  }, [initialTxHash, startFromPayment, canUseFreeStep])
 
   useEffect(() => {
     if (!startFromPayment || !initialTxHash) {
       return
     }
 
-    if (freeInfo.hasFree && step === Step.PAYMENT) {
+    if (canUseFreeStep && step === Step.PAYMENT) {
       setStep(Step.FREE)
     }
-  }, [startFromPayment, initialTxHash, freeInfo.hasFree, step])
+  }, [startFromPayment, initialTxHash, canUseFreeStep, step])
 
   useEffect(() => {
     if (!isConnected && (step === Step.PAYMENT || step === Step.GENERATING)) {
@@ -255,7 +268,7 @@ export function ReceiptGenerator({ initialTxHash, startFromPayment = false, onBu
       const transactionExists = await verifyTransaction(form.txHash)
       
       if (transactionExists) {
-        if (freeInfo.hasFree) {
+        if (canUseFreeStep) {
           setStep(Step.FREE)
           return
         }
@@ -264,7 +277,7 @@ export function ReceiptGenerator({ initialTxHash, startFromPayment = false, onBu
         setStep(Step.INPUT)
       }
     }
-  }, [isFullyAuthenticated, form, step, verifyTransaction, freeInfo.hasFree])
+  }, [isFullyAuthenticated, form, step, verifyTransaction, canUseFreeStep])
 
   const handleFreeGenerate = useCallback(async () => {
     if (isFreeGenerating) return
@@ -273,6 +286,7 @@ export function ReceiptGenerator({ initialTxHash, startFromPayment = false, onBu
     try {
       const receipt = await generateReceipt({
         txHash: form.txHash,
+        txChainId,
         description: form.description || undefined,
       })
       if (receipt) {
@@ -291,7 +305,7 @@ export function ReceiptGenerator({ initialTxHash, startFromPayment = false, onBu
     } finally {
       setIsFreeGenerating(false)
     }
-  }, [isFreeGenerating, generateReceipt, form, checkAuth, onReceiptGenerated])
+  }, [isFreeGenerating, generateReceipt, form, txChainId, checkAuth, onReceiptGenerated])
 
   const handlePayment = useCallback(async () => {
     if (!selectedPayment) {
@@ -327,6 +341,7 @@ export function ReceiptGenerator({ initialTxHash, startFromPayment = false, onBu
         // and pass the payment transaction hash for efficient verification
         const receipt = await generateReceipt({
           txHash: form.txHash, // Use the original transaction hash from form
+          txChainId,
           description: form.description || undefined,
           paymentTxHash, // Pass the payment transaction hash for efficient verification
           paymentAmount: selectedPayment.amount, // Pass the actual payment amount used
@@ -352,7 +367,7 @@ export function ReceiptGenerator({ initialTxHash, startFromPayment = false, onBu
       toast.error(errorMessage)
       setStep(Step.PAYMENT)
     }
-  }, [selectedPayment, payETH, payToken, detectedContractAddress, generateReceipt, form, checkAuth, onReceiptGenerated])
+  }, [selectedPayment, payETH, payToken, detectedContractAddress, generateReceipt, form, txChainId, checkAuth, onReceiptGenerated])
 
   const handleDownload = useCallback(() => {
     if (receiptData?.pdfUrl) {
@@ -501,6 +516,11 @@ export function ReceiptGenerator({ initialTxHash, startFromPayment = false, onBu
         {step === Step.PAYMENT && (
           <div className="text-center">
             <p className="text-gray-600 dark:text-gray-400 mb-4 sm:mb-4 text-xs sm:text-sm font-light transition-colors duration-300">Choose your payment method</p>
+            {batchPayableRemaining > 0 && (
+              <p className="text-[11px] text-orange-500 dark:text-orange-400 mb-3">
+                Remaining payable receipts in batch: {batchPayableRemaining}
+              </p>
+            )}
             
             {/* Payment Method Selector */}
             <div className="mb-4 sm:mb-4">
@@ -515,7 +535,7 @@ export function ReceiptGenerator({ initialTxHash, startFromPayment = false, onBu
                 itemBaseClassName="relative overflow-hidden rounded-xl px-3 py-1.5 text-[12px] transition-colors duration-300 font-light"
                 itemActiveClassName="text-orange-400 dark:text-orange-400"
                 itemInactiveClassName="text-gray-900 dark:text-gray-300 hover:text-orange-400 dark:hover:text-orange-400"
-                pillClassName="absolute inset-0 rounded-xl border border-orange-400/90 bg-orange-400/10 shadow-[0_0_0_1px_rgba(251,146,60,0.25),0_8px_20px_rgba(251,146,60,0.18)]"
+                pillClassName="absolute inset-0 rounded-2xl border border-orange-400/90 bg-orange-400/10 shadow-[0_0_0_1px_rgba(251,146,60,0.25),0_8px_20px_rgba(251,146,60,0.18)]"
               />
               {availablePaymentOptions.length === 0 && (
                 <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
@@ -570,6 +590,11 @@ export function ReceiptGenerator({ initialTxHash, startFromPayment = false, onBu
           <div className="text-center">
             <p className="text-gray-600 dark:text-gray-400 mb-4 sm:mb-4 text-xs sm:text-sm font-light transition-colors duration-300">
               You have a free receipt available. Generate it now without payment.
+              {batchPayableRemaining > 0 && (
+                <span className="block mt-2 text-[11px] text-orange-500 dark:text-orange-400">
+                  Payment will still be required for {batchPayableRemaining} receipt{batchPayableRemaining !== 1 ? 's' : ''} in this batch.
+                </span>
+              )}
               {freeInfo.count > 0 && (
                 <span className="block mt-2 text-[11px] tracking-wide text-orange-500 dark:text-orange-400">
                   Free receipts left: <span className="font-medium">{freeInfo.count}</span>

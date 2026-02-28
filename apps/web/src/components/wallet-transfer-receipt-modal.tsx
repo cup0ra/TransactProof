@@ -17,9 +17,26 @@ type WalletTransferReceiptModalProps = {
   onClose: () => void
   onError?: (message: string | null) => void
   onReceiptGenerated?: (data: { txHash: string; receiptId: string; pdfUrl: string }) => void
+  batchMeta?: {
+    total: number
+    freeIncluded: number
+    payable: number
+  } | null
+  batchPosition?: number | null
+  batchPayableRemaining?: number
+  forcePayment?: boolean
 }
 
-export function WalletTransferReceiptModal({ transfer, onClose, onError, onReceiptGenerated }: WalletTransferReceiptModalProps) {
+export function WalletTransferReceiptModal({
+  transfer,
+  onClose,
+  onError,
+  onReceiptGenerated,
+  batchMeta,
+  batchPosition,
+  batchPayableRemaining = 0,
+  forcePayment = false,
+}: WalletTransferReceiptModalProps) {
   const currentChainId = useChainId()
   const { switchChain } = useSwitchChain()
   const [isPortalReady, setIsPortalReady] = useState(false)
@@ -108,11 +125,26 @@ export function WalletTransferReceiptModal({ transfer, onClose, onError, onRecei
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h4 className="text-sm font-medium text-black dark:text-white">Generate Receipt</h4>
-            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400 font-mono">{transfer.hash}</p>
+            <p className="mt-1 max-w-full truncate whitespace-nowrap text-[11px] text-gray-500 dark:text-gray-400 font-mono">{transfer.hash}</p>
+            {batchMeta && (
+              <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                Batch {batchPosition || 1}/{batchMeta.total} • Free: {batchMeta.freeIncluded} • Paid: {batchMeta.payable}
+              </p>
+            )}
+            {batchMeta && batchPayableRemaining > 0 && (
+              <p className="mt-1 text-[11px] text-orange-500 dark:text-orange-400">
+                Payment pending for {batchPayableRemaining} receipt{batchPayableRemaining !== 1 ? 's' : ''}
+              </p>
+            )}
+            {forcePayment && (
+              <p className="mt-1 text-[11px] text-orange-500 dark:text-orange-400">
+                Payment required for this receipt
+              </p>
+            )}
           </div>
           <button
             type="button"
-            className="rounded-lg border border-gray-300/70 dark:border-gray-700 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-300 hover:text-orange-400 hover:border-orange-400 transition-colors"
+            className="rounded-xl border border-gray-300/70 dark:border-gray-700 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-300 hover:text-orange-400 hover:border-orange-400 dark:hover:text-orange-400 dark:hover:text-orange-400 dark:hover:border-orange-400 transition-colors"
             disabled={isModalLocked}
             onClick={onClose}
           >
@@ -136,7 +168,10 @@ export function WalletTransferReceiptModal({ transfer, onClose, onError, onRecei
 
         <ReceiptGenerator
           initialTxHash={transfer.hash}
+          txChainId={transfer.chainId}
           startFromPayment
+          forcePayment={forcePayment}
+          batchPayableRemaining={batchPayableRemaining}
           compactMode
           onBusyChange={setIsReceiptFlowBusy}
           onReceiptGenerated={onReceiptGenerated}
