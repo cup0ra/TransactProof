@@ -6,6 +6,7 @@ import { ApiClient } from '@/lib/api-client'
 
 interface GenerateReceiptParams {
   txHash: string
+  txChainId?: number
   description?: string
   paymentTxHash?: string
   paymentAmount?: number

@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard'
 import { ReceiptsService } from '../services/receipts.service'
 import { BrandingService } from '../services/branding.service'
 import { PayAndGenerateDto } from '../dto/pay-and-generate.dto'
+import { PayAndGenerateBatchDto } from '../dto/pay-and-generate-batch.dto'
 import { ReceiptResponseDto } from '../dto/receipt-response.dto'
 import { PurchasePackDto } from '../dto/purchase-pack.dto'
 import { PurchaseSubscriptionDto } from '../dto/purchase-subscription.dto'
@@ -53,6 +54,29 @@ export class ReceiptsController {
     
     return this.receiptsService.payAndGenerate(
       payAndGenerateDto,
+      userAddress,
+      userId,
+    )
+  }
+
+  @Post('pay-and-generate-batch')
+  @UseGuards(ThrottlerGuard, JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Single payment + batch receipt generation',
+    description: 'Verifies one payment (if needed) and generates PDF receipts for all provided transaction hashes in one API call',
+  })
+  @ApiResponse({ status: 201, description: 'Batch processed successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid transaction hashes or payment params' })
+  async payAndGenerateBatch(
+    @Body() payAndGenerateBatchDto: PayAndGenerateBatchDto,
+    @Req() req: Request,
+  ) {
+    const userAddress = req.user?.walletAddress
+    const userId = req.user?.id
+
+    return this.receiptsService.payAndGenerateBatch(
+      payAndGenerateBatchDto,
       userAddress,
       userId,
     )

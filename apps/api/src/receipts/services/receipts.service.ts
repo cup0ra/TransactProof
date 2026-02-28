@@ -11,6 +11,7 @@ import { BlockchainService } from './blockchain.service'
 import { PdfService, BrandingOptions } from './pdf.service'
 import { BrandingService } from './branding.service'
 import { PayAndGenerateDto } from '../dto/pay-and-generate.dto'
+import { PayAndGenerateBatchDto } from '../dto/pay-and-generate-batch.dto'
 import { PaymentRequiredException } from '../../common/exceptions/payment-required.exception'
 import { PurchasePackDto } from '../dto/purchase-pack.dto'
 import { PurchaseSubscriptionDto } from '../dto/purchase-subscription.dto'
@@ -48,7 +49,7 @@ export class ReceiptsService {
     userAddress?: string,
     userId?: string,
   ) {
-    const { txHash, description, paymentTxHash, paymentAmount, paymentType, paymentContractAddress, companyName, website, logoDataUrl } = payAndGenerateDto
+    const { txHash, txChainId, description, paymentTxHash, paymentAmount, paymentType, paymentContractAddress, companyName, website, logoDataUrl } = payAndGenerateDto
 
     // Check free generation eligibility for authenticated users
     const { usingFreeGeneration, decrementFreeCounter } = await this.checkFreeGenerationEligibility(userId)
@@ -58,20 +59,12 @@ export class ReceiptsService {
       await this.delayForNetwork()
     }
 
-    // 1. Verify transaction exists in supported networks
-    const transactionExists = await this.blockchainService.verifyTransactionExists(txHash)
-    if (!transactionExists) {
-      throw new BadRequestException(
-        'Transaction hash not found in any supported network (Ethereum, Base, Base Sepolia, Polygon, Arbitrum, Optimism). Please verify your transaction hash.'
-      )
-    }
-
-    // 2. Verify payment unless using free generation
+    // 1. Verify payment unless using free generation
     if (userAddress && !usingFreeGeneration) {
       await this.verifyPayment(userAddress, paymentTxHash, paymentAmount, paymentType, paymentContractAddress)
     }
     
-    // 3. Decrement free generation counter if applicable
+    // 2. Decrement free generation counter if applicable
     if (usingFreeGeneration && decrementFreeCounter && userId) {
       await this.prisma.client.user.update({
         where: { id: userId },
@@ -79,30 +72,34 @@ export class ReceiptsService {
       })
     }
 
-    // 4. Fetch transaction details
-    const networkForTx = await this.blockchainService.findTransactionNetwork(txHash)
+    // 3. Fetch transaction details (use provided chainId to avoid auto-detection by hash)
     const universalDetails = await this.blockchainService.getUniversalTxDetails({
       hash: txHash,
-      chainId: networkForTx?.chainId,
+      chainId: txChainId,
       traceRpcUrl: this.configService.get<string>('TRACE_RPC_URL') || undefined,
       loadTokenMeta: true,
     })
     
     if (!universalDetails) {
-      throw new BadRequestException('Universal transaction details not found or invalid')
+      if (txChainId) {
+        throw new BadRequestException(`Transaction hash not found on provided chainId ${txChainId}`)
+      }
+      throw new BadRequestException(
+        'Transaction hash not found in supported networks (Ethereum, Base, Base Sepolia, Polygon, Arbitrum, Optimism). Please verify your transaction hash.',
+      )
     }
 
-    // 5. Prepare PDF data
+    // 4. Prepare PDF data
     const pdfData = this.preparePdfData(universalDetails, txHash, description)
     
-    // 6. Get branding options
+    // 5. Get branding options
     const effectiveBranding = await this.getEffectiveBranding(userId, companyName, website, logoDataUrl)
 
-    // 7. Generate and upload PDF
+    // 6. Generate and upload PDF
     const pdfBuffer = await this.pdfService.generateReceiptPdf(pdfData, effectiveBranding)
     const pdfUrl = await this.pdfService.uploadPdf(pdfBuffer, txHash)
 
-    // 8. Save receipt to database
+    // 7. Save receipt to database
     const receipt = await this.prisma.client.receipt.create({
       data: {
         userId,
@@ -128,6 +125,159 @@ export class ReceiptsService {
       pdfUrl: receipt.pdfUrl,
       description: receipt.description,
       createdAt: receipt.createdAt.toISOString(),
+    }
+  }
+
+  async payAndGenerateBatch(
+    payAndGenerateBatchDto: PayAndGenerateBatchDto,
+    userAddress?: string,
+    userId?: string,
+  ) {
+    const {
+      transactions,
+      description,
+      paymentTxHash,
+      paymentAmount,
+      paymentType,
+      paymentContractAddress,
+      companyName,
+      website,
+      logoDataUrl,
+    } = payAndGenerateBatchDto
+
+    const uniqueTransactions = Array.from(
+      new Map(
+        (transactions || [])
+          .filter((item) => !!item?.hash && Number(item?.chainId) > 0)
+          .map((item) => [`${item.chainId}:${item.hash.trim().toLowerCase()}`, {
+            hash: item.hash.trim(),
+            chainId: Number(item.chainId),
+          }]),
+      ).values(),
+    )
+
+    if (uniqueTransactions.length === 0) {
+      throw new BadRequestException('At least one transaction (hash + chainId) is required')
+    }
+
+    let freeIncluded = 0
+    let payableCount = uniqueTransactions.length
+    let decrementCounterBy = 0
+
+    if (userId) {
+      const user: any = await this.prisma.client.user.findUnique({ where: { id: userId } })
+      if (user) {
+        const now = new Date()
+        const hasValidDate = !!user.freeUntil && user.freeUntil > now
+        const freeCounter = Math.max(Number(user.freeGenerationsRemaining || 0), 0)
+
+        freeIncluded = hasValidDate
+          ? uniqueTransactions.length
+          : Math.min(uniqueTransactions.length, freeCounter)
+
+        decrementCounterBy = hasValidDate ? 0 : Math.min(freeIncluded, freeCounter)
+        payableCount = Math.max(uniqueTransactions.length - freeIncluded, 0)
+      }
+    }
+
+    if (payableCount > 0) {
+      if (!userAddress) {
+        throw new ForbiddenException('User not authenticated')
+      }
+
+      if (typeof paymentAmount !== 'number' || paymentAmount <= 0) {
+        throw new BadRequestException('paymentAmount is required for payable batch generation')
+      }
+
+      await this.delayForNetwork()
+      await this.verifyPayment(userAddress, paymentTxHash, paymentAmount, paymentType, paymentContractAddress)
+    }
+
+    if (decrementCounterBy > 0 && userId) {
+      await this.prisma.client.user.update({
+        where: { id: userId },
+        data: { freeGenerationsRemaining: { decrement: decrementCounterBy } } as any,
+      })
+    }
+
+    const effectiveBranding = await this.getEffectiveBranding(userId, companyName, website, logoDataUrl)
+    const receipts: Array<{
+      id: string
+      txHash: string
+      sender: string
+      receiver: string
+      amount: string
+      token: string
+      chainId: number
+      pdfUrl: string
+      description?: string
+      createdAt: string
+    }> = []
+    const failedTxHashes: string[] = []
+
+    for (const txItem of uniqueTransactions) {
+      const txHash = txItem.hash
+      try {
+        const universalDetails = await this.blockchainService.getUniversalTxDetails({
+          hash: txHash,
+          chainId: txItem.chainId,
+          traceRpcUrl: this.configService.get<string>('TRACE_RPC_URL') || undefined,
+          loadTokenMeta: true,
+        })
+
+        if (!universalDetails) {
+          failedTxHashes.push(txHash)
+          continue
+        }
+
+        const pdfData = this.preparePdfData(universalDetails, txHash, description)
+        const pdfBuffer = await this.pdfService.generateReceiptPdf(pdfData, effectiveBranding)
+        const pdfUrl = await this.pdfService.uploadPdf(pdfBuffer, txHash)
+
+        const receipt = await this.prisma.client.receipt.create({
+          data: {
+            userId,
+            txHash,
+            sender: pdfData.sender,
+            receiver: pdfData.receiver,
+            amount: parseFloat(pdfData.amount),
+            token: pdfData.token,
+            chainId: pdfData.chainId,
+            pdfUrl,
+            description,
+          },
+        })
+
+        receipts.push({
+          id: receipt.id,
+          txHash: receipt.txHash,
+          sender: receipt.sender,
+          receiver: receipt.receiver,
+          amount: receipt.amount.toString(),
+          token: receipt.token,
+          chainId: receipt.chainId,
+          pdfUrl: receipt.pdfUrl,
+          description: receipt.description || undefined,
+          createdAt: receipt.createdAt.toISOString(),
+        })
+      } catch (error) {
+        this.logger.error(`Failed to generate receipt for tx ${txHash}`, error as any)
+        failedTxHashes.push(txHash)
+      }
+    }
+
+    if (receipts.length === 0) {
+      throw new BadRequestException('Failed to generate receipts for all provided transactions')
+    }
+
+    return {
+      totalRequested: uniqueTransactions.length,
+      freeIncluded,
+      payableCount,
+      generatedCount: receipts.length,
+      failedCount: failedTxHashes.length,
+      failedTxHashes,
+      receipts,
     }
   }
 

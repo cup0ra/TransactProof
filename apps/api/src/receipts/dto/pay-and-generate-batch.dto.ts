@@ -1,32 +1,31 @@
 import {
-  IsString,
-  IsOptional,
-  IsNumber,
+  ArrayMaxSize,
+  ArrayMinSize,
   IsInt,
-  Min,
+  IsArray,
   IsIn,
-  MaxLength,
+  IsNumber,
+  IsOptional,
+  IsString,
   Matches,
+  MaxLength,
+  Min,
+  Validate,
   ValidateIf,
   ValidatorConstraint,
   ValidatorConstraintInterface,
-  Validate,
 } from 'class-validator'
 import { ApiProperty } from '@nestjs/swagger'
 
-// 500KB max for logo image (same as frontend)
 const MAX_LOGO_BYTES = 500 * 1024
 
 @ValidatorConstraint({ name: 'logoDataUrl', async: false })
 class LogoDataUrlConstraint implements ValidatorConstraintInterface {
   validate(value: string) {
     if (typeof value !== 'string') return false
-    // Basic pattern check
     if (!/^data:image\/(png|jpe?g|svg\+xml);base64,[A-Za-z0-9+/=]+$/.test(value)) return false
-    // Size check: decode base64 length portion after comma
     const base64 = value.split(',')[1]
     if (!base64) return false
-    // Compute approximate bytes: 3/4 of base64 length (ignore padding nuance for simplicity)
     const bytes = (base64.length * 3) / 4 - (base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0)
     return bytes <= MAX_LOGO_BYTES
   }
@@ -36,28 +35,40 @@ class LogoDataUrlConstraint implements ValidatorConstraintInterface {
   }
 }
 
-export class PayAndGenerateDto {
+class BatchTransactionDto {
   @ApiProperty({
-    description: 'Transaction hash to generate receipt for',
+    description: 'Transaction hash',
     example: '0xa1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
   })
   @IsString()
-  txHash: string
+  hash: string
 
   @ApiProperty({
-    description: 'Optional chain id where transaction hash exists (skips network auto-detection when provided)',
+    description: 'Network chain id where transaction exists',
     example: 8453,
-    required: false,
   })
-  @IsOptional()
   @IsNumber()
   @IsInt()
   @Min(1)
-  txChainId?: number
+  chainId: number
+}
+
+export class PayAndGenerateBatchDto {
+  @ApiProperty({
+    description: 'List of transactions for receipt generation (hash + chainId)',
+    type: [BatchTransactionDto],
+    example: [
+      { hash: '0xa1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456', chainId: 8453 },
+      { hash: '0xb1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456', chainId: 8453 },
+    ],
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  transactions: BatchTransactionDto[]
 
   @ApiProperty({
-    description: 'Optional description for the receipt',
-    example: 'Payment for services',
+    description: 'Optional description to apply for all generated receipts',
     required: false,
   })
   @IsOptional()
@@ -65,8 +76,7 @@ export class PayAndGenerateDto {
   description?: string
 
   @ApiProperty({
-    description: 'Transaction hash of the payment to the service',
-    example: '0xb2c3d4e5f6789012345678901234567890abcdef1234567890abcdef1234567a',
+    description: 'Transaction hash of the single payment for payable receipts in batch',
     required: false,
   })
   @IsOptional()
@@ -74,8 +84,7 @@ export class PayAndGenerateDto {
   paymentTxHash?: string
 
   @ApiProperty({
-    description: 'Amount paid to the service',
-    example: 0.0000001,
+    description: 'Total payment amount for all payable receipts in batch',
     required: false,
   })
   @IsOptional()
@@ -84,8 +93,7 @@ export class PayAndGenerateDto {
   paymentAmount?: number
 
   @ApiProperty({
-    description: 'Type of payment token used',
-    example: 'ETH',
+    description: 'Type of payment token used for batch payment',
     enum: ['ETH', 'USDT', 'USDC'],
     required: false,
   })
@@ -96,17 +104,14 @@ export class PayAndGenerateDto {
 
   @ApiProperty({
     description: 'Contract address for token payments (not needed for ETH)',
-    example: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
     required: false,
   })
   @IsOptional()
   @IsString()
   paymentContractAddress?: string
 
-  // Branding (optional, per-request, not persisted)
   @ApiProperty({
     description: 'Optional company name for branding (max 80 chars)',
-    example: 'TransactProof LLC',
     required: false,
     maxLength: 80,
   })
@@ -117,7 +122,6 @@ export class PayAndGenerateDto {
 
   @ApiProperty({
     description: 'Optional company website (https URL or domain, max 120 chars)',
-    example: 'https://transactproof.com',
     required: false,
     maxLength: 120,
   })
